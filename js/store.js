@@ -29,8 +29,9 @@ const Store = {
     },
 
     login: async (email, password) => {
+        const cleanEmail = email.trim();
         const { data, error } = await window.supabaseClient.auth.signInWithPassword({
-            email: email,
+            email: cleanEmail,
             password: password
         });
 
@@ -47,8 +48,9 @@ const Store = {
     },
 
     register: async (email, password, fullName) => {
+        const cleanEmail = email.trim();
         const { data, error } = await window.supabaseClient.auth.signUp({
-            email: email,
+            email: cleanEmail,
             password: password,
             options: {
                 data: {
