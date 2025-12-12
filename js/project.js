@@ -1438,10 +1438,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                 .eq('project_id', currentId);
 
             if (memberError) throw memberError;
-            if (!memberData || memberData.length === 0) return;
 
-            // 3. Fetch Profiles for these IDs
-            const userIds = memberData.map(m => m.user_id);
+            // 3. Fetch Profiles (Members + Owner)
+            let userIds = (memberData || []).map(m => m.user_id);
+
+            // Add Owner ID if available
+            const ownerId = window._project ? window._project.owner_id : null;
+            if (ownerId && !userIds.includes(ownerId)) {
+                userIds.push(ownerId);
+            }
+
+            if (userIds.length === 0) return;
+
             const { data: profileData, error: profileError } = await window.supabaseClient
                 .from('profiles')
                 .select('id, email, full_name')
@@ -1449,25 +1457,35 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (profileError) throw profileError;
 
-            // Map profiles for Lookup
+            // Map profiles
             const profileMap = {};
             if (profileData) {
                 profileData.forEach(p => profileMap[p.id] = p);
             }
 
-            // 4. Render Members
-            memberData.forEach(m => {
-                const profile = profileMap[m.user_id];
-                if (profile) {
-                    if (profile.email === ownerName) return; // Avoid dupe
-                    const d = document.createElement('div');
-                    d.className = 'summary-card';
-                    d.style.padding = '10px';
-                    d.style.minWidth = '200px';
-                    d.innerHTML = `<strong>${profile.full_name || 'Collaborator'}</strong><br>${profile.email}<br><span style="font-size:0.7rem; color:gray;">${m.role}</span>`;
-                    list.appendChild(d);
-                }
-            });
+            // Update Owner Card with Real Name
+            if (ownerId && profileMap[ownerId]) {
+                const p = profileMap[ownerId];
+                // const ownerTitle = (p.email === ownerName) ? 'Owner' : 'Owner (' + ownerName + ')'; 
+                // Actually ownerName is usually email.
+                ownerDiv.innerHTML = `<strong>Owner</strong><br>${p.full_name || 'Unknown Name'}<br><span style="font-size:0.7rem; color:gray;">${p.email}</span>`;
+            }
+
+            // 4. Render Members (Skip Owner)
+            if (memberData) {
+                memberData.forEach(m => {
+                    const profile = profileMap[m.user_id];
+                    if (profile) {
+                        if (profile.id === ownerId) return; // Skip Owner if in list
+                        const d = document.createElement('div');
+                        d.className = 'summary-card';
+                        d.style.padding = '10px';
+                        d.style.minWidth = '200px';
+                        d.innerHTML = `<strong>${profile.full_name || 'Collaborator'}</strong><br>${profile.email}<br><span style="font-size:0.7rem; color:gray;">${m.role}</span>`;
+                        list.appendChild(d);
+                    }
+                });
+            }
 
         } catch (err) {
             console.error("Error loading collaborators:", err);
