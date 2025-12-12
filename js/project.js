@@ -986,7 +986,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // 4. Global Event Delegation (Robust Handling)
-    document.addEventListener('click', (e) => {
+    document.addEventListener('click', async (e) => {
         // console.log("Global Click:", e.target); // DEBUG
         const btn = e.target.closest('button');
         if (!btn) return; // Only care about buttons
