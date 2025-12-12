@@ -1,5 +1,6 @@
 /**
  * Power in Numbers - Utilities
+ * Utility Functions
  */
 
 const Utils = {

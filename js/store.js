@@ -246,6 +246,7 @@ const Store = {
         if (!user) return;
 
         const payload = {
+            id: project.id, // CRITICAL: Required for Upsert to update existing row
             name: project.name,
             data: project, // Storing full object in JSONB
             owner_id: user.id
