@@ -786,7 +786,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Helper: Labor Calculation Logic
     function calculateWorkerCost(member, phase, state) {
         // 1. Get Base Rates
-        const user = Store.getUsers()[member.username] || {};
+        const user = usersMap[member.username] || {};
         const profile = user.independentProfile;
         const baseRates = BudgetEngine.getWorkerRates(profile); // { now, goal }
 
@@ -797,7 +797,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const minMod = parseFloat(project.minModifier) || 100;
         const maxMod = parseFloat(project.maxModifier) || 100;
 
-        const projectParams = BudgetEngine.calculateProjectParams(project.teamMembers, Store.getUsers(), minMod, maxMod);
+        const projectParams = BudgetEngine.calculateProjectParams(project.teamMembers, usersMap, minMod, maxMod);
 
         if (state.overrideRateMethod === 'custom') {
             appliedRate = parseFloat(state.overrideRateVal) || 0;
