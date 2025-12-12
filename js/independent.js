@@ -653,43 +653,43 @@ document.addEventListener('DOMContentLoaded', () => {
                 // NOW Fees
                 nowHourly: [
                     { formula: "Current Gross Income", value: currentGross },
-                    { formula: `Total Billable Hours (Total Capacity - Non-Billable)`, value: totalBillable },
+                    { formula: `Total Billable Hours (Total Capacity - Non-Billable)`, value: totalBillable, formatter: 'number' },
                     { formula: "Hourly Rate = Gross / Total Billable Hours", value: nowFees.hourly }
                 ],
                 nowDaily: [
                     { formula: "Hourly Rate", value: nowFees.hourly },
-                    { formula: `Hours per Day`, value: schedule.hours },
+                    { formula: `Hours per Day`, value: schedule.hours, formatter: 'number' },
                     { formula: "Daily Rate = Hourly * Hours/Day", value: nowFees.daily }
                 ],
                 nowWeekly: [
                     { formula: "Daily Rate", value: nowFees.daily },
-                    { formula: `Work Days per Week`, value: schedule.days },
+                    { formula: `Work Days per Week`, value: schedule.days, formatter: 'number' },
                     { formula: "Weekly Rate = Daily * Days/Week", value: nowFees.weekly }
                 ],
                 nowMonthly: [
                     { formula: "Weekly Rate", value: nowFees.weekly },
-                    { formula: "Weeks per Year", value: schedule.weeks },
+                    { formula: "Weeks per Year", value: schedule.weeks, formatter: 'number' },
                     { formula: "Monthly Rate = (Weekly * Weeks) / 12", value: nowFees.monthly }
                 ],
                 // GOAL Fees
                 goalHourly: [
                     { formula: "Goal Gross Income", value: goalGross },
-                    { formula: `Total Billable Hours (Total Capacity - Non-Billable)`, value: totalBillable },
+                    { formula: `Total Billable Hours (Total Capacity - Non-Billable)`, value: totalBillable, formatter: 'number' },
                     { formula: "Hourly Rate = Gross / Total Billable Hours", value: goalFees.hourly }
                 ],
                 goalDaily: [
                     { formula: "Hourly Rate", value: goalFees.hourly },
-                    { formula: `Hours per Day`, value: schedule.hours },
+                    { formula: `Hours per Day`, value: schedule.hours, formatter: 'number' },
                     { formula: "Daily Rate = Hourly * Hours/Day", value: goalFees.daily }
                 ],
                 goalWeekly: [
                     { formula: "Daily Rate", value: goalFees.daily },
-                    { formula: `Work Days per Week`, value: schedule.days },
+                    { formula: `Work Days per Week`, value: schedule.days, formatter: 'number' },
                     { formula: "Weekly Rate = Daily * Days/Week", value: goalFees.weekly }
                 ],
                 goalMonthly: [
                     { formula: "Weekly Rate", value: goalFees.weekly },
-                    { formula: "Weeks per Year", value: schedule.weeks },
+                    { formula: "Weeks per Year", value: schedule.weeks, formatter: 'number' },
                     { formula: "Monthly Rate = (Weekly * Weeks) / 12", value: goalFees.monthly }
                 ]
             };
@@ -731,9 +731,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 div.style.marginBottom = '10px';
                 div.style.borderBottom = '1px solid #eee';
                 div.style.paddingBottom = '5px';
+
+                let displayValue;
+                if (log.formatter === 'number') {
+                    displayValue = Utils.formatNumber(log.value);
+                } else if (log.formatter === 'none') {
+                    displayValue = log.value;
+                } else {
+                    displayValue = Utils.formatCurrency(log.value);
+                }
+
                 div.innerHTML = `
                     <div style="color:#555; font-size:0.85rem;">${log.formula}</div>
-                    <div style="font-weight:bold; text-align:right;">${Utils.formatCurrency(log.value)}</div>
+                    <div style="font-weight:bold; text-align:right;">${displayValue}</div>
                 `;
                 content.appendChild(div);
             });
