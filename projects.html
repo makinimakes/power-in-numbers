@@ -68,10 +68,16 @@
         document.addEventListener('DOMContentLoaded', async () => {
             // Auth Check
             if (typeof Store === 'undefined') return;
-            const user = await Store.checkSession();
-            if (!user) return;
+            // Auth Check
+            if (typeof Store === 'undefined') return;
+            // checkSession returns email string
+            const userEmail = await Store.checkSession();
+            if (!userEmail) return;
 
-            document.getElementById('user-display').textContent = `User: ${user}`;
+            // Fetch full user object for ID check
+            const currentUser = await Store.getCurrentUser();
+
+            document.getElementById('user-display').textContent = `User: ${userEmail}`;
             document.getElementById('btn-logout').onclick = Store.logout;
 
             // Render Projects
@@ -105,7 +111,7 @@
 
                     // Owner Display Logic (handle email vs string)
                     const ownerDisplay = p.owner || 'Unknown';
-                    const isOwner = (p.owner_id === user.id) || (p.owner === user.email); // Fallback check
+                    const isOwner = (currentUser && p.owner_id === currentUser.id) || (p.owner === userEmail); // Fallback check
 
                     let deleteBtnHtml = '';
                     if (isOwner) {
