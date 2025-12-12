@@ -1548,11 +1548,32 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             try {
                 // Ensure we have project ID
-                const currentId = window._project ? window._project.id : (new URLSearchParams(window.location.search).get('id'));
+                const proj = window._project || project;
+                if (!proj) throw new Error("Project state missing.");
+
+                const currentId = proj.id || (new URLSearchParams(window.location.search).get('id')); // Fallback
+
+                // 1. Backend Invite
                 await Store.inviteUser(currentId, email);
+
+                // 2. Frontend State Update (Add to Team Members List if not present)
+                const existing = proj.teamMembers.find(m => m.username === email || m.email === email);
+                if (!existing) {
+                    proj.teamMembers.push({
+                        id: Utils.generateId(), // Temporary ID until they join? Or just a unique reference.
+                        name: email.split('@')[0], // Placeholder name
+                        rate: 0,
+                        days: 0,
+                        username: email,
+                        email: email
+                    });
+                    await Store.saveProject(proj); // Save the project structure
+                    render(); // Re-render to show in Phase Lists immediately
+                }
+
                 alert(`Invited ${email} successfully!`);
                 document.getElementById('modal-invite-member').style.display = 'none';
-                await loadAndRenderCollaborators();
+                await loadAndRenderCollaborators(); // Keep this for side-effects if any
             } catch (e) {
                 alert("Error inviting user: " + e.message);
             } finally {
