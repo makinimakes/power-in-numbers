@@ -49,6 +49,9 @@
             </div>
         </div>
 
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <p>This is your logic map. Define how your needs translate into your rates.</p>
+        </div>
         <script>
             // Inline session check to prevent flash of content
             // However, Store.js needs to be loaded first.
@@ -188,7 +191,11 @@
                     </div>
                     <div class="ledger-row" style="margin-top:5px; border-bottom:none;">
                         <span class="text-muted" style="font-size:0.8rem; font-weight:bold;">Current Gross Income</span>
-                        <span id="out-current-gross" style="font-weight:bold;">$0</span>
+                        <span>
+                            <strong id="out-current-gross">$0</strong>
+                            <button onclick="window.viewIndependentLog('currentGross')"
+                                style="background:none; border:none; cursor:pointer; opacity:0.6; font-size:0.8rem;">ℹ️</button>
+                        </span>
                     </div>
                 </div>
             </div>
@@ -198,13 +205,19 @@
                 <aside class="result-dock">
                     <div style="margin-bottom: var(--spacing-lg); margin-top: var(--spacing-lg);">
                         <div class="result-label">Goal Annual Income<br><span
-                                style="font-weight:400; font-size:0.8em;">(Net / After Tax)</span></div>
+                                style="font-weight:400; font-size:0.8em;">(Net / After Tax)</span>
+                            <button onclick="window.viewIndependentLog('goalNet')"
+                                style="background:none; border:none; cursor:pointer; opacity:0.6;">ℹ️</button>
+                        </div>
                         <div class="result-value" id="out-goal-net">$0</div>
                     </div>
 
                     <div style="margin-bottom: var(--spacing-lg);">
                         <div class="result-label">Goal Annual Income<br><span
-                                style="font-weight:400; font-size:0.8em;">(Gross / Accounting for Taxes)</span></div>
+                                style="font-weight:400; font-size:0.8em;">(Gross / Accounting for Taxes)</span>
+                            <button onclick="window.viewIndependentLog('goalGross')"
+                                style="background:none; border:none; cursor:pointer; opacity:0.6;">ℹ️</button>
+                        </div>
                         <div class="result-value" id="out-goal-gross" style="color: var(--color-accent-primary);">$0
                         </div>
                     </div>
@@ -235,19 +248,35 @@
                             <table style="width:100%; border-collapse: collapse; font-size: 0.9rem;">
                                 <tr>
                                     <td style="padding: 4px 0; color: var(--color-text-muted);">Hourly</td>
-                                    <td style="text-align:right; font-weight:bold;" id="out-now-hourly">$0</td>
+                                    <td style="text-align:right;">
+                                        <strong id="out-now-hourly">$0</strong>
+                                        <button onclick="window.viewIndependentLog('nowHourly')"
+                                            style="background:none; border:none; cursor:pointer; opacity:0.6; font-size:0.8rem;">ℹ️</button>
+                                    </td>
                                 </tr>
                                 <tr>
                                     <td style="padding: 4px 0; color: var(--color-text-muted);">Daily</td>
-                                    <td style="text-align:right; font-weight:bold;" id="out-now-daily">$0</td>
+                                    <td style="text-align:right;">
+                                        <strong id="out-now-daily">$0</strong>
+                                        <button onclick="window.viewIndependentLog('nowDaily')"
+                                            style="background:none; border:none; cursor:pointer; opacity:0.6; font-size:0.8rem;">ℹ️</button>
+                                    </td>
                                 </tr>
                                 <tr>
                                     <td style="padding: 4px 0; color: var(--color-text-muted);">Weekly</td>
-                                    <td style="text-align:right; font-weight:bold;" id="out-now-weekly">$0</td>
+                                    <td style="text-align:right;">
+                                        <strong id="out-now-weekly">$0</strong>
+                                        <button onclick="window.viewIndependentLog('nowWeekly')"
+                                            style="background:none; border:none; cursor:pointer; opacity:0.6; font-size:0.8rem;">ℹ️</button>
+                                    </td>
                                 </tr>
                                 <tr>
                                     <td style="padding: 4px 0; color: var(--color-text-muted);">Monthly</td>
-                                    <td style="text-align:right; font-weight:bold;" id="out-now-monthly">$0</td>
+                                    <td style="text-align:right;">
+                                        <strong id="out-now-monthly">$0</strong>
+                                        <button onclick="window.viewIndependentLog('nowMonthly')"
+                                            style="background:none; border:none; cursor:pointer; opacity:0.6; font-size:0.8rem;">ℹ️</button>
+                                    </td>
                                 </tr>
                             </table>
                         </div>
@@ -260,18 +289,27 @@
                             <table style="width:100%; border-collapse: collapse; font-size: 0.9rem;">
                                 <tr>
                                     <td style="padding: 4px 0; color: var(--color-text-muted);">Hourly</td>
-                                    <td style="text-align:right; font-weight:bold; color: var(--color-accent-primary);"
-                                        id="out-goal-hourly">$0</td>
+                                    <td style="text-align:right; color: var(--color-accent-primary);">
+                                        <strong id="out-goal-hourly">$0</strong>
+                                        <button onclick="window.viewIndependentLog('goalHourly')"
+                                            style="background:none; border:none; cursor:pointer; opacity:0.6; font-size:0.8rem;">ℹ️</button>
+                                    </td>
                                 </tr>
                                 <tr>
                                     <td style="padding: 4px 0; color: var(--color-text-muted);">Daily</td>
-                                    <td style="text-align:right; font-weight:bold; color: var(--color-accent-primary);"
-                                        id="out-goal-daily">$0</td>
+                                    <td style="text-align:right; color: var(--color-accent-primary);">
+                                        <strong id="out-goal-daily">$0</strong>
+                                        <button onclick="window.viewIndependentLog('goalDaily')"
+                                            style="background:none; border:none; cursor:pointer; opacity:0.6; font-size:0.8rem;">ℹ️</button>
+                                    </td>
                                 </tr>
                                 <tr>
                                     <td style="padding: 4px 0; color: var(--color-text-muted);">Weekly</td>
-                                    <td style="text-align:right; font-weight:bold; color: var(--color-accent-primary);"
-                                        id="out-goal-weekly">$0</td>
+                                    <td style="text-align:right; color: var(--color-accent-primary);">
+                                        <strong id="out-goal-weekly">$0</strong>
+                                        <button onclick="window.viewIndependentLog('goalWeekly')"
+                                            style="background:none; border:none; cursor:pointer; opacity:0.6; font-size:0.8rem;">ℹ️</button>
+                                    </td>
                                 </tr>
                                 <tr>
                                     <td style="padding: 4px 0; color: var(--color-text-muted);">Monthly</td>
@@ -316,20 +354,46 @@
         </form>
     </dialog>
 
+    <!-- Modal: Math Log -->
+    <div id="modal-math-log"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
+        <div
+            style="background:var(--color-bg-base); padding:20px; border-radius:8px; max-width:600px; width:90%; box-shadow:0 4px 12px rgba(0,0,0,0.2);">
+            <div
+                style="border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="margin:0;">Calculation Details</h3>
+                <button onclick="document.getElementById('modal-math-log').style.display='none'"
+                    style="background:none; border:none; font-size:1.5rem; cursor:pointer;">&times;</button>
+            </div>
+            <div id="math-log-content"
+                style="max-height:400px; overflow-y:auto; font-family:var(--font-mono); font-size:0.9rem; line-height:1.6;">
+                <!-- JS Injected Content -->
+            </div>
+            <div style="text-align:right; margin-top:20px;">
+                <button onclick="document.getElementById('modal-math-log').style.display='none'"
+                    class="btn">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script src="js/utils.js"></script>
     <script src="js/supabase_client.js"></script>
     <script src="js/store.js"></script>
     <script src="js/independent.js"></script>
     <script>
-        // Auth Check
+        // Authentication Check
         (async () => {
-            const currentUser = await Store.checkSession();
-            if (currentUser) {
-                document.getElementById('user-display').textContent = 'User: ' + currentUser;
-            }
+            const user = await Store.checkSession();
+            if (!user) return; // Store handles redirect
+
+            // Check for Local Legacy Data
+            // (Migration Tool Removed - Data Cleared)
+
+            init();
         })();
     </script>
 </body>
 
 </html>
+```
