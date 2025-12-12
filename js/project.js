@@ -1031,6 +1031,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Button: Add Funding (Open Modal - Clean)
         if (btn.id === 'btn-open-income-modal') {
+            alert("Debug: Opening Funding Modal"); // FORCE DEBUG
             document.getElementById('income-id').value = '';
             document.getElementById('income-name').value = '';
             document.getElementById('income-amount').value = '';
