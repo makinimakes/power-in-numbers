@@ -178,31 +178,55 @@ const Store = {
      * 1. Check if user exists (requires Public Profiles).
      * 2. Add to project_members.
      */
-    inviteUser: async (projectId, email) => {
-        // 1. Find User
-        const userProfile = await Store.findUserByEmail(email);
-        if (!userProfile) {
-            throw new Error(`User with email ${email} not found. They must sign up first.`);
+    init: async () => {
+        // Initialize Supabase Client
+        if (window.supabase) {
+            window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            console.log("Supabase Client Initialized");
+
+            // Check session and claim invites if logged in
+            const { data: { session } } = await window.supabaseClient.auth.getSession();
+            if (session) {
+                try {
+                    await window.supabaseClient.rpc('claim_invites');
+                } catch (e) {
+                    console.log("Claim Invites check (silent fail):", e);
+                }
+            }
+        } else {
+            console.error("Supabase SDK not found!");
         }
-
-        // 2. Add to project_members table
-        // We first need the UUID from the profiles table lookup.
-        // findUserByEmail returns { username, email, fullName, independentProfile } 
-        // We need to update findUserByEmail to return ID or do a raw lookup here.
-        // Let's do a raw lookup here to be safe and get the ID.
-
-        const { data: profileData, error: profileError } = await window.supabaseClient
-            .from('profiles')
-            .select('id')
-            .eq('email', email)
-            .single();
-
-        if (profileError || !profileData) {
-            throw new Error(`User ${email} not found.`);
+    },
+    const { data: { session } } = await window.supabaseClient.auth.getSession();
+    if(session) {
+        try {
+            await window.supabaseClient.rpc('claim_invites');
+        } catch (e) {
+            console.log("Claim Invites check (silent fail):", e);
         }
+    }
+} else {
+    console.error("Supabase SDK not found!");
+}
+},
 
+/**
+ * Invite a user to a project by email.
+ * 1. Check if user exists (requires Public Profiles).
+ * 2. If yes, Add to project_members.
+ * 3. If no, Add to project_invites (Pending).
+ */
+inviteUser: async (projectId, email) => {
+    // 1. Try to Find User ID first
+    const { data: profileData, error: profileError } = await window.supabaseClient
+        .from('profiles')
+        .select('id')
+        .eq('email', email)
+        .single();
+
+    // 2. If User Found -> Add to Members
+    if (profileData && profileData.id) {
         const userId = profileData.id;
-
         const { error: insertError } = await window.supabaseClient
             .from('project_members')
             .insert([{
@@ -212,15 +236,33 @@ const Store = {
             }]);
 
         if (insertError) {
-            // Unique violation means already invited
-            if (insertError.code === '23505') {
-                throw new Error("User is already a member of this project.");
-            }
+            if (insertError.code === '23505') throw new Error("User is already a member.");
             throw insertError;
         }
+        return { status: 'added', message: 'User added to project.' };
+    }
 
-        return true;
-    },
+    // 3. User Not Found -> Add to Invites
+    else {
+        // We need the current user ID for 'invited_by'
+        const { data: { user } } = await window.supabaseClient.auth.getUser();
+        if (!user) throw new Error("You must be logged in to invite.");
+
+        const { error: inviteError } = await window.supabaseClient
+            .from('project_invites')
+            .insert([{
+                project_id: projectId,
+                email: email,
+                invited_by: user.id
+            }]);
+
+        if (inviteError) {
+            if (inviteError.code === '23505') throw new Error("User already invited.");
+            throw inviteError;
+        }
+        return { status: 'invited', message: 'User not found. Invite sent (Pending).' };
+    }
+},
 
     getProject: async (id) => {
         const { data, error } = await window.supabaseClient
@@ -241,148 +283,148 @@ const Store = {
         return { ...data.data, id: data.id, name: data.name, owner_id: data.owner_id };
     },
 
-    saveProject: async (project) => {
-        const user = await Store.getCurrentUser();
-        if (!user) return;
+        saveProject: async (project) => {
+            const user = await Store.getCurrentUser();
+            if (!user) return;
 
-        const payload = {
-            id: project.id, // CRITICAL: Required for Upsert to update existing row
-            name: project.name,
-            data: project, // Storing full object in JSONB
-            owner_id: user.id
-        };
+            const payload = {
+                id: project.id, // CRITICAL: Required for Upsert to update existing row
+                name: project.name,
+                data: project, // Storing full object in JSONB
+                owner_id: user.id
+            };
 
-        if (project.id && !project.id.includes('-')) {
-            // Legacy numeric ID check? No, all UUIDs now.
-            // Just proceed to payload.
-        }
+            if (project.id && !project.id.includes('-')) {
+                // Legacy numeric ID check? No, all UUIDs now.
+                // Just proceed to payload.
+            }
 
-        // Use UPSERT for simplicity (Insert if new/ID not found, Update if ID found)
-        // Note: For this to work, ID must be a primary key.
-        const { data, error } = await window.supabaseClient
-            .from('projects')
-            .upsert(payload)
-            .select()
-            .single();
+            // Use UPSERT for simplicity (Insert if new/ID not found, Update if ID found)
+            // Note: For this to work, ID must be a primary key.
+            const { data, error } = await window.supabaseClient
+                .from('projects')
+                .upsert(payload)
+                .select()
+                .single();
 
-        if (error) {
-            console.error("Save Project Error", error);
-            throw error;
-        }
+            if (error) {
+                console.error("Save Project Error", error);
+                throw error;
+            }
 
-        // Return merged data (DB truth)
-        // Ensure we merge back the full 'data' json column into the object structure
-        // The DB returns: { id, name, owner_id, data: {...}, created_at }
-        // We want to return the 'expanded' object.
-        const merged = { ...data.data, id: data.id, name: data.name, owner_id: data.owner_id };
-        return merged;
-    },
+            // Return merged data (DB truth)
+            // Ensure we merge back the full 'data' json column into the object structure
+            // The DB returns: { id, name, owner_id, data: {...}, created_at }
+            // We want to return the 'expanded' object.
+            const merged = { ...data.data, id: data.id, name: data.name, owner_id: data.owner_id };
+            return merged;
+        },
 
-    /**
-     * Delete a project by ID
-     */
-    deleteProject: async (id) => {
-        const user = await Store.getCurrentUser();
-        if (!user) return;
+            /**
+             * Delete a project by ID
+             */
+            deleteProject: async (id) => {
+                const user = await Store.getCurrentUser();
+                if (!user) return;
 
-        // Perform delete
-        // RLS policies should prevent deleting projects you don't own
-        const { error } = await window.supabaseClient
-            .from('projects')
-            .delete()
-            .eq('id', id);
+                // Perform delete
+                // RLS policies should prevent deleting projects you don't own
+                const { error } = await window.supabaseClient
+                    .from('projects')
+                    .delete()
+                    .eq('id', id);
 
-        if (error) {
-            console.error("Delete Project Error:", error);
-            throw error;
-        }
-        return true;
-    },
-
-    // Helper to find users (for collaboration)
-    findUserByEmail: async (email) => {
-        // Requires RLS policy 'Public profiles are viewable by everyone'
-        const { data, error } = await window.supabaseClient
-            .from('profiles')
-            .select('*')
-            .eq('email', email)
-            .single();
-
-        if (error || !data) return null;
-
-        return {
-            username: data.email, // Map email to legacy username field
-            email: data.email,
-            fullName: data.full_name,
-            independentProfile: data.independent_profile
-        };
-    },
-
-    // Helper: Map of all users (Deprecated in Async World, but used by Project.js)
-    // We must replace usages of `Store.getUsers()` with individual lookups or a batch fetch.
-    // For now, we can implement a method that fetches ALL profiles if the user base is small, 
-    // OR we change the project logic.
-    // Given the prompt "collaborators to observe", let's try to fetch all needed profiles via `getProjectTeam`.
-
-    getUsersMap: async (emailsArray) => {
-        if (!emailsArray || emailsArray.length === 0) return {};
-
-        const { data, error } = await window.supabaseClient
-            .from('profiles')
-            .select('*')
-            .in('email', emailsArray);
-
-        const map = {};
-        if (data) {
-            data.forEach(p => {
-                map[p.email] = {
-                    username: p.email,
-                    email: p.email,
-                    fullName: p.full_name,
-                    independentProfile: p.independent_profile
-                };
-            });
-        }
-        return map;
-    },
-
-    createProject: async (name) => {
-        const user = await Store.getCurrentUser();
-
-        // Fetch full profile for the creator
-        const profile = await Store.getIndependentProfile();
-
-        const newProject = {
-            id: crypto.randomUUID ? crypto.randomUUID() : undefined, // Let Supabase gen ID if crypto missing
-            name: name,
-            owner: user.email,
-            teamMembers: [],
-            incomeSources: [],
-            phases: [
-                {
-                    id: crypto.randomUUID(),
-                    name: 'Phase 1',
-                    schedule: {},
-                    lineItems: [],
-                    overrides: {}
+                if (error) {
+                    console.error("Delete Project Error:", error);
+                    throw error;
                 }
-            ],
-            totalBudget: 0
-        };
+                return true;
+            },
 
-        // Auto-add creator
-        newProject.teamMembers.push({
-            id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(), // Fallback for file://
-            name: profile.fullName || "Me",
-            rate: 0,
-            days: 0,
-            username: user.email,
-            email: user.email
-        });
+                // Helper to find users (for collaboration)
+                findUserByEmail: async (email) => {
+                    // Requires RLS policy 'Public profiles are viewable by everyone'
+                    const { data, error } = await window.supabaseClient
+                        .from('profiles')
+                        .select('*')
+                        .eq('email', email)
+                        .single();
 
-        // Save and Return the DB version (which has the authoritative ID)
-        return await Store.saveProject(newProject);
-    }
+                    if (error || !data) return null;
+
+                    return {
+                        username: data.email, // Map email to legacy username field
+                        email: data.email,
+                        fullName: data.full_name,
+                        independentProfile: data.independent_profile
+                    };
+                },
+
+                    // Helper: Map of all users (Deprecated in Async World, but used by Project.js)
+                    // We must replace usages of `Store.getUsers()` with individual lookups or a batch fetch.
+                    // For now, we can implement a method that fetches ALL profiles if the user base is small, 
+                    // OR we change the project logic.
+                    // Given the prompt "collaborators to observe", let's try to fetch all needed profiles via `getProjectTeam`.
+
+                    getUsersMap: async (emailsArray) => {
+                        if (!emailsArray || emailsArray.length === 0) return {};
+
+                        const { data, error } = await window.supabaseClient
+                            .from('profiles')
+                            .select('*')
+                            .in('email', emailsArray);
+
+                        const map = {};
+                        if (data) {
+                            data.forEach(p => {
+                                map[p.email] = {
+                                    username: p.email,
+                                    email: p.email,
+                                    fullName: p.full_name,
+                                    independentProfile: p.independent_profile
+                                };
+                            });
+                        }
+                        return map;
+                    },
+
+                        createProject: async (name) => {
+                            const user = await Store.getCurrentUser();
+
+                            // Fetch full profile for the creator
+                            const profile = await Store.getIndependentProfile();
+
+                            const newProject = {
+                                id: crypto.randomUUID ? crypto.randomUUID() : undefined, // Let Supabase gen ID if crypto missing
+                                name: name,
+                                owner: user.email,
+                                teamMembers: [],
+                                incomeSources: [],
+                                phases: [
+                                    {
+                                        id: crypto.randomUUID(),
+                                        name: 'Phase 1',
+                                        schedule: {},
+                                        lineItems: [],
+                                        overrides: {}
+                                    }
+                                ],
+                                totalBudget: 0
+                            };
+
+                            // Auto-add creator
+                            newProject.teamMembers.push({
+                                id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(), // Fallback for file://
+                                name: profile.fullName || "Me",
+                                rate: 0,
+                                days: 0,
+                                username: user.email,
+                                email: user.email
+                            });
+
+                            // Save and Return the DB version (which has the authoritative ID)
+                            return await Store.saveProject(newProject);
+                        }
 };
 
 // Temp helper to check if ID is UUID (server side) vs something else? 

@@ -1001,29 +1001,52 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('new-phase-name').value = '';
             document.getElementById('modal-add-phase').style.display = 'flex';
             document.getElementById('new-phase-name').focus();
-        }
+            btnSave.onclick = async () => {
+                try {
+                    btnSave.disabled = true;
+                    btnSave.textContent = "Inviting...";
+                    const result = await Store.inviteUser(project.id, foundUser ? foundUser.email : email);
 
-        // Button: Save New Phase
-        if (btn.id === 'btn-save-new-phase') {
-            const name = document.getElementById('new-phase-name').value;
-            if (name && name.trim() !== "") {
-                project.phases.push({
-                    id: crypto.randomUUID(),
-                    name: name.trim(),
-                    isActive: true, // Auto-enabled
-                    lineItems: [],
-                    schedule: {}
-                });
-                Store.saveProject(project);
-                render();
-                document.getElementById('modal-add-phase').style.display = 'none';
-            } else {
-                alert("Please enter a phase name.");
-            }
-        }
+                    // Handle result (added or invited)
+                    if (result.status === 'added') {
+                        alert('User successfully added!');
+                    } else {
+                        alert('User invited! They will be added automatically when they sign up.');
+                    }
 
-        // Button: Rename Phase
-        if (btn.classList.contains('btn-edit-phase')) {
+                    window.closeModal();
+                    renderFn(); // Reload list
+                } catch (e) {
+                    alert("Error inviting user: " + e.message);
+                    btnSave.disabled = false;
+                    btnSave.textContent = "Add / Invite";
+                }
+            };
+
+        } else {
+            foundUser = null;
+            // Pending Logic Support
+            statusMsg.textContent = "User not found. Click to send an Invite.";
+            statusMsg.style.color = 'orange';
+            btnSave.style.display = 'block';
+            btnSave.textContent = "Send Invite";
+
+            // Re-bind save for Pending
+            btnSave.onclick = async () => {
+                try {
+                    btnSave.disabled = true;
+                    btnSave.textContent = "Sending...";
+                    const result = await Store.inviteUser(project.id, email); // email from input
+                    alert('Invitation sent! They will join the project upon signup.');
+                    window.closeModal();
+                    renderFn();
+                } catch (e) {
+                    alert("Error sending invite: " + e.message);
+                    btnSave.disabled = false;
+                    btnSave.textContent = "Send Invite";
+                }
+            };
+        } (btn.classList.contains('btn-edit-phase')) {
             const id = btn.dataset.phase;
             const phase = project.phases.find(p => p.id === id);
             if (phase) {
@@ -1511,6 +1534,25 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const p = profileMap[ownerId];
                 const statsHtml = getStats(p);
                 ownerDiv.innerHTML = `<strong>Owner</strong><br>${p.full_name || 'Unknown Name'}<br><span style="font-size:0.7rem; color:gray;">${p.email}</span>${statsHtml}`;
+            }
+
+            // 5. Fetch Pending Invites (Project Invites table)
+            const { data: inviteData } = await window.supabaseClient
+                .from('project_invites')
+                .select('email, invited_at')
+                .eq('project_id', currentId);
+
+            // Render Pending Invites
+            if (inviteData && inviteData.length > 0) {
+                inviteData.forEach(inv => {
+                    const d = document.createElement('div');
+                    d.className = 'summary-card';
+                    d.style.padding = '10px';
+                    d.style.minWidth = '200px';
+                    d.style.border = '1px dashed #ccc'; // Distinct style for pending
+                    d.innerHTML = `<strong>Invited</strong><br>${inv.email}<br><span style="font-size:0.7rem; color:orange;">Pending Signup</span>`;
+                    list.appendChild(d);
+                });
             }
 
             // 4. Render Members (Skip Owner)
