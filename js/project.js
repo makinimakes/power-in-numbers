@@ -1486,11 +1486,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const days = parseFloat(sched.days) || 0;
                 // const weeks = sched.weeks || 0; // Not needed for this specific display
 
+                // Calculate Billable Capacity (accounting for Admin/Non-Billable work)
+                // Use Utils (which is already loaded)
+                const capacity = Utils.calculateBillableCapacity(ip);
+                const pBillable = capacity.billableRatio || 0; // e.g., 0.85
+
                 let stats = [];
                 if (goalRate > 0) stats.push(`Goal: ${Utils.formatCurrency(goalRate)}/hr`);
 
-                const weeklyHours = hours * days;
-                if (weeklyHours > 0) stats.push(`Billable Hours per week: ${weeklyHours}`);
+                // Total Weekly Hours = Hours/Day * Days/Week (Already in variables hours, days)
+                const totalWeeklyHours = hours * days;
+
+                // Effective Billable Hours = Total * Ratio
+                // Round to 1 decimal for cleanliness
+                const effectiveBillable = Math.round((totalWeeklyHours * pBillable) * 10) / 10;
+
+                if (effectiveBillable > 0) stats.push(`Billable Hours per week: ${effectiveBillable}`);
 
                 return stats.length > 0 ? `<br><span style="font-size:0.7rem; color:#666; font-style:italic;">${stats.join(' • ')}</span>` : '';
             };
