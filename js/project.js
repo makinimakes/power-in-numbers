@@ -1482,12 +1482,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 const sched = ip.schedule || {};
-                const hours = sched.hours || 0;
-                const weeks = sched.weeks || 0;
+                const hours = parseFloat(sched.hours) || 0;
+                const days = parseFloat(sched.days) || 0;
+                // const weeks = sched.weeks || 0; // Not needed for this specific display
 
                 let stats = [];
                 if (goalRate > 0) stats.push(`Goal: ${Utils.formatCurrency(goalRate)}/hr`);
-                if (hours > 0 && weeks > 0) stats.push(`Sched: ${weeks}wks @ ${hours}hrs`);
+
+                const weeklyHours = hours * days;
+                if (weeklyHours > 0) stats.push(`Billable Hours per week: ${weeklyHours}`);
 
                 return stats.length > 0 ? `<br><span style="font-size:0.7rem; color:#666; font-style:italic;">${stats.join(' • ')}</span>` : '';
             };
