@@ -1415,6 +1415,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             const email = document.getElementById('invite-email').value.trim();
             const btn = document.getElementById('btn-confirm-invite');
 
+            // Force debug check for user
+            console.log("Input value:", email);
+
+            if (!email) {
+                // Double check by ID
+                const rawVal = document.getElementById('invite-email').value;
+                if (!rawVal) {
+                    alert("Please enter an email (Input appears empty).");
+                    return;
+                }
+            }// console.log("Invite Email Value:", email);
+            if (window.location.search.includes("debug")) alert("Debug Email Value: [" + email + "]");
+
             if (!email) {
                 alert("Please enter an email.");
                 return;
