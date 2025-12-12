@@ -367,6 +367,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderPhases();
         renderSummary(); // Updates Scenarios
         renderShares(); // NEW
+        renderGlobalRates(); // Populate Inputs
     }
 
     function renderGlobalRates() {
