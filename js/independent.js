@@ -298,6 +298,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 card.appendChild(actsContainer);
                 LineManager.container.appendChild(card);
             });
+
+            // Add "New Line" button at the bottom if there are any lines
+            if (profile.linesOfWork.length > 0) {
+                const bottomBtn = document.createElement('button');
+                bottomBtn.innerText = "+ New Line";
+                bottomBtn.style.fontSize = "0.8rem";
+                bottomBtn.style.padding = "5px 10px";
+                bottomBtn.style.marginTop = "10px";
+                bottomBtn.style.cursor = "pointer";
+                bottomBtn.style.width = "100%";
+                bottomBtn.style.border = "1px dashed #ccc";
+                bottomBtn.style.background = "#fafafa";
+
+                bottomBtn.onclick = () => LineManager.addLine();
+                LineManager.container.appendChild(bottomBtn);
+            }
         },
 
         addLine: () => {
