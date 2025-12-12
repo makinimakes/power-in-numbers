@@ -1472,7 +1472,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (err) {
             console.error("Error loading collaborators:", err);
             const list = document.getElementById('collaborators-list');
-            if (list) list.innerHTML += `<div style="color:red; font-size:0.8rem;">Error loading members.</div>`;
+            // DEBUG: Show actual error on screen
+            if (list) list.innerHTML += `<div style="color:red; font-size:0.8rem;">Error: ${err.message || err.toString()}</div>`;
         }
     }
 
