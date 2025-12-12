@@ -1003,7 +1003,33 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('new-phase-name').value = '';
             document.getElementById('modal-add-phase').style.display = 'flex';
             document.getElementById('new-phase-name').focus();
-            // Legacy direct binding moved to separate handler or global save
+        }
+
+        // Button: Confirm Create Phase
+        if (btn.id === 'btn-save-new-phase') {
+            const name = document.getElementById('new-phase-name').value;
+            if (name) {
+                const proj = window._project || project;
+                proj.phases.push({
+                    id: Utils.generateId(),
+                    name: name,
+                    weeks: 0,
+                    hours: 0,
+                    lineItems: [],
+                    workers: {},
+                    overrides: {}
+                });
+                try {
+                    await Store.saveProject(proj);
+                    document.getElementById('modal-add-phase').style.display = 'none';
+                    render();
+                } catch (err) {
+                    console.error("Error creating phase:", err);
+                    alert("Failed to create phase.");
+                }
+            } else {
+                alert("Please enter a phase name.");
+            }
         }
 
         // Button: Rename Phase
