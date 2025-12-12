@@ -1031,7 +1031,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Button: Add Funding (Open Modal - Clean)
         if (btn.id === 'btn-open-income-modal') {
-            alert("Debug: Opening Funding Modal"); // FORCE DEBUG
             document.getElementById('income-id').value = '';
             document.getElementById('income-name').value = '';
             document.getElementById('income-amount').value = '';
@@ -1041,7 +1040,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Button: Edit Funding (Open Modal - Populate)
         if (btn.classList.contains('btn-edit-funding')) {
             const id = btn.dataset.id;
-            const source = project.incomeSources.find(s => s.id === id);
+            const proj = window._project || project; // Fallback
+            const source = proj.incomeSources.find(s => s.id === id);
             if (source) {
                 document.getElementById('income-id').value = source.id;
                 document.getElementById('income-name').value = source.name;
