@@ -1103,11 +1103,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Button: Phase Settings
         // Button: Save Funding / Income
         if (btn.id === 'btn-save-income') {
-            // alert("Debug: Clicked Save Source!"); // FORCE DEBUG
+            console.log("Debug: Save Source Clicked");
+
             const id = document.getElementById('income-id').value;
             const name = document.getElementById('income-name').value;
             const amount = parseFloat(document.getElementById('income-amount').value) || 0;
             const status = document.getElementById('income-status') ? document.getElementById('income-status').value : 'Confirmed';
+
+            console.log("Debug: Inputs", { id, name, amount, status });
 
             if (!name) {
                 alert('Please enter a name for the funding source.');
