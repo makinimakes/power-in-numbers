@@ -1302,46 +1302,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // 5. Global Change Listener (Toggles, Inputs)
-    document.addEventListener('change', (e) => {
+    document.addEventListener('change', async (e) => {
         const target = e.target;
+        // console.log("Change Event:", target);
 
         // Toggle Worker Presence
         if (target.classList.contains('cb-worker-present')) {
-            // ...
-        }
-
-        // Project Wage Modifiers
-        if (target.id === 'project-min-mod' || target.id === 'project-max-mod') {
-            const minVal = parseFloat(document.getElementById('project-min-mod').value) || 100;
-            const maxVal = parseFloat(document.getElementById('project-max-mod').value) || 100;
-
-            project.minModifier = minVal;
-            project.maxModifier = maxVal;
-
-            Store.saveProject(project);
-            render();
-        }
-
-        // Project Global Rates (Pay/Expense)
-        if (target.id === 'project-global-pay-rate' || target.id === 'project-global-expense-rate') {
-            project.payRate = parseFloat(document.getElementById('project-global-pay-rate').value) || 100;
-            project.expenseRate = parseFloat(document.getElementById('project-global-expense-rate').value) || 100;
-
-            Store.saveProject(project);
-            render();
-        }
-
-        if (target.classList.contains('cb-worker-present')) {
             const pId = target.dataset.phase;
             const wId = target.dataset.worker;
-            const phase = project.phases.find(p => p.id === pId);
+
+            // console.log("Toggle Worker:", pId, wId, target.checked);
+
+            const proj = window._project || project;
+            const phase = proj.phases.find(p => p.id === pId);
             if (phase) {
                 if (!phase.workers) phase.workers = {};
                 if (!phase.workers[wId]) phase.workers[wId] = {};
 
                 phase.workers[wId].isPresent = target.checked;
-                Store.saveProject(project);
-                render();
+
+                try {
+                    await Store.saveProject(proj);
+                    render();
+                } catch (err) {
+                    console.error("Error saving worker toggle:", err);
+                    alert("Failed to save worker state.");
+                }
             }
         }
 
