@@ -653,28 +653,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 // NOW Fees
                 nowHourly: [
                     { formula: "Current Gross Income", value: currentGross },
-                    { formula: `Total Billable Hours (${formatNumber(schedule.weeks)} wks * ${formatNumber(schedule.days)} days * ${formatNumber(schedule.hours)} hrs)`, value: schedule.hours * schedule.days * schedule.weeks },
-                    { formula: "Hourly Rate = Gross / Total Hours", value: nowFees.hourly }
+                    { formula: `Total Billable Hours (Total Capacity - Non-Billable)`, value: totalBillable },
+                    { formula: "Hourly Rate = Gross / Total Billable Hours", value: nowFees.hourly }
                 ],
                 nowDaily: [
-                    { formula: "Current Gross Income", value: currentGross },
-                    { formula: `Total Billable Days (${formatNumber(schedule.weeks)} wks * ${formatNumber(schedule.days)} days)`, value: schedule.days * schedule.weeks },
-                    { formula: "Daily Rate = Gross / Total Days", value: nowFees.daily }
+                    { formula: "Hourly Rate", value: nowFees.hourly },
+                    { formula: `Hours per Day`, value: schedule.hours },
+                    { formula: "Daily Rate = Hourly * Hours/Day", value: nowFees.daily }
                 ],
                 nowWeekly: [
-                    { formula: "Current Gross Income", value: currentGross },
-                    { formula: `Total Work Weeks`, value: schedule.weeks },
-                    { formula: "Weekly Rate = Gross / Total Weeks", value: nowFees.weekly }
+                    { formula: "Daily Rate", value: nowFees.daily },
+                    { formula: `Work Days per Week`, value: schedule.days },
+                    { formula: "Weekly Rate = Daily * Days/Week", value: nowFees.weekly }
                 ],
                 nowMonthly: [
-                    { formula: "Current Gross Income", value: currentGross },
-                    { formula: "Months per Year", value: 12 },
-                    { formula: "Monthly Rate = Gross / 12", value: nowFees.monthly }
+                    { formula: "Weekly Rate", value: nowFees.weekly },
+                    { formula: "Weeks per Year", value: schedule.weeks },
+                    { formula: "Monthly Rate = (Weekly * Weeks) / 12", value: nowFees.monthly }
                 ],
                 // GOAL Fees
                 goalHourly: [
                     { formula: "Goal Gross Income", value: goalGross },
-                    { formula: `Total Billable Hours (${formatNumber(schedule.weeks)} wks * ${formatNumber(schedule.days)} days * ${formatNumber(schedule.hours)} hrs less non-billable)`, value: totalBillable },
+                    { formula: `Total Billable Hours (Total Capacity - Non-Billable)`, value: totalBillable },
                     { formula: "Hourly Rate = Gross / Total Billable Hours", value: goalFees.hourly }
                 ],
                 goalDaily: [
@@ -683,14 +683,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     { formula: "Daily Rate = Hourly * Hours/Day", value: goalFees.daily }
                 ],
                 goalWeekly: [
-                    { formula: "Goal Gross Income", value: goalGross },
-                    { formula: `Total Work Weeks`, value: schedule.weeks },
-                    { formula: "Weekly Rate = Gross / Total Weeks", value: goalFees.weekly }
+                    { formula: "Daily Rate", value: goalFees.daily },
+                    { formula: `Work Days per Week`, value: schedule.days },
+                    { formula: "Weekly Rate = Daily * Days/Week", value: goalFees.weekly }
                 ],
                 goalMonthly: [
-                    { formula: "Goal Gross Income", value: goalGross },
-                    { formula: "Months per Year", value: 12 },
-                    { formula: "Monthly Rate = Gross / 12", value: goalFees.monthly }
+                    { formula: "Weekly Rate", value: goalFees.weekly },
+                    { formula: "Weeks per Year", value: schedule.weeks },
+                    { formula: "Monthly Rate = (Weekly * Weeks) / 12", value: goalFees.monthly }
                 ]
             };
         } catch (e) {
