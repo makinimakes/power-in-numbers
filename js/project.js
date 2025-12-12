@@ -1172,6 +1172,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Populate Modal
                 document.getElementById('phase-settings-id').value = pId;
                 document.getElementById('phase-name-edit').value = phase.name;
+                document.getElementById('phase-desc-edit').value = phase.description || '';
                 document.getElementById('phase-weeks').value = phase.weeks || '';
                 document.getElementById('phase-hours').value = phase.hours || '';
                 document.getElementById('phase-pay-rate').value = phase.payRate || '';
@@ -1255,6 +1256,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const phase = project.phases.find(p => p.id === pId);
             if (phase) {
                 phase.name = document.getElementById('phase-name-edit').value;
+                phase.description = document.getElementById('phase-desc-edit').value;
                 phase.weeks = parseFloat(document.getElementById('phase-weeks').value) || 0;
                 phase.hours = parseFloat(document.getElementById('phase-hours').value) || 0;
                 phase.payRate = parseFloat(document.getElementById('phase-pay-rate').value) || null;
