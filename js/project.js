@@ -1331,6 +1331,27 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
+        // Project Wage Modifiers
+        if (target.id === 'project-min-mod' || target.id === 'project-max-mod') {
+            const minVal = parseFloat(document.getElementById('project-min-mod').value) || 100;
+            const maxVal = parseFloat(document.getElementById('project-max-mod').value) || 100;
+
+            project.minModifier = minVal;
+            project.maxModifier = maxVal;
+
+            Store.saveProject(project);
+            render();
+        }
+
+        // Project Global Rates (Pay/Expense)
+        if (target.id === 'project-global-pay-rate' || target.id === 'project-global-expense-rate') {
+            project.payRate = parseFloat(document.getElementById('project-global-pay-rate').value) || 100;
+            project.expenseRate = parseFloat(document.getElementById('project-global-expense-rate').value) || 100;
+
+            Store.saveProject(project);
+            render();
+        }
+
         // Toggle All Labor
         if (target.classList.contains('cb-toggle-all-labor')) {
             const pId = target.dataset.phase;
