@@ -618,10 +618,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // Calculate breakdown for logs
         let monthlySum = 0;
         let periodicSum = 0;
+        let percentSumLog = 0;
         profile.expenses.items.forEach(item => {
             const amount = parseFloat(item.amount) || 0;
             if (item.type === 'Monthly') monthlySum += amount;
             if (item.type === 'Periodic') periodicSum += (amount * (item.frequency || 1));
+            if (item.type === 'Percent') percentSumLog += amount;
         });
 
         // Helper aliases
@@ -631,15 +633,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const formatCurrency = Utils.formatCurrency;
         const taxRateVal = taxRate;
 
+        // Build Goal Net Log dynamically
+        const goalNetLog = [
+            { formula: "Sum of Expenses (Monthly Items)", value: monthlySum * 12 },
+            { formula: "Sum of Expenses (Periodic Items)", value: periodicSum },
+            { formula: "Total Fixed Expenses", value: (monthlySum * 12) + periodicSum }
+        ];
+
+        if (percentSumLog > 0) {
+            goalNetLog.push({ formula: `Plus Percent Adjustments (Savings/Profit)`, value: `${percentSumLog}%`, formatter: 'none' });
+            goalNetLog.push({ formula: `Formula: Fixed Expenses / (1 - ${percentSumLog}%)`, value: `1 / ${formatNumber(1 - (percentSumLog / 100))}`, formatter: 'none' });
+        }
+
+        goalNetLog.push({ formula: "Goal Net Income", value: goalNetWork });
+
         // Populate Math Logs
         try {
             window._mathLogs = {
-                goalNet: [
-                    { formula: "Sum of Expenses (Monthly Items)", value: monthlySum * 12 },
-                    { formula: "Sum of Expenses (Periodic Items)", value: periodicSum },
-                    { formula: "Total Expenses (Before Tax)", value: (monthlySum * 12) + periodicSum },
-                    { formula: "Goal Net Income (Expenses + Savings/Profit)", value: goalNetWork }
-                ],
+                goalNet: goalNetLog,
                 currentGross: [
                     { formula: "Current Net Income (Input)", value: currentNet },
                     { formula: `Gross Up Factor: 1 / (1 - ${formatNumber(taxRateVal)}%)`, value: 1 / ((100 - taxRateVal) / 100) },
