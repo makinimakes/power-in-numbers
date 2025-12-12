@@ -8,7 +8,7 @@
 const expensesList = document.getElementById('expenses-list');
 const btnReset = document.getElementById('btn-reset');
 const outTotalAllocated = document.getElementById('out-total-allocated');
-const outRecalibratedGross = document.getElementById('out-recalibrated-gross');
+
 
 let profile = {}; // Init empty
 
@@ -171,11 +171,7 @@ function updateCalculations() {
     // For now, it stays as Current Net because we aren't driving it.
     // outRecalibratedNet.textContent = formatMoney(profile.currentNetIncome || 0);
 
-    // Gross
-    // Gross (Match logic from independent.js: Net * (1 + TaxRate))
-    const taxRate = (profile.expenses && profile.expenses.taxRate) ? parseFloat(profile.expenses.taxRate) / 100 : 0.3;
-    const gross = (profile.currentNetIncome || 0) * (1 + taxRate);
-    outRecalibratedGross.textContent = formatMoney(gross);
+
 }
 
 function renderExpenses() {
