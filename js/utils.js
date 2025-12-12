@@ -19,6 +19,10 @@ const Utils = {
         }).format(amount);
     },
 
+    generateId: () => {
+        return crypto.randomUUID ? crypto.randomUUID() : 'id-' + Math.random().toString(36).substr(2, 9);
+    },
+
     // Calculate Rate based on Income approach
     calculateRateFromIncome: (annualIncome, weeks, days) => {
         if (!weeks || !days) return 0;
