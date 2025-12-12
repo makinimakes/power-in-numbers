@@ -1140,10 +1140,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-        // Button: Add Funding (Open Modal)
-        if (btn.id === 'btn-open-income-modal') {
-            document.getElementById('modal-add-income').style.display = 'flex';
-        }
+
 
         // Button: Phase Settings
         if (btn.classList.contains('btn-phase-settings')) {
