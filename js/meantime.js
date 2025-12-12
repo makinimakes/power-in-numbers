@@ -8,6 +8,7 @@ const outSelectCount = document.getElementById('select-count');
 const outCurrentNet = document.getElementById('out-current-net');
 const outAdjustment = document.getElementById('out-adjustment');
 const outNetPrime = document.getElementById('out-net-prime');
+const outGrossPrime = document.getElementById('out-gross-prime');
 
 let profile = {};
 let selectedItems = []; // Array of { id, currentVal, goalVal }
@@ -99,6 +100,11 @@ function updateCalculations() {
     // NetPRIME
     const netPrime = currentNet + displayAdjustment;
     outNetPrime.textContent = Utils.formatCurrency(netPrime);
+
+    // GrossPRIME (Net * (1 + TaxRate))
+    const taxRate = (profile.expenses && profile.expenses.taxRate) ? parseFloat(profile.expenses.taxRate) / 100 : 0.3;
+    const grossPrime = netPrime * (1 + taxRate);
+    if (outGrossPrime) outGrossPrime.textContent = Utils.formatCurrency(grossPrime);
 
     // Update Count UI
     outSelectCount.textContent = `${selectedItems.length}/${MAX_SELECTION} selected`;
