@@ -15,9 +15,6 @@ let profile = {}; // Init empty
 
 // Local state
 let expenseState = [];
-let driverIndex = -1; // -1 means no driver (Fixed Income Mode)
-let currentDrivenNet = 0; // The calculated Net Income
-let currentDriverOverride = 0; // The user's manual input for the driver
 
 async function init() {
     // Load data
@@ -25,8 +22,6 @@ async function init() {
 
     // If profile is empty or default not fully populated yet (race condition?), handle gracefully
     if (!profile.expenses) profile.expenses = { items: [] };
-
-    currentDrivenNet = profile.currentNetIncome || 0;
 
     // 1. Calculate Goal Net (Total) based on Main Profile to determine percentages
     let fixedSum = 0;
@@ -74,7 +69,7 @@ async function init() {
         } else {
             // Annual Share = (Percent * CurrentNet)
             // Display Amount = Annual Share / Divider
-            currentAmt = ((dreamPercent / 100) * currentDrivenNet) / divider;
+            currentAmt = ((dreamPercent / 100) * (profile.currentNetIncome || 0)) / divider;
         }
 
         return {
@@ -95,77 +90,28 @@ async function init() {
 
 function resetLocks() {
     expenseState.forEach(item => item.locked = false);
-    driverIndex = -1; // Reset driver
-    currentDrivenNet = profile.currentNetIncome || 0;
 
     // Recalculate using original profile income
-    recalculateUnlocked(currentDrivenNet);
+    recalculateUnlocked(profile.currentNetIncome || 0);
     renderExpenses();
 }
 
 function toggleLock(index) {
-    // If we have an active driver, locking another item just holds it at current value
     const willBeLocked = !expenseState[index].locked;
     expenseState[index].locked = willBeLocked;
 
-    // If we just LOCK the active driver, disable driver mode for it
-    // "if a line... selects the unlock icon (toggles lock), it should immediately unregister as chart"
-    // Wait, the user said "selects the unlock icon" -> unregister. 
-    // Usually "Unlock Icon" means "Make it Unlocked". 
-    // But our button is a toggle.
-    // If it is currently Driver, it is implicitly UNLOCKED (per our new logic).
-    // So the button shows '🔓'. Clicking it locks it '🔒'.
-    // User said: "if a line has selected the chart icon, and then selects the unlock icon..."
-    // If they mean clicking the lock button (which is currently open):
-    if (driverIndex === index) {
-        driverIndex = -1;
-        // It becomes a standard locked item at its current override value
-        expenseState[index].amount = currentDriverOverride;
-        expenseState[index].locked = true;
-    }
-
-    recalculateWithLocks(profile.currentNetIncome || 0, index);
-    renderExpenses();
-}
-
-function toggleDriver(index) {
-    if (driverIndex === index) {
-        // Deactivate Driver
-        driverIndex = -1;
-    } else {
-        // Activate Driver
-        driverIndex = index;
-        // User Rule: Immediately unlock
-        expenseState[index].locked = false;
-
-        // Init override with current value
-        currentDriverOverride = expenseState[index].amount;
-    }
-
-    // Recalculate "Natural" state for everyone (since this item is now Unlocked)
-    recalculateWithLocks(profile.currentNetIncome || 0, index);
+    recalculateWithLocks(profile.currentNetIncome || 0);
     renderExpenses();
 }
 
 function handleAmountChange(index, newAmount) {
-    // Logic Branch: Driver vs. Squeeze
-    if (driverIndex === index) {
-        // DRIVER MODE CHANGE
-        currentDriverOverride = newAmount;
-        // Ensure unlocked
-        expenseState[index].locked = false;
+    // STANDARD MODE CHANGE
+    expenseState[index].amount = newAmount;
+    expenseState[index].locked = true; // Implicit lock
 
-        // Recalculate natural state of list
-        recalculateWithLocks(profile.currentNetIncome || 0, index);
+    // Recalculate
+    recalculateWithLocks(profile.currentNetIncome || 0);
 
-    } else {
-        // STANDARD MODE CHANGE
-        expenseState[index].amount = newAmount;
-        expenseState[index].locked = true; // Implicit lock
-
-        // Recalculate
-        recalculateWithLocks(profile.currentNetIncome || 0, index);
-    }
     // Update global calculation display (manually since we messed with state)
     updateCalculations();
     renderExpenses();
@@ -174,7 +120,7 @@ function handleAmountChange(index, newAmount) {
 /**
  * Core Logic: Lock & Rescale
  */
-function recalculateWithLocks(totalIncome, changedIndex) {
+function recalculateWithLocks(totalIncome) {
     // 1. Sum Locked Amounts (ANNUALIZED)
     const lockedTotal = expenseState.reduce((sum, item) => item.locked ? sum + (item.amount * item.divider) : sum, 0);
 
@@ -212,38 +158,17 @@ function recalculateUnlocked(totalIncome) {
 }
 
 function updateCalculations() {
-    // 1. Total Allocated (In standard list)
-    // For the list, the Driver is "Natural" (part of the unlocked pool). 
-    // If we want "Total Allocated" to reflect the "CurrentNet" reality, we sum the natural amounts.
-    // If we want it to reflect the "Recalibrated" reality, we'd sum recalibrated amounts.
-    // Given the list visuals show Natural for others, Total Allocated should likely be Natural Sum (should close to CurrentNet).
     const totalAllocated = expenseState.reduce((sum, item) => sum + (item.amount * item.divider), 0);
     outTotalAllocated.textContent = formatMoney(totalAllocated);
 
-    // 2. Recalibrated Values (Sidebar)
-    // Only affected by Driver
-    if (driverIndex !== -1) {
-        const item = expenseState[driverIndex];
-
-        // Explicitly calculate Baseline vs New
-        const originalBaseAnnual = (parseFloat(item.percent) / 100) * (profile.currentNetIncome || 0);
-        const newDriverAnnual = currentDriverOverride * item.divider;
-
-        // Additive Delta
-        const delta = newDriverAnnual - originalBaseAnnual;
-
-        // New Net = Current + Delta
-        currentDrivenNet = (profile.currentNetIncome || 0) + delta;
-
-    } else {
-        currentDrivenNet = profile.currentNetIncome || 0;
-    }
-
-    outRecalibratedNet.textContent = formatMoney(currentDrivenNet);
+    // Recalibrated Values - In pure "Lock" mode, this usually just matches Current Net 
+    // unless we allow "Squeezing" (where locks exceed income).
+    // For now, it stays as Current Net because we aren't driving it.
+    outRecalibratedNet.textContent = formatMoney(profile.currentNetIncome || 0);
 
     // Gross
     const taxRate = (profile.expenses && profile.expenses.taxRate) ? parseFloat(profile.expenses.taxRate) / 100 : 0.3;
-    const gross = currentDrivenNet / (1 - taxRate);
+    const gross = (profile.currentNetIncome || 0) / (1 - taxRate);
     outRecalibratedGross.textContent = formatMoney(gross);
 }
 
@@ -254,20 +179,10 @@ function renderExpenses() {
         const row = document.createElement('div');
         row.className = `expense-row ${item.locked ? 'locked' : ''}`;
 
-        if (index === driverIndex) {
-            row.style.background = 'var(--color-bg-subtle)';
-            row.style.borderLeft = '4px solid var(--color-primary)';
-        }
-
         let freqText = '';
         if (item.type === 'Monthly' || item.type === 'Percent') freqText = 'Monthly';
         else if (item.type === 'Periodic') freqText = `${item.frequency} times per year`;
         else freqText = 'Annually';
-
-        // DISPLAY VALUE DETERMINATION
-        // If this is the driver, show the Override value.
-        // Otherwise, show the computed `item.amount`.
-        const displayValue = (index === driverIndex) ? currentDriverOverride : item.amount;
 
         row.innerHTML = `
             <div style="flex-grow:1;">
@@ -279,18 +194,10 @@ function renderExpenses() {
             <div style="display:flex; align-items:center; gap:5px;">
                 <div style="width: 100px;">
                     <input type="number" 
-                        value="${Math.round(displayValue)}" 
+                        value="${Math.round(item.amount)}" 
                         onchange="handleAmountChange(${index}, parseFloat(this.value))"
                         style="text-align:right; width:100%;">
                 </div>
-                <!-- Driver Button -->
-                <button onclick="toggleDriver(${index})" 
-                    title="Recalculate Total Income to account for increased expense"
-                    style="background:none; border:1px solid transparent; cursor:pointer; padding:5px; border-radius:4px; ${driverIndex === index ? 'background:var(--color-bg-subtle); border-color:var(--color-primary);' : 'opacity:0.6;'}">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M18 20V10M12 20V4M6 20v-6" />
-                    </svg>
-                </button>
                 <!-- Lock Button -->
                 <button onclick="toggleLock(${index})" style="background:none; border:none; cursor:pointer;">
                     ${item.locked ? '🔒' : '🔓'}
@@ -305,6 +212,5 @@ function renderExpenses() {
 // Global scope exposure
 window.handleAmountChange = handleAmountChange;
 window.toggleLock = toggleLock;
-window.toggleDriver = toggleDriver;
 
 init();
