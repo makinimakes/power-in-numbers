@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Power in Numbers</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .hero {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .title-block {
+            padding: var(--spacing-lg) 0;
+            border-bottom: var(--border-hero);
+        }
+
+        .mission-statement {
+            font-size: 1.5rem;
+            max-width: 800px;
+            padding: var(--spacing-md) 0;
+            font-weight: 400;
+        }
+
+        .nav-card {
+            display: block;
+            padding: var(--spacing-md);
+            border-bottom: var(--border-std);
+            text-decoration: none;
+            color: var(--color-text-main);
+            height: 100%;
+            transition: all 0.2s;
+        }
+
+        .nav-card:hover {
+            background: #4E3629;
+            color: var(--color-text-inverse);
+            padding-left: var(--spacing-lg);
+            /* Kinetic movement */
+        }
+
+        .nav-card h2 {
+            margin-bottom: var(--spacing-xs);
+            text-decoration: underline;
+        }
+
+        .nav-card:hover h2 {
+            text-decoration: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="hero">
+            <div class="title-block">
+                <h1>Power<br>in Numbers.</h1>
+            </div>
+
+            <p class="mission-statement">
+                A living ledger for interdependence.
+                <br>
+                <span style="opacity: 0.5;">Center your needs and desires. Share better together.</span>
+            </p>
+
+            <div class="grid-2" style="border-top: var(--border-hero);">
+                <a href="independent.html" class="nav-card" style="border-right: var(--border-std);">
+                    <div style="font-size: 0.8rem; text-transform: uppercase; margin-bottom: var(--spacing-sm);">Tool 01
+                    </div>
+                    <h2>My Economies &rarr;</h2>
+                    <p>Calculate rates based on real needs. Move from surviving to thriving.</p>
+                </a>
+
+                <a href="projects.html" class="nav-card">
+                    <div style="font-size: 0.8rem; text-transform: uppercase; margin-bottom: var(--spacing-sm);">Tool 02
+                    </div>
+                    <h2>My Projects &rarr;</h2>
+                    <p>Create and manage project budgets using the Interdependence Ledger.</p>
+                </a>
+            </div>
+        </div>
+
+        <footer
+            style="padding-top: var(--spacing-sm); border-top: var(--border-std); font-size: 0.8rem; text-transform: uppercase;">
+            &copy; 2025 Power in Numbers
+        </footer>
+    </div>
+</body>
+
+</html>

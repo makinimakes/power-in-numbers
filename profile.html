@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile - Power in Numbers</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: var(--color-bg-subtle);
+            padding: 20px 0;
+        }
+
+        .auth-card {
+            background: var(--color-bg-base);
+            padding: var(--spacing-xl);
+            border: var(--border-std);
+            width: 100%;
+            max-width: 600px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .auth-header {
+            text-align: center;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .form-section {
+            margin-bottom: var(--spacing-lg);
+            border-bottom: 1px dashed var(--color-border);
+            padding-bottom: var(--spacing-md);
+        }
+
+        .form-section h3 {
+            font-size: 1rem;
+            color: var(--color-primary);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 10px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        input[readonly] {
+            background-color: #f0f0f0;
+            color: #777;
+            cursor: not-allowed;
+        }
+
+        .btn-auth {
+            width: 100%;
+            padding: 12px;
+            background: var(--color-bg-inverse);
+            color: #fff;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-size: 1rem;
+        }
+
+        .btn-cancel {
+            background: transparent;
+            color: var(--color-text-muted);
+            border: 1px solid var(--color-border);
+        }
+
+        .required::after {
+            content: " *";
+            color: var(--color-text-error);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="auth-card">
+        <div class="auth-header">
+            <div style="text-align: left; margin-bottom: 20px;">
+                <a href="index.html" style="font-weight: 700; text-decoration: none;">&larr; MAIN INDEX</a>
+            </div>
+            <h1>My Profile</h1>
+            <p style="color:var(--color-text-muted);">Update your personal information</p>
+        </div>
+
+        <form id="profile-form">
+            <div id="status-msg"
+                style="display:none; margin-bottom:15px; padding:10px; border-radius:4px; text-align:center;"></div>
+
+            <!-- Top Actions -->
+            <div style="display:flex; justify-content:flex-end; margin-bottom: 20px;">
+                <button type="submit" class="btn-auth" style="width:auto; padding: 5px 15px; font-size: 0.8rem;">Save
+                    Changes</button>
+            </div>
+
+            <!-- Credentials -->
+            <div class="form-section">
+                <h3>Login Details</h3>
+                <div class="form-group">
+                    <label>Username (Cannot be changed)</label>
+                    <input type="text" id="username" readonly>
+                </div>
+                <div class="form-group">
+                    <label class="required">Email Address</label>
+                    <input type="email" id="email" required>
+                </div>
+            </div>
+
+            <!-- Identity -->
+            <div class="form-section">
+                <h3>Personal Information</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="required">Full Name</label>
+                        <input type="text" id="fullname" required>
+                    </div>
+                    <div class="form-group">
+                        <label>What You Want To Be Called</label>
+                        <input type="text" id="callname">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="required">Birthdate</label>
+                        <input type="date" id="birthdate" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Race</label>
+                        <input type="text" id="race">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Education</label>
+                    <input type="text" id="education">
+                </div>
+            </div>
+
+            <!-- Professional & Financial -->
+            <div class="form-section">
+                <h3>Professional & Household</h3>
+                <div class="form-group">
+                    <label>Type(s) of Work You Do</label>
+                    <input type="text" id="worktypes">
+                </div>
+                <div class="form-group">
+                    <label>Tax Filing Status</label>
+                    <select id="taxstatus">
+                        <option value="">Select...</option>
+                        <option value="Single">Single</option>
+                        <option value="Married Filing Jointly">Married Filing Jointly</option>
+                        <option value="Married Filing Separately">Married Filing Separately</option>
+                        <option value="Head of Household">Head of Household</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Number of Dependents</label>
+                        <input type="number" id="dependents-count" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Types of Dependents</label>
+                        <input type="text" id="dependents-type">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Spacer for fixed footer -->
+            <div style="height: 100px;"></div>
+
+            <!-- Fixed Footer -->
+            <div
+                style="position: fixed; bottom: 0; left: 0; width: 100%; background: var(--color-bg-base); padding: 15px; border-top: 1px solid var(--color-border); display:flex; justify-content: center; gap:10px; box-shadow: 0 -4px 12px rgba(0,0,0,0.1); z-index: 9999;">
+                <div style="width: 100%; max-width: 600px; display: flex; gap: 10px;">
+                    <a href="independent.html" class="btn-auth btn-cancel"
+                        style="text-align:center; text-decoration:none; display:block;">Cancel</a>
+                    <button type="submit" class="btn-auth">Save Changes</button>
+                </div>
+            </div>
+
+        </form>
+    </div>
+
+    <script src="js/store.js"></script>
+    <script>
+        // Load Data
+        const currentUser = Store.checkSession();
+        if (!currentUser) window.location.href = 'login.html';
+
+        const users = Store.getUsers();
+        const userData = users[currentUser];
+
+        if (userData) {
+            document.getElementById('username').value = userData.username;
+            document.getElementById('email').value = userData.email || '';
+            document.getElementById('fullname').value = userData.fullName || '';
+            document.getElementById('callname').value = userData.callName || '';
+            document.getElementById('birthdate').value = userData.birthdate || '';
+            document.getElementById('race').value = userData.race || '';
+            document.getElementById('education').value = userData.education || '';
+            document.getElementById('worktypes').value = userData.workTypes || '';
+            document.getElementById('taxstatus').value = userData.taxStatus || '';
+            document.getElementById('dependents-count').value = userData.dependentsCount || '';
+            document.getElementById('dependents-type').value = userData.dependentsType || '';
+        }
+
+        // Save Data
+        document.getElementById('profile-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const updatedData = {
+                email: document.getElementById('email').value.trim(),
+                fullName: document.getElementById('fullname').value.trim(),
+                callName: document.getElementById('callname').value.trim(),
+                birthdate: document.getElementById('birthdate').value,
+                race: document.getElementById('race').value,
+                education: document.getElementById('education').value,
+                workTypes: document.getElementById('worktypes').value,
+                taxStatus: document.getElementById('taxstatus').value,
+                dependentsCount: document.getElementById('dependents-count').value,
+                dependentsType: document.getElementById('dependents-type').value
+            };
+
+            try {
+                Store.updateUser(currentUser, updatedData);
+
+                const msg = document.getElementById('status-msg');
+                msg.style.display = 'block';
+                msg.style.background = '#e8f5e9';
+                msg.style.color = '#2e7d32';
+                msg.textContent = 'Profile updated successfully!';
+
+                // Hide success message after 3s
+                setTimeout(() => msg.style.display = 'none', 3000);
+            } catch (err) {
+                const msg = document.getElementById('status-msg');
+                msg.style.display = 'block';
+                msg.style.background = '#ffebee';
+                msg.style.color = '#c62828';
+                msg.textContent = 'Error: ' + err.message;
+            }
+        });
+    </script>
+</body>
+
+</html>

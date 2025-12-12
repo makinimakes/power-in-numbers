@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interdependence Ledger - Power in Numbers</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            padding: var(--spacing-sm);
+            border-bottom: var(--border-hero);
+        }
+
+        .summary-panel {
+            position: sticky;
+            top: 0;
+            padding: var(--spacing-md);
+            background: var(--color-bg-inverse);
+            color: var(--color-text-inverse);
+            height: 100%;
+            min-height: 50vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        /* Modal Overlay */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            border: 2px solid black;
+            background: white;
+            width: 100%;
+            max-width: 600px;
+            box-shadow: 20px 20px 0px black;
+        }
+
+        .modal-header {
+            background: black;
+            color: white;
+            padding: var(--spacing-sm);
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header
+            style="padding: var(--spacing-md); background: var(--color-bg-inverse); color: var(--color-text-inverse); display: flex; justify-content: space-between; align-items: flex-end;">
+            <div>
+                <a href="projects.html"
+                    style="color:var(--color-text-inverse); text-decoration:none; font-size:0.8rem; margin-bottom:10px; display:inline-block;">&larr;
+                    My Projects</a>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <h1 id="project-title" style="display:inline-block; margin:0;">Project Name</h1>
+                </div>
+            </div>
+            <div style="text-align: right;">
+                <nav>
+                    <a href="independent.html"
+                        style="color: var(--color-text-inverse); margin-right: var(--spacing-sm);">My Economic Dream
+                        Plan</a>
+                    <button onclick="Store.logout()"
+                        style="background:none; border:none; text-decoration:underline; cursor:pointer; color:var(--color-text-inverse);">Logout</button>
+                </nav>
+                <a href="profile.html" id="user-display"
+                    style="display:block; font-size:0.8rem; font-weight:bold; margin-top:5px; color:var(--color-text-inverse); text-decoration:none;"></a>
+            </div>
+        </header>
+
+        <!-- 0. PROJECT GLOBAL RATES -->
+        <section class="ledger-section"
+            style="margin-top:20px; padding:var(--spacing-sm); border:2px solid #000; background:#fff;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="margin:0;">Project Global Rates</h3>
+                <div style="display:flex; gap:20px; align-items:center;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <label style="font-weight:bold;">Pay Rate (%):</label>
+                        <input type="number" id="project-global-pay-rate" placeholder="100"
+                            style="width:70px; padding:5px;">
+                    </div>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <label style="font-weight:bold;">Expense Rate (%):</label>
+                        <input type="number" id="project-global-expense-rate" placeholder="100"
+                            style="width:70px; padding:5px;">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 1. TEAM POOL (Top) -->
+        <section class="ledger-section" style="margin-top:20px;">
+            <div
+                style="padding:var(--spacing-sm); display:flex; justify-content:space-between; align-items:center; background:#f0f0f0;">
+                <div>
+                    <h3>Worker Collaborators (Pool)</h3>
+                    <small>Establishes Project Min/Max Wage Rates</small>
+                </div>
+                <div style="text-align:right;">
+                    <div style="display:flex; align-items:center; gap:8px; justify-content:flex-end;">
+                        <label style="font-size:0.8rem;">Min (% of High Now):</label>
+                        <input type="number" id="project-min-mod" placeholder="100"
+                            style="width:50px; padding:2px; font-size:0.8rem; text-align:right;">
+                        <strong>Min: <span id="pool-min-wage">$0/hr</span></strong>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px; justify-content:flex-end; margin-top:5px;">
+                        <label style="font-size:0.8rem;">Max (% of Low Goal):</label>
+                        <input type="number" id="project-max-mod" placeholder="100"
+                            style="width:50px; padding:2px; font-size:0.8rem; text-align:right;">
+                        <strong>Max: <span id="pool-max-wage">$0/hr</span></strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-container" style="max-height: 200px; overflow-y: auto; font-size: 0.85rem;">
+                <table class="ledger-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Role/Username</th>
+                            <th>Rates (Now / Goal)</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="team-pool-list">
+                        <!-- Pool Items Render Here -->
+                    </tbody>
+                </table>
+            </div>
+            <div style="padding:var(--spacing-sm);">
+                <button class="btn" id="btn-add-member">+ Add Collaborator to Pool</button>
+            </div>
+        </section>
+
+        <!-- 2. PHASES -->
+        <section class="ledger-section" id="phases-section">
+            <div
+                style="padding:var(--spacing-sm); display:flex; justify-content:space-between; align-items:center; background: #000; color: #fff;">
+                <h3>Project Phases</h3>
+                <button class="btn btn-primary" id="btn-add-phase" style="border:1px solid white;">+ New Phase</button>
+            </div>
+
+            <div id="phases-container">
+                <!-- Dynamic Phases Render Here -->
+            </div>
+        </section>
+
+
+        </section>
+
+
+        <!-- 3. PRODUCERIAL SHARES -->
+        <section class="ledger-section" id="shares-section" style="border-top:var(--border-hero);">
+            <h3>Producerial Shares & Equity</h3>
+            <div class="grid-2" style="grid-template-columns: 300px 1fr; align-items:start; gap:var(--spacing-lg);">
+                <!-- Chart Area -->
+                <div style="background:#fff; padding:20px; text-align:center;">
+                    <div id="shares-pie-chart"
+                        style="width:200px; height:200px; border-radius:50%; background:#eee; margin:0 auto; position:relative;">
+                        <!-- Conic Gradient applied via JS -->
+                    </div>
+                    <div id="shares-legend" style="margin-top:20px; font-size:0.8rem; text-align:left;">
+                        <!-- Legend Items -->
+                    </div>
+                </div>
+
+                <!-- Table Area -->
+                <div class="table-container">
+                    <table class="ledger-table">
+                        <thead>
+                            <tr>
+                                <th>Collaborator</th>
+                                <th>Role</th>
+                                <th>Equity (Liability)</th>
+                                <th>Project Share %</th>
+                            </tr>
+                        </thead>
+                        <tbody id="shares-table-body">
+                            <!-- Dynamic Content -->
+                        </tbody>
+                        <tfoot>
+                            <tr style="font-weight:bold; background:#f9f9f9;">
+                                <td colspan="2">Total Liability</td>
+                                <td id="shares-total-equity">$0.00</td>
+                                <td>100%</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. SCENARIOS -->
+        <section class="ledger-section" style="border-top:var(--border-hero); border-bottom:var(--border-hero);">
+            <h3>Project Scenarios (Budget vs. Funding)</h3>
+            <div class="grid-2" style="grid-template-columns: 1fr 1fr 1fr; background: var(--color-bg-base);">
+                <!-- Ideal -->
+                <div class="card-scenario" style="padding:20px; border-right:var(--border-std); position:relative;">
+                    <div class="result-label">Ideal Funding</div>
+                    <div class="result-value" id="dash-ideal-total">$0</div>
+                    <div style="margin-top:10px; font-size:0.9rem;">
+                        <div style="display:flex; justify-content:space-between;">
+                            <span>Gross Profit:</span>
+                            <span id="dash-ideal-gross" style="font-weight:bold;">$0</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; margin-top:5px;">
+                            <span>Actual Profit:</span>
+                            <span id="dash-ideal-net" style="font-weight:bold;">$0</span>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-text-action"
+                        onclick="event.stopPropagation(); window.renderDistributionModal('ideal')"
+                        style="margin-top:10px; font-size:0.8rem; text-decoration:underline;">View Distribution</button>
+                </div>
+                <!-- Possible -->
+                <div class="card-scenario" style="padding:20px; border-right:var(--border-std); position:relative;">
+                    <div class="result-label">Possible Funding</div>
+                    <div class="result-value" id="dash-possible-total">$0</div>
+                    <div style="margin-top:10px; font-size:0.9rem;">
+                        <div style="display:flex; justify-content:space-between;">
+                            <span>Gross Profit:</span>
+                            <span id="dash-possible-gross" style="font-weight:bold;">$0</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; margin-top:5px;">
+                            <span>Actual Profit:</span>
+                            <span id="dash-possible-net" style="font-weight:bold;">$0</span>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-text-action"
+                        onclick="event.stopPropagation(); window.renderDistributionModal('possible')"
+                        style="margin-top:10px; font-size:0.8rem; text-decoration:underline;">View Distribution</button>
+                </div>
+                <!-- Confirmed -->
+                <div class="card-scenario" style="padding:20px; position:relative;">
+                    <div class="result-label">Confirmed Funding</div>
+                    <div class="result-value" id="dash-confirmed-total">$0</div>
+                    <div style="margin-top:10px; font-size:0.9rem;">
+                        <div style="display:flex; justify-content:space-between;">
+                            <span>Gross Profit:</span>
+                            <span id="dash-confirmed-gross" style="font-weight:bold;">$0</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; margin-top:5px;">
+                            <span>Actual Profit:</span>
+                            <span id="dash-confirmed-net" style="font-weight:bold;">$0</span>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-text-action"
+                        onclick="event.stopPropagation(); window.renderDistributionModal('confirmed')"
+                        style="margin-top:10px; font-size:0.8rem; text-decoration:underline;">View Distribution</button>
+                </div>
+            </div>
+            <!-- Add Income Button for Scenarios context -->
+            <div style="padding:10px; text-align:right; background:#f9f9f9;">
+                <button class="btn" id="btn-open-income-modal">+ Add Funding Source</button>
+            </div>
+
+            <!-- Funding List -->
+            <div class="table-container" style="padding:0 var(--spacing-sm) var(--spacing-sm);">
+                <table class="ledger-table" style="font-size:0.9rem;">
+                    <thead>
+                        <tr>
+                            <th>Source</th>
+                            <th>Status (Likelihood)</th>
+                            <th>Amount</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="funding-list">
+                        <!-- Rendered by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Modal: Distribution -->
+        <div id="modal-distribution" class="modal">
+            <div class="modal-content" style="max-width: 800px;">
+                <div class="modal-header">Profit & Share Distribution</div>
+                <div style="padding: var(--spacing-md);">
+
+                    <div class="summary-card" style="margin-bottom:20px; background:#f9f9f9;">
+                        <div class="grid-2">
+                            <div>
+                                <div class="label-sm">Total Income</div>
+                                <div id="dist-income" style="font-size:1.2rem; font-weight:bold;">$0</div>
+                            </div>
+                            <div>
+                                <div class="label-sm">Cash Expenses</div>
+                                <div id="dist-cost" style="font-size:1.2rem; font-weight:bold;">$0</div>
+                            </div>
+                            <div>
+                                <div class="label-sm">Profit Share (Equity)</div>
+                                <div id="dist-liability"
+                                    style="font-size:1.2rem; font-weight:bold; color:var(--color-primary);">$0</div>
+                            </div>
+                            <div>
+                                <div class="label-sm">Distributable Profit</div>
+                                <div id="dist-distributable" style="font-size:1.2rem; font-weight:bold;">$0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="ledger-table" style="font-size:0.9rem;">
+                            <thead>
+                                <tr>
+                                    <th>Collaborator</th>
+                                    <th>Project Share</th>
+                                    <th>Profit Share (Due)</th>
+                                    <th>Payout</th>
+                                    <th>Remaining Due</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dist-list"></tbody>
+                        </table>
+                    </div>
+
+                    <div style="margin-top:20px; padding-top:20px; border-top:1px solid #eee; text-align:right;">
+                        <div style="font-size:1.1rem;">Actual Profit (Net of Payouts): <strong
+                                id="dist-actual-profit">$0</strong></div>
+                    </div>
+
+                    <div style="display: flex; justify-content: flex-end; margin-top: var(--spacing-md);">
+                        <button class="btn"
+                            onclick="document.getElementById('modal-distribution').style.display='none'">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal -->
+        <div id="modal-add-member" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">Add Worker Collaborator</div>
+                <div style="padding: var(--spacing-md);">
+
+                    <!-- Step 1: Email Lookup -->
+                    <div id="step-lookup">
+                        <div class="input-group">
+                            <label>Collaborator Email Address</label>
+                            <div style="display:flex; gap:10px;">
+                                <input type="email" id="invite-email" placeholder="colleague@example.com">
+                                <button class="btn btn-primary" id="btn-lookup-email">Find</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Confirmation / Details (Hidden initially) -->
+                    <div id="step-details"
+                        style="display:none; margin-top:20px; border-top:1px dashed #ccc; padding-top:20px;">
+                        <div id="invite-status-msg" style="margin-bottom:15px; font-weight:bold;"></div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-sm);">
+                            <div class="input-group">
+                                <label>Day Rate ($)</label>
+                                <input type="number" id="new-member-rate">
+                            </div>
+                            <div class="input-group">
+                                <label>Days Allocated</label>
+                                <input type="number" id="new-member-days">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div
+                        style="display: flex; justify-content: flex-end; gap: var(--spacing-sm); margin-top: var(--spacing-md);">
+                        <button class="btn" onclick="closeModal()">Close</button>
+                        <button class="btn btn-primary" id="btn-save-member" style="display:none;">Confirm &
+                            Add</button>
+                        <button class="btn btn-primary" id="btn-send-invite" style="display:none;">Send
+                            Invitation</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal: Add Line Item Wizard -->
+        <div id="modal-line-item-wizard" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">Add Line Item</div>
+                <div style="padding: var(--spacing-md);">
+
+                    <!-- Step 1: Basic Info -->
+                    <div id="wizard-step-1">
+                        <div class="input-group">
+                            <label>Item Name</label>
+                            <input type="text" id="wiz-name" placeholder="e.g. Catering, Editor">
+                        </div>
+                        <div class="input-group">
+                            <label>Cost Type</label>
+                            <div style="display:flex; gap:10px;">
+                                <button class="btn btn-outline" onclick="Wizard.setType('Flat')">Flat Amount</button>
+                                <button class="btn btn-outline" onclick="Wizard.setType('Percentage')">% of Phase
+                                    Total</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Percentage -->
+                    <div id="wizard-step-percent" style="display:none;">
+                        <input type="number" id="wiz-percent" placeholder="Ex: 10" style="width:100px;"> %
+                    </div>
+
+                    <!-- Step 2: Flat Type Select -->
+                    <div id="wizard-step-flat-type" style="display:none;">
+                        <label>Is this Item Time-Based?</label>
+                        <div style="display:flex; gap:10px; margin-top:10px;">
+                            <button class="btn btn-outline" onclick="Wizard.setTimeBased(true)">Yes
+                                (Time-Based)</button>
+                            <button class="btn btn-outline" onclick="Wizard.setTimeBased(false)">No
+                                (Fixed/Unit)</button>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Non-Time Structure -->
+                    <div id="wizard-step-fixed-struct" style="display:none;">
+                        <label>Pricing Structure</label>
+                        <div style="display:flex; gap:10px; margin-top:10px;">
+                            <button class="btn btn-outline" onclick="Wizard.setFixedType('Lump')">Lump Sum</button>
+                            <button class="btn btn-outline" onclick="Wizard.setFixedType('Unit')">Per Unit</button>
+                        </div>
+                    </div>
+
+                    <!-- Step 4: Lump Sum -->
+                    <div id="wizard-step-lump" style="display:none;">
+                        <label>Total Amount ($)</label>
+                        <input type="number" id="wiz-lump-amount">
+                    </div>
+
+                    <!-- Step 4: Unit -->
+                    <div id="wizard-step-unit" style="display:none;">
+                        <div class="grid-2" style="gap:10px;">
+                            <div>
+                                <label>Quantity</label>
+                                <input type="number" id="wiz-unit-qty">
+                            </div>
+                            <div>
+                                <label>Cost Per Item ($)</label>
+                                <input type="number" id="wiz-unit-cost">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Time Based -->
+                    <div id="wizard-step-time" style="display:none;">
+                        <div class="input-group">
+                            <label>Count (How many people/items?)</label>
+                            <input type="number" id="wiz-time-count" value="1">
+                        </div>
+                        <div class="grid-2" style="gap:10px;">
+                            <div>
+                                <label>Duration</label>
+                                <input type="number" id="wiz-time-duration">
+                            </div>
+                            <div>
+                                <label>Time Unit</label>
+                                <select id="wiz-time-unit">
+                                    <option value="Hours">Hours</option>
+                                    <option value="Days">Days</option>
+                                    <option value="Weeks">Weeks</option>
+                                    <option value="Months">Months</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label>Rate ($ per Unit)</label>
+                            <input type="number" id="wiz-time-rate" placeholder="0.00">
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div
+                        style="display: flex; justify-content: space-between; margin-top: 20px; border-top:1px solid #eee; padding-top:10px;">
+                        <button class="btn"
+                            onclick="document.getElementById('modal-line-item-wizard').style.display='none'">Cancel</button>
+                        <button class="btn btn-primary" id="btn-wizard-finish" style="display:none;">Add Line
+                            Item</button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal: Add Income -->
+        <div id="modal-add-income" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">Manage Income Source</div>
+                <div style="padding: var(--spacing-md);">
+                    <input type="hidden" id="income-id">
+                    <div class="input-group">
+                        <label>Source Name</label>
+                        <input type="text" id="income-name" placeholder="e.g. Grant Name, Donor">
+                    </div>
+                    <div class="input-group">
+                        <label>Amount ($)</label>
+                        <input type="number" id="income-amount" placeholder="0.00">
+                    </div>
+                    <div class="input-group">
+                        <label>Status</label>
+                        <select id="income-status" style="width:100%; padding:8px;">
+                            <option value="Confirmed">Confirmed</option>
+                            <option value="Likely">Likely</option>
+                            <option value="Unconfirmed">Unconfirmed</option>
+                        </select>
+                    </div>
+
+                    <div
+                        style="display: flex; justify-content: flex-end; gap: var(--spacing-sm); margin-top: var(--spacing-md);">
+                        <button class="btn"
+                            onclick="document.getElementById('modal-add-income').style.display='none'">Cancel</button>
+                        <button class="btn btn-primary" id="btn-save-income">Save Source</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal: Phase Settings -->
+        <div id="modal-phase-settings" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">Phase Settings</div>
+                <div style="padding: var(--spacing-md);">
+                    <input type="hidden" id="phase-settings-id">
+
+                    <div class="input-group">
+                        <label>Phase Name</label>
+                        <input type="text" id="phase-name-edit">
+                    </div>
+
+                    <div class="grid-2" style="gap:15px;">
+                        <div class="input-group">
+                            <label>Duration (Weeks)</label>
+                            <input type="number" id="phase-weeks" placeholder="e.g. 10">
+                        </div>
+                        <div class="input-group">
+                            <label>Hours / Week</label>
+                            <input type="number" id="phase-hours" placeholder="e.g. 40">
+                        </div>
+                    </div>
+
+                    <div class="summary-card" style="margin-top:20px; background:#f9f9f9;">
+                        <strong>Rate Overrides (Optional)</strong>
+                        <p style="font-size:0.8rem; color:gray;">Leave blank to use Global Project Defaults.</p>
+
+                        <div class="grid-2" style="gap:15px; margin-top:10px;">
+                            <div class="input-group">
+                                <label>Pay Rate (%)</label>
+                                <input type="number" id="phase-pay-rate" placeholder="Default">
+                            </div>
+                            <div class="input-group">
+                                <label>Expense Rate (%)</label>
+                                <input type="number" id="phase-expense-rate" placeholder="Default">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button class="btn"
+                            onclick="document.getElementById('modal-phase-settings').style.display='none'">Cancel</button>
+                        <button class="btn btn-primary" id="btn-save-phase-settings">Save Settings</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal: Worker Override -->
+        <div id="modal-worker-override" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">Override Worker Specs</div>
+                <div style="padding: var(--spacing-md);">
+                    <input type="hidden" id="override-phase-id">
+                    <input type="hidden" id="override-worker-id">
+
+                    <h3 id="override-worker-name" style="margin-top:0;">Worker Name</h3>
+
+                    <div class="summary-card" style="margin-bottom:15px;" id="section-override-rate">
+                        <strong>Hourly Rate Override</strong>
+                        <div style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">
+                            <label><input type="radio" name="rate-rule" value="auto" checked> Auto (Goal * Pay
+                                Rate)</label>
+                            <label><input type="radio" name="rate-rule" value="min"> Force to Project Min Wage</label>
+                            <label><input type="radio" name="rate-rule" value="max"> Force to Project Max Wage</label>
+                            <label><input type="radio" name="rate-rule" value="custom"> Custom Amount ($/hr)</label>
+                            <input type="number" id="override-rate-val" placeholder="0.00"
+                                style="display:none; margin-left:25px; width:150px;">
+                        </div>
+                    </div>
+
+                    <div class="summary-card" id="section-override-schedule">
+                        <strong>Schedule Override</strong>
+                        <div style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">
+                            <label><input type="radio" name="sched-rule" value="auto" checked> Standard Phase Schedule
+                                (Capped by Capacity)</label>
+                            <label><input type="radio" name="sched-rule" value="project"> Conform to Project Schedule
+                                (Full Hours)</label>
+                            <label><input type="radio" name="sched-rule" value="custom-weekly"> Custom Weekly
+                                Hours</label>
+                            <input type="number" id="override-sched-weekly-val" placeholder="Hrs/Wk"
+                                style="display:none; margin-left:25px; width:150px;">
+                            <label><input type="radio" name="sched-rule" value="lump"> Lump Sum Hours (total for
+                                phase)</label>
+                            <input type="number" id="override-sched-lump-val" placeholder="Total Hrs"
+                                style="display:none; margin-left:25px; width:150px;">
+                        </div>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button class="btn"
+                            onclick="document.getElementById('modal-worker-override').style.display='none'">Cancel</button>
+                        <button class="btn btn-primary" id="btn-save-worker-override">Save Override</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal: Add Phase -->
+        <div id="modal-add-phase" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">New Project Phase</div>
+                <div style="padding: var(--spacing-md);">
+                    <div class="input-group">
+                        <label>Phase Name</label>
+                        <input type="text" id="new-phase-name" placeholder="e.g. Pre-Production, Shooting, Post">
+                    </div>
+                    <div class="modal-actions">
+                        <button class="btn"
+                            onclick="document.getElementById('modal-add-phase').style.display='none'">Cancel</button>
+                        <button class="btn btn-primary" id="btn-save-new-phase">Create Phase</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal: Math Log -->
+        <div id="modal-math-log" class="modal">
+            <div class="modal-content" style="max-width: 600px;">
+                <div class="modal-header">Equity Calculation Details</div>
+                <div style="padding: var(--spacing-md);">
+                    <h3 id="math-log-title" style="margin-top:0;">Worker Name</h3>
+                    <div id="math-log-content"
+                        style="max-height: 400px; overflow-y: auto; background: #f9f9f9; padding: 10px; border: 1px solid #eee;">
+                        <!-- Content -->
+                    </div>
+                    <div style="text-align: right; margin-top: 20px;">
+                        <button class="btn"
+                            onclick="document.getElementById('modal-math-log').style.display='none'">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script src="js/utils.js"></script>
+        <script src="js/store.js"></script>
+        <script src="js/budget_engine.js"></script>
+        <script src="js/project.js"></script>
+
+</body>
+
+</html>

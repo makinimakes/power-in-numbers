@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Account - Power in Numbers</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: var(--color-bg-subtle);
+            padding: 20px 0;
+        }
+
+        .auth-card {
+            background: var(--color-bg-base);
+            padding: var(--spacing-xl);
+            border: var(--border-std);
+            width: 100%;
+            max-width: 600px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .auth-header {
+            text-align: center;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .form-section {
+            margin-bottom: var(--spacing-lg);
+            border-bottom: 1px dashed var(--color-border);
+            padding-bottom: var(--spacing-md);
+        }
+
+        .form-section h3 {
+            font-size: 1rem;
+            color: var(--color-primary);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 10px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .btn-auth {
+            width: 100%;
+            padding: 12px;
+            background: var(--color-accent-primary);
+            color: #fff;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-size: 1rem;
+        }
+
+        .required::after {
+            content: " *";
+            color: var(--color-text-error);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="auth-card">
+        <div class="auth-header">
+            <h1>Create Account</h1>
+            <p style="color:var(--color-text-muted);">Join Power in Numbers</p>
+        </div>
+
+        <form id="signup-form">
+            <div id="signup-error" style="color:red; display:none; margin-bottom:15px;"></div>
+
+            <!-- Credentials -->
+            <div class="form-section">
+                <h3>Login Details</h3>
+                <div class="form-group">
+                    <label class="required">Distinct Username</label>
+                    <input type="text" id="username" required>
+                    <small style="color:gray;">Used for login and collaboration</small>
+                </div>
+                <div class="form-group">
+                    <label class="required">Password</label>
+                    <input type="password" id="password" required>
+                </div>
+                <div class="form-group">
+                    <label class="required">Email Address</label>
+                    <input type="email" id="email" required>
+                </div>
+            </div>
+
+            <!-- Identity -->
+            <div class="form-section">
+                <h3>Personal Information</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="required">Full Name</label>
+                        <input type="text" id="fullname" required>
+                    </div>
+                    <div class="form-group">
+                        <label>What You Want To Be Called</label>
+                        <input type="text" id="callname" placeholder="(If different)">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="required">Birthdate</label>
+                        <input type="date" id="birthdate" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Race</label>
+                        <input type="text" id="race">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Education</label>
+                    <input type="text" id="education">
+                </div>
+            </div>
+
+            <!-- Professional & Financial -->
+            <div class="form-section">
+                <h3>Professional & Household</h3>
+                <div class="form-group">
+                    <label>Type(s) of Work You Do</label>
+                    <input type="text" id="worktypes" placeholder="e.g. Designer, Consultant">
+                </div>
+                <div class="form-group">
+                    <label>Tax Filing Status</label>
+                    <select id="taxstatus">
+                        <option value="">Select...</option>
+                        <option value="Single">Single</option>
+                        <option value="Married Filing Jointly">Married Filing Jointly</option>
+                        <option value="Married Filing Separately">Married Filing Separately</option>
+                        <option value="Head of Household">Head of Household</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Number of Dependents</label>
+                        <input type="number" id="dependents-count" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Types of Dependents</label>
+                        <input type="text" id="dependents-type" placeholder="e.g. Children, Parents">
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-auth">Register</button>
+            <div style="margin-top: 15px; text-align: center;">
+                <a href="login.html">Already have an account? Log In</a>
+            </div>
+        </form>
+    </div>
+
+    <script src="js/store.js"></script>
+    <script>
+        document.getElementById('signup-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const userData = {
+                username: document.getElementById('username').value.trim(),
+                password: document.getElementById('password').value,
+                email: document.getElementById('email').value.trim(),
+                fullName: document.getElementById('fullname').value.trim(),
+                callName: document.getElementById('callname').value.trim(),
+                birthdate: document.getElementById('birthdate').value,
+                race: document.getElementById('race').value,
+                education: document.getElementById('education').value,
+                workTypes: document.getElementById('worktypes').value,
+                taxStatus: document.getElementById('taxstatus').value,
+                dependentsCount: document.getElementById('dependents-count').value,
+                dependentsType: document.getElementById('dependents-type').value
+            };
+
+            try {
+                Store.register(userData);
+                alert('Account created successfully!');
+                window.location.href = 'independent.html';
+            } catch (err) {
+                const errorBox = document.getElementById('signup-error');
+                errorBox.style.display = 'block';
+                errorBox.textContent = err.message;
+            }
+        });
+    </script>
+</body>
+
+</html>

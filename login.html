@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Power in Numbers</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: var(--color-bg-subtle);
+        }
+
+        .auth-card {
+            background: var(--color-bg-base);
+            padding: var(--spacing-xl);
+            border: var(--border-std);
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .auth-header {
+            text-align: center;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .form-group {
+            margin-bottom: var(--spacing-md);
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .btn-auth {
+            width: 100%;
+            padding: 12px;
+            background: var(--color-accent-primary);
+            color: #fff;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+
+        .btn-auth:hover {
+            opacity: 0.9;
+        }
+
+        .error-msg {
+            color: var(--color-text-error);
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="auth-card">
+        <div class="auth-header">
+            <h1 style="margin-bottom:5px;">Power in Numbers</h1>
+            <p style="color:var(--color-text-muted);">Sign in to continue</p>
+        </div>
+
+        <form id="login-form">
+            <div class="error-msg" id="login-error">Invalid username or password</div>
+
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" id="username" required autofocus>
+            </div>
+
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="password" required>
+            </div>
+
+            <button type="submit" class="btn-auth">Log In</button>
+
+            <div style="margin-top: 20px; text-align: center; font-size: 0.9rem;">
+                New here? <a href="signup.html" style="font-weight:bold;">Create an Account</a>
+            </div>
+        </form>
+    </div>
+
+    <script src="js/store.js"></script>
+    <script>
+        // Check if already logged in
+        if (Store.getCurrentUser()) {
+            window.location.href = 'independent.html';
+        }
+
+        document.getElementById('login-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const user = document.getElementById('username').value.trim();
+            const pass = document.getElementById('password').value;
+
+            if (Store.login(user, pass)) {
+                window.location.href = 'independent.html';
+            } else {
+                const err = document.getElementById('login-error');
+                err.style.display = 'block';
+                err.textContent = 'Invalid username or password';
+            }
+        });
+    </script>
+</body>
+
+</html>

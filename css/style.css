@@ -1,0 +1,444 @@
+/**
+ * Power in Numbers - Design System & Global Styles
+ * Theme: "The Gallery Grid"
+ * A blend of Makini Makes (Minimalist/Gallery) and Spreadsheet (Grid/Honesty).
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap');
+
+:root {
+  /* Palette - High Contrast Gallery */
+  --color-bg-base: #ffffff;
+  --color-bg-surface: #ffffff;
+  --color-bg-inverse: #000000;
+
+  --color-text-main: #000000;
+  --color-text-inverse: #ffffff;
+  --color-text-muted: #555555;
+
+  --color-border: #4E3629;
+  /* Brown Lines */
+
+  /* Accents - "Interaction Energy" */
+  --color-accent-primary: #0000ff;
+  /* Electric Blue (Reference Makini Vibrance) */
+
+  /* Spacing - Generous */
+  --spacing-xs: 0.5rem;
+  --spacing-sm: 1.5rem;
+  --spacing-md: 3rem;
+  --spacing-lg: 6rem;
+
+  /* Typography */
+  --font-family-base: 'Inter', Helvetica, Arial, sans-serif;
+
+  /* Visuals */
+  --radius-none: 0px;
+  /* Sharp edges for grid */
+  --border-std: 1px solid var(--color-border);
+  --border-hero: 3px solid var(--color-border);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--color-bg-base);
+  color: var(--color-text-main);
+  font-family: var(--font-family-base);
+  line-height: 1.4;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+}
+
+h1 {
+  font-size: 4rem;
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+}
+
+h2 {
+  font-size: 2.5rem;
+}
+
+h3 {
+  font-size: 1.5rem;
+}
+
+a {
+  color: var(--color-text-main);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+  transition: all 0.2s;
+}
+
+a:hover {
+  background: var(--color-bg-inverse);
+  color: var(--color-text-inverse);
+  text-decoration: none;
+  padding: 0 4px;
+  /* Highlight effect */
+}
+
+/* Layout Utilities */
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: var(--spacing-sm);
+  border-left: var(--border-std);
+  border-right: var(--border-std);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr;
+  border-top: var(--border-std);
+}
+
+@media (min-width: 768px) {
+  .grid-2 {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* Ledger Components - The Grid */
+.ledger-sheet {
+  border-bottom: var(--border-std);
+}
+
+.ledger-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-sm);
+  border-bottom: var(--border-std);
+}
+
+.ledger-row:last-child {
+  border-bottom: none;
+}
+
+.ledger-section h3 {
+  padding: var(--spacing-sm);
+  border-bottom: var(--border-std);
+  background: #4E3629;
+  color: #ffffff;
+}
+
+/* Form Controls */
+.input-group {
+  margin-bottom: 0;
+  /* Remove margin, using padding instead */
+  padding: var(--spacing-sm);
+  border-bottom: var(--border-std);
+}
+
+label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
+input[type="number"],
+input[type="text"] {
+  width: 100%;
+  padding: 0.5rem 0;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--color-text-main);
+  font-family: var(--font-family-base);
+  font-size: 1.5rem;
+  font-weight: 400;
+}
+
+input:focus {
+  outline: none;
+  border-bottom-color: var(--color-accent-primary);
+}
+
+/* Buttons - Brutalist/Minimal */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem 2rem;
+  font-family: var(--font-family-base);
+  font-size: 1rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  border: var(--border-std);
+  background: var(--color-bg-base);
+  color: var(--color-text-main);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background: var(--color-bg-inverse);
+  color: var(--color-text-inverse);
+  border-color: var(--color-bg-inverse);
+}
+
+.btn-primary:hover {
+  background: var(--color-accent-primary);
+  border-color: var(--color-accent-primary);
+}
+
+.btn-secondary:hover {
+  background: var(--color-bg-inverse);
+  color: var(--color-text-inverse);
+}
+
+/* Special "Gallery" Result Dock */
+.result-dock {
+  position: sticky;
+  top: 0;
+  padding: var(--spacing-sm);
+  background: var(--color-bg-base);
+  border-left: var(--border-std);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  overflow-y: auto;
+}
+
+.result-value {
+  font-size: 4rem;
+  font-weight: 900;
+  line-height: 1;
+  margin-bottom: var(--spacing-sm);
+}
+
+.result-label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+/* Tables */
+.ledger-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ledger-table th,
+.ledger-table td {
+  padding: var(--spacing-sm);
+  border-bottom: var(--border-std);
+  border-right: var(--border-std);
+  text-align: left;
+}
+
+.ledger-table th:last-child,
+.ledger-table td:last-child {
+  border-right: none;
+}
+
+.ledger-table th {
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+}
+
+/* Utilities */
+.hidden {
+  display: none !important;
+}
+
+.toggle-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 0 5px;
+  display: flex;
+  align-items: center;
+  color: inherit;
+}
+
+.toggle-icon {
+  display: inline-block;
+  transition: transform 0.2s;
+  margin-right: 5px;
+}
+
+.collapsed .toggle-icon {
+  transform: rotate(-90deg);
+}
+
+/* Cards */
+.summary-card {
+  padding: var(--spacing-sm);
+  border: var(--border-std);
+  background: var(--color-bg-base);
+  transition: all 0.2s;
+}
+
+.summary-card:hover {
+  background: var(--color-bg-inverse);
+  color: var(--color-text-inverse);
+  transform: translateY(-2px);
+}
+
+/* Status Badges */
+.status-badge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* Responsive / Mobile Optimization */
+@media (max-width: 768px) {
+
+  /* 1. Typography */
+  h1 {
+    font-size: 2.5rem;
+    /* Reduced from 4rem */
+  }
+
+  h2 {
+    font-size: 2rem;
+    /* Reduced from 2.5rem */
+  }
+
+  .result-value {
+    font-size: 2.5rem;
+    /* Reduced from 4rem */
+  }
+
+  /* 2. Layout */
+  .container {
+    padding: 1rem;
+    /* Reduced padding */
+    border: none;
+    /* Remove side borders on mobile for full width feel */
+  }
+
+  .grid-2 {
+    grid-template-columns: 1fr !important;
+    /* Force stack */
+  }
+
+  /* 3. Result Dock - Unstick */
+  .result-dock {
+    position: relative;
+    /* Unstick */
+    height: auto;
+    border-left: none;
+    border-top: var(--border-hero);
+    padding: var(--spacing-sm) 0;
+    margin-top: var(--spacing-md);
+  }
+
+  /* 4. Tables - Overflow */
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: var(--spacing-sm);
+    border: var(--border-std);
+  }
+
+  .ledger-table {
+    min-width: 600px;
+    /* Force scroll */
+    border: none;
+    /* Border handled by container */
+  }
+
+  /* 5. Modals */
+  .modal-content {
+    width: 95%;
+    max-width: none;
+    box-shadow: 10px 10px 0px black;
+    /* Reduce shadow size */
+  }
+
+  /* 6. Header/Nav Stack */
+  header,
+  .grid-header {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: var(--spacing-sm);
+  }
+
+  .grid-header>div {
+    flex-direction: column;
+    width: 100%;
+    gap: var(--spacing-sm);
+  }
+
+  .grid-header>div>div {
+    text-align: left !important;
+  }
+}
+
+.status-confirmed {
+  background: #e8f5e9;
+  color: #2e7d32;
+  border: 1px solid #4CAF50;
+}
+
+.status-likely {
+  background: #fff3e0;
+  color: #ef6c00;
+  border: 1px solid #FF9800;
+}
+
+.status-unconfirmed {
+  background: #ffebee;
+  color: #c62828;
+  border: 1px solid #F44336;
+}
+
+/* Modals */
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.9);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-content {
+  border: 3px solid black;
+  background: white;
+  width: 100%;
+  max-width: 600px;
+  box-shadow: 20px 20px 0px black;
+}
+
+.modal-header {
+  background: black;
+  color: white;
+  padding: var(--spacing-sm);
+  font-weight: 700;
+  text-transform: uppercase;
+}

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Projects | Power in Numbers</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header
+            style="padding: var(--spacing-md); border-bottom: var(--border-hero); display: flex; justify-content: space-between; align-items: flex-end;">
+            <div>
+                <h1>My Projects</h1>
+                <p>The Interdependence Ledger</p>
+            </div>
+            <div style="text-align: right;">
+                <a href="independent.html" style="margin-right: 20px;">My Economic Dream Plan</a>
+                <button id="btn-logout" class="btn-text"
+                    style="background:none; border:none; text-decoration:underline; cursor:pointer; color:var(--color-text-main);">Logout</button>
+                <div id="user-display" style="font-size:0.8rem; font-weight:bold; margin-top:5px;"></div>
+            </div>
+        </header>
+
+        <div style="padding: var(--spacing-md);">
+            <div style="display: flex; justify-content: flex-end; margin-bottom: var(--spacing-md);">
+                <button class="btn btn-primary" id="btn-open-create-modal">+ Create New Project</button>
+            </div>
+
+            <div id="projects-grid"
+                style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--spacing-md);">
+                <!-- Projects injected here -->
+            </div>
+
+            <p id="empty-projects-msg"
+                style="display:none; text-align:center; padding: 50px; color: var(--color-text-muted);">
+                You haven't connected to any projects yet. Create one to get started.
+            </p>
+        </div>
+    </div>
+
+    <!-- Modal: Create Project -->
+    <div id="modal-create-project" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Create New Project</div>
+            <div style="padding: var(--spacing-md);">
+                <div class="input-group">
+                    <label>Project Name</label>
+                    <input type="text" id="new-project-name" placeholder="e.g. Community Garden Grant">
+                </div>
+                <div
+                    style="display: flex; justify-content: flex-end; gap: var(--spacing-sm); margin-top: var(--spacing-md);">
+                    <button class="btn" id="btn-cancel-create">Cancel</button>
+                    <button class="btn btn-primary" id="btn-confirm-create">Create Project</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/store.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Auth Check
+            if (typeof Store === 'undefined') return;
+            const user = Store.checkSession();
+            if (!user) return;
+
+            document.getElementById('user-display').textContent = `User: ${user}`;
+            document.getElementById('btn-logout').onclick = Store.logout;
+
+            // Render Projects
+            const projectsMap = Store.getProjects();
+            const projects = Object.values(projectsMap);
+            const grid = document.getElementById('projects-grid');
+            const emptyMsg = document.getElementById('empty-projects-msg');
+
+            if (projects.length === 0) {
+                emptyMsg.style.display = 'block';
+            } else {
+                emptyMsg.style.display = 'none';
+                projects.forEach(p => {
+                    const card = document.createElement('div');
+                    card.className = 'summary-card';
+                    card.style.cursor = 'pointer';
+                    card.style.transition = 'transform 0.2s';
+                    card.onclick = () => window.location.href = `project.html?id=${p.id}`;
+                    card.onmouseover = () => card.style.transform = 'translateY(-2px)';
+                    card.onmouseout = () => card.style.transform = 'translateY(0)';
+
+                    const teamCount = p.teamMembers ? p.teamMembers.length : 0;
+                    const budget = p.totalBudget || 0; // Or calculate dynamically?
+
+                    card.innerHTML = `
+                        <h3>${p.name || 'Untitled Project'}</h3>
+                        <p style="margin-top:10px; color:var(--color-text-muted); font-size:0.9rem;">
+                            Owner: ${p.owner || 'Unknown'}<br>
+                            Team Members: ${teamCount}
+                        </p>
+                    `;
+                    grid.appendChild(card);
+                });
+            }
+
+            document.getElementById('btn-confirm-create').onclick = () => {
+                const name = document.getElementById('new-project-name').value.trim();
+                if (name) {
+                    const newProject = Store.createProject(name);
+                    window.location.href = `project.html?id=${newProject.id}`;
+                } else {
+                    alert('Please enter a project name.');
+                }
+            };
+
+            // Modal Logic
+            const modal = document.getElementById('modal-create-project');
+            document.getElementById('btn-open-create-modal').onclick = () => modal.style.display = 'flex';
+            document.getElementById('btn-cancel-create').onclick = () => modal.style.display = 'none';
+        });
+    </script>
+</body>
+
+</html>
