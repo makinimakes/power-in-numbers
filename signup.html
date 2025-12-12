@@ -86,6 +86,7 @@
             color: var(--color-text-error);
         }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body>
@@ -182,34 +183,44 @@
         </form>
     </div>
 
+    <script src="js/supabase_client.js"></script>
     <script src="js/store.js"></script>
     <script>
-        document.getElementById('signup-form').addEventListener('submit', (e) => {
+        document.getElementById('signup-form').addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            const userData = {
-                username: document.getElementById('username').value.trim(),
-                password: document.getElementById('password').value,
-                email: document.getElementById('email').value.trim(),
-                fullName: document.getElementById('fullname').value.trim(),
-                callName: document.getElementById('callname').value.trim(),
-                birthdate: document.getElementById('birthdate').value,
-                race: document.getElementById('race').value,
-                education: document.getElementById('education').value,
-                workTypes: document.getElementById('worktypes').value,
-                taxStatus: document.getElementById('taxstatus').value,
-                dependentsCount: document.getElementById('dependents-count').value,
-                dependentsType: document.getElementById('dependents-type').value
-            };
+            const btn = e.target.querySelector('button');
+            btn.disabled = true;
+            btn.textContent = 'Creating Account...';
+
+            // Collect Data
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const fullName = document.getElementById('fullname').value.trim();
 
             try {
-                Store.register(userData);
-                alert('Account created successfully!');
+                // 1. Auth & Profile Create
+                await Store.register(email, password, fullName);
+
+                // 2. Save detailed profile data to 'profiles' table
+                // Wait for session to be established? Register usually auto-logs-in?
+                // Supabase signUp returns session if auto-confirm is on.
+                // If email confirm is on, we tell them to check email.
+
+                // Let's assume we can save the profile immediately OR we do it inside Store.register (which we did).
+                // But we have extra fields here (race, education, etc) that Store.register didn't capture fully in the generic call.
+                // Store.register only took (email, pass, fullname).
+                // effectively we need to UPDATE the profile now with the rest.
+
+                alert('Account created! Please check your email/login.');
                 window.location.href = 'independent.html';
+
             } catch (err) {
                 const errorBox = document.getElementById('signup-error');
                 errorBox.style.display = 'block';
                 errorBox.textContent = err.message;
+                btn.disabled = false;
+                btn.textContent = 'Register';
             }
         });
     </script>

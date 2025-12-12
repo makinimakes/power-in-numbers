@@ -22,11 +22,11 @@ const outCapacityMsg = document.getElementById('out-capacity-msg');
 const modal = document.getElementById('modal-contract');
 
 // State
-let profile = Store.getIndependentProfile();
+let profile = {}; // Init empty
 let activeContractType = 'confirmed'; // 'confirmed' or 'projected'
 
-function init() {
-    profile = Store.getIndependentProfile();
+async function init() {
+    profile = await Store.getIndependentProfile();
 
     // Load Period State
     if (!profile.calibrations) {

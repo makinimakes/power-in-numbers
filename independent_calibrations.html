@@ -44,6 +44,7 @@
             border-bottom: 1px dotted var(--color-border);
         }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body>
@@ -342,14 +343,18 @@
     </dialog>
 
     <script src="js/utils.js"></script>
+    <script src="js/supabase_client.js"></script>
     <script src="js/store.js"></script>
     <script src="js/calibrations_spectrum.js"></script>
     <script>
         // Auth Check
-        const currentUser = Store.checkSession();
-        if (currentUser) {
-            document.getElementById('user-display').textContent = 'User: ' + currentUser;
-        }
+        // Auth Check
+        (async () => {
+            const currentUser = await Store.checkSession();
+            if (currentUser) {
+                document.getElementById('user-display').textContent = 'User: ' + currentUser;
+            }
+        })();
     </script>
     <script src="js/calibrations.js"></script>
 </body>

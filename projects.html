@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Projects | Power in Numbers</title>
     <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body>
@@ -61,19 +62,20 @@
     </div>
 
     <script src="js/utils.js"></script>
+    <script src="js/supabase_client.js"></script>
     <script src="js/store.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             // Auth Check
             if (typeof Store === 'undefined') return;
-            const user = Store.checkSession();
+            const user = await Store.checkSession();
             if (!user) return;
 
             document.getElementById('user-display').textContent = `User: ${user}`;
             document.getElementById('btn-logout').onclick = Store.logout;
 
             // Render Projects
-            const projectsMap = Store.getProjects();
+            const projectsMap = await Store.getProjects();
             const projects = Object.values(projectsMap);
             const grid = document.getElementById('projects-grid');
             const emptyMsg = document.getElementById('empty-projects-msg');
@@ -92,12 +94,16 @@
                     card.onmouseout = () => card.style.transform = 'translateY(0)';
 
                     const teamCount = p.teamMembers ? p.teamMembers.length : 0;
-                    const budget = p.totalBudget || 0; // Or calculate dynamically?
+                    // Provide default if budget missing (e.g. migration)
+                    const budget = p.totalBudget || 0;
+
+                    // Owner Display Logic (handle email vs string)
+                    const ownerDisplay = p.owner || 'Unknown';
 
                     card.innerHTML = `
                         <h3>${p.name || 'Untitled Project'}</h3>
                         <p style="margin-top:10px; color:var(--color-text-muted); font-size:0.9rem;">
-                            Owner: ${p.owner || 'Unknown'}<br>
+                            Owner: ${ownerDisplay}<br>
                             Team Members: ${teamCount}
                         </p>
                     `;
@@ -105,11 +111,21 @@
                 });
             }
 
-            document.getElementById('btn-confirm-create').onclick = () => {
+            document.getElementById('btn-confirm-create').onclick = async () => {
                 const name = document.getElementById('new-project-name').value.trim();
+                const btn = document.getElementById('btn-confirm-create');
+
                 if (name) {
-                    const newProject = Store.createProject(name);
-                    window.location.href = `project.html?id=${newProject.id}`;
+                    btn.textContent = 'Creating...';
+                    btn.disabled = true;
+                    try {
+                        const newProject = await Store.createProject(name);
+                        window.location.href = `project.html?id=${newProject.id}`;
+                    } catch (e) {
+                        alert("Error creating project: " + e.message);
+                        btn.textContent = 'Create Project';
+                        btn.disabled = false;
+                    }
                 } else {
                     alert('Please enter a project name.');
                 }

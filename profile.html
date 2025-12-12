@@ -98,6 +98,7 @@
             color: var(--color-text-error);
         }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body>
@@ -208,7 +209,8 @@
         </form>
     </div>
 
-    <script src="js/store.js"></script>
+    <script src="js/supabase_client.js"></script>
+        <script src="js/store.js"></script>
     <script>
         // Load Data
         const currentUser = Store.checkSession();

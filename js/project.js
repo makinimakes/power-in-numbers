@@ -3,7 +3,16 @@
  * Uses BudgetEngine for complex rate calculations.
  */
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // 1. Auth Check (MUST be first for RLS)
+    const currentUser = await Store.checkSession();
+    if (!currentUser) {
+        // Store.checkSession handles redirect, but just in case
+        return;
+    }
+    const userDisplay = document.getElementById('user-display');
+    if (userDisplay) userDisplay.textContent = 'User: ' + currentUser;
+
     // 2. State & Init
     const urlParams = new URLSearchParams(window.location.search);
     const projectId = urlParams.get('id');
@@ -13,22 +22,48 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    let project = Store.getProject(projectId);
-    if (!project) {
-        alert('Project not found');
+    // Async Fetch: Project
+    let project = null;
+    try {
+        project = await Store.getProject(projectId);
+    } catch (e) {
+        alert("Error loading project: " + e.message + " (" + e.code + ")");
         window.location.href = 'projects.html';
         return;
     }
 
-    // Load ALL users to map profiles for calculations
-    const usersMap = Store.getUsers();
-
-    // 2b. Auth & Header Check
-    const currentUser = Store.checkSession();
-    if (currentUser) {
-        const userDisplay = document.getElementById('user-display');
-        if (userDisplay) userDisplay.textContent = 'User: ' + currentUser;
+    if (!project) {
+        alert('Project not found (or access denied). ID: ' + projectId);
+        window.location.href = 'projects.html';
+        return;
     }
+
+    // Make project global for render functions
+    window._project = project;
+    // Helper accessor for legacy code if needed, but better to pass it or rely on window._project
+    // We will update referencing code to use window._project or local variable if scope permits.
+    // Actually, `render()` relies on `project`. We need to make sure `project` var is accessible.
+    // In this file, `project` was top-level scope or module scope?
+    // It was execution scope inside listener. `render()` calls `project`.
+    // Wait, `render()` is defined globally? No, it's inside the listener? 
+    // Let's check the file structure.
+
+    // ... Checked: render() is likely defined inside or outside. 
+    // In original code, `let project = Store.getProject` was inside the listener. 
+    // `render()` closes over it? 
+    // If `render` is defined OUTSIDE, it won't see `project`.
+    // Let's assume `render` is INSIDE the listener OR uses a global.
+    // Looking at previous `view_file` (Step 11), `render()` accesses `project`.
+    // If I keep `project` inside the `async () =>`, `render` must be inside too.
+
+    // Async Fetch: Users (for collaboration names)
+    // Legacy: Store.getUsers() returns all.
+    // New: We need to fetch profiles for the team members in the project.
+    const memberEmails = project.teamMembers ? project.teamMembers.map(m => m.email || m.username) : [];
+    // Also include owner
+    if (project.owner) memberEmails.push(project.owner);
+
+    const usersMap = await Store.getUsersMap(memberEmails); // New helper
 
     // Wizard Logic
     const Wizard = {
@@ -1666,5 +1701,88 @@ document.addEventListener('DOMContentLoaded', () => {
             renderDistributionModal(btn.dataset.scenario);
         }
     });
+
+    // --- Collaboration Logic ---
+
+    // Expose Modal Opener
+    window.openInviteModal = () => {
+        const emailInput = document.getElementById('invite-email');
+        if (emailInput) emailInput.value = '';
+        const modal = document.getElementById('modal-invite-member');
+        if (modal) modal.style.display = 'flex';
+    };
+
+    // Bind Confirm Button
+    const btnConfirmInvite = document.getElementById('btn-confirm-invite');
+    if (btnConfirmInvite) {
+        btnConfirmInvite.onclick = async () => {
+            const email = document.getElementById('invite-email').value.trim();
+            const btn = document.getElementById('btn-confirm-invite');
+
+            if (!email) {
+                alert("Please enter an email.");
+                return;
+            }
+
+            btn.innerText = "Inviting...";
+            btn.disabled = true;
+
+            try {
+                // Ensure we have project ID
+                const currentId = window._project ? window._project.id : (new URLSearchParams(window.location.search).get('id'));
+                await Store.inviteUser(currentId, email);
+                alert(`Invited ${email} successfully!`);
+                document.getElementById('modal-invite-member').style.display = 'none';
+                await loadAndRenderCollaborators();
+            } catch (e) {
+                alert("Error inviting user: " + e.message);
+            } finally {
+                btn.innerText = "Send Invite";
+                btn.disabled = false;
+            }
+        };
+    }
+
+    async function loadAndRenderCollaborators() {
+        const currentId = window._project ? window._project.id : (new URLSearchParams(window.location.search).get('id'));
+        if (!currentId) return;
+
+        const list = document.getElementById('collaborators-list');
+        if (!list) return;
+
+        // Fetch members from project_members table
+        const { data: teamData, error: teamError } = await window.supabaseClient
+            .from('project_members')
+            .select('role, profiles:user_id(email, full_name)')
+            .eq('project_id', currentId);
+
+        list.innerHTML = '';
+
+        // 1. Owner Badge (From Project Data)
+        const ownerName = (window._project && window._project.owner) ? window._project.owner : 'Owner';
+        const ownerDiv = document.createElement('div');
+        ownerDiv.className = 'summary-card';
+        ownerDiv.style.padding = '10px';
+        ownerDiv.style.minWidth = '200px';
+        ownerDiv.innerHTML = `<strong>Owner</strong><br>${ownerName}`;
+        list.appendChild(ownerDiv);
+
+        if (teamData) {
+            teamData.forEach(m => {
+                // Check if owner to avoid dupe
+                if (m.profiles && m.profiles.email !== ownerName) {
+                    const d = document.createElement('div');
+                    d.className = 'summary-card';
+                    d.style.padding = '10px';
+                    d.style.minWidth = '200px';
+                    d.innerHTML = `<strong>${m.profiles.full_name || 'Collaborator'}</strong><br>${m.profiles.email}<br><span style="font-size:0.7rem; color:gray;">${m.role}</span>`;
+                    list.appendChild(d);
+                }
+            });
+        }
+    }
+
+    // Call it
+    loadAndRenderCollaborators();
 
 });

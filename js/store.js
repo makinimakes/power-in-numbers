@@ -1,15 +1,373 @@
 /**
- * Data Store
- * Management of localStorage for Power in Numbers
+ * Data Store - Supabase Edition (Async)
+ * Wraps Supabase Client for Power in Numbers
  */
 
-const STORAGE_KEYS = {
-    USERS: 'pin_users',       // { username: { password, profile, ...userData } }
-    SESSION: 'pin_session',   // "username"
-    PROJECT: 'pin_project_budget'
+const Store = {
+    // --- Auth Methods ---
+
+    /**
+     * Check current session. Returns string username (email) or null.
+     * NOW ASYNC if validating against server, but for speed we can check local session.
+     * Supabase handles session auto-refresh.
+     */
+    checkSession: async () => {
+        const { data: { session } } = await window.supabaseClient.auth.getSession();
+        if (!session) {
+            // Redirect if not on public pages
+            if (!window.location.href.includes('login.html') && !window.location.href.includes('signup.html')) {
+                window.location.href = 'login.html';
+            }
+            return null;
+        }
+        return session.user.email;
+    },
+
+    getCurrentUser: async () => {
+        const { data: { user } } = await window.supabaseClient.auth.getUser();
+        return user;
+    },
+
+    login: async (email, password) => {
+        const { data, error } = await window.supabaseClient.auth.signInWithPassword({
+            email: email,
+            password: password
+        });
+
+        if (error) {
+            alert("Login Failed: " + error.message);
+            return false;
+        }
+        return true;
+    },
+
+    logout: async () => {
+        await window.supabaseClient.auth.signOut();
+        window.location.href = 'login.html';
+    },
+
+    register: async (email, password, fullName) => {
+        const { data, error } = await window.supabaseClient.auth.signUp({
+            email: email,
+            password: password,
+            options: {
+                data: {
+                    full_name: fullName
+                }
+            }
+        });
+
+        if (error) {
+            throw new Error(error.message);
+        }
+
+        // Create Profile Row
+        if (data.user) {
+            // Check if profile exists (triggered by trigger? or manual?)
+            // Manual creation to be safe
+            const { error: profileError } = await window.supabaseClient
+                .from('profiles')
+                .insert([
+                    {
+                        id: data.user.id,
+                        email: email,
+                        full_name: fullName,
+                        independent_profile: window.DEFAULT_INDEPENDENT // Init with defaults
+                    }
+                ]);
+
+            if (profileError) console.error("Profile creation error:", profileError);
+        }
+    },
+
+    // --- Profile Methods ---
+
+    getIndependentProfile: async () => {
+        const user = await Store.getCurrentUser();
+        if (!user) return window.DEFAULT_INDEPENDENT;
+
+        const { data, error } = await window.supabaseClient
+            .from('profiles')
+            .select('independent_profile')
+            .eq('id', user.id)
+            .single();
+
+        if (error) {
+            console.error("Error fetching profile:", error);
+            return window.DEFAULT_INDEPENDENT;
+        }
+
+        // Merge defaults
+        return { ...window.DEFAULT_INDEPENDENT, ...data.independent_profile };
+    },
+
+    saveIndependentProfile: async (profile) => {
+        const user = await Store.getCurrentUser();
+        if (!user) return;
+
+        const { error } = await window.supabaseClient
+            .from('profiles')
+            .update({ independent_profile: profile })
+            .eq('id', user.id);
+
+        if (error) {
+            console.error("Error saving profile:", error);
+            alert("Failed to save profile.");
+        } else {
+            // Notify local listeners just in case
+            window.dispatchEvent(new CustomEvent('pin-independent-update', { detail: profile }));
+        }
+    },
+
+    // --- Project Methods ---
+
+    /**
+     * Get ALL projects (Owned + Shared)
+     * Returns Map: { [id]: project }
+     */
+    getProjects: async () => {
+        const user = await Store.getCurrentUser();
+        if (!user) return {};
+
+        // 1. Fetch Owned Projects
+        const { data: owned, error: err1 } = await window.supabaseClient
+            .from('projects')
+            .select('*')
+            .eq('owner_id', user.id);
+
+        if (err1) throw err1;
+
+        // 2. Fetch Shared Projects
+        // Query project_members to find project_ids where user_id = me
+        const { data: memberRows, error: err2 } = await window.supabaseClient
+            .from('project_members')
+            .select('project_id, role')
+            .eq('user_id', user.id);
+
+        // If error (e.g. table doesn't exist yet), just return owned.
+        let shared = [];
+        if (!err2 && memberRows && memberRows.length > 0) {
+            const sharedIds = memberRows.map(r => r.project_id);
+            if (sharedIds.length > 0) {
+                const { data: sharedProjects, error: err3 } = await window.supabaseClient
+                    .from('projects')
+                    .select('*')
+                    .in('id', sharedIds);
+
+                if (!err3 && sharedProjects) {
+                    shared = sharedProjects;
+                }
+            }
+        }
+
+        // Merge
+        const projects = {};
+        [...(owned || []), ...(shared || [])].forEach(p => {
+            projects[p.id] = { ...p.data, id: p.id, name: p.name, owner_id: p.owner_id };
+        });
+
+        return projects;
+    },
+
+    /**
+     * Invite a user to a project by email.
+     * 1. Check if user exists (requires Public Profiles).
+     * 2. Add to project_members.
+     */
+    inviteUser: async (projectId, email) => {
+        // 1. Find User
+        const userProfile = await Store.findUserByEmail(email);
+        if (!userProfile) {
+            throw new Error(`User with email ${email} not found. They must sign up first.`);
+        }
+
+        // 2. Add to project_members table
+        // We first need the UUID from the profiles table lookup.
+        // findUserByEmail returns { username, email, fullName, independentProfile } 
+        // We need to update findUserByEmail to return ID or do a raw lookup here.
+        // Let's do a raw lookup here to be safe and get the ID.
+
+        const { data: profileData, error: profileError } = await window.supabaseClient
+            .from('profiles')
+            .select('id')
+            .eq('email', email)
+            .single();
+
+        if (profileError || !profileData) {
+            throw new Error(`User ${email} not found.`);
+        }
+
+        const userId = profileData.id;
+
+        const { error: insertError } = await window.supabaseClient
+            .from('project_members')
+            .insert([{
+                project_id: projectId,
+                user_id: userId,
+                role: 'editor'
+            }]);
+
+        if (insertError) {
+            // Unique violation means already invited
+            if (insertError.code === '23505') {
+                throw new Error("User is already a member of this project.");
+            }
+            throw insertError;
+        }
+
+        return true;
+    },
+
+    getProject: async (id) => {
+        const { data, error } = await window.supabaseClient
+            .from('projects')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (error) {
+            console.error("Store.getProject Error:", error);
+            // If it's a "Row not found" (PGRST116), return null gracefully.
+            if (error.code === 'PGRST116') return null;
+            // Otherwise throw
+            throw error;
+        }
+
+        // Merge
+        return { ...data.data, id: data.id, name: data.name, owner_id: data.owner_id };
+    },
+
+    saveProject: async (project) => {
+        const user = await Store.getCurrentUser();
+        if (!user) return;
+
+        const payload = {
+            name: project.name,
+            data: project, // Storing full object in JSONB
+            owner_id: user.id
+        };
+
+        if (project.id && !project.id.includes('-')) {
+            // Legacy numeric ID check? No, all UUIDs now.
+            // Just proceed to payload.
+        }
+
+        // Use UPSERT for simplicity (Insert if new/ID not found, Update if ID found)
+        // Note: For this to work, ID must be a primary key.
+        const { data, error } = await window.supabaseClient
+            .from('projects')
+            .upsert(payload)
+            .select()
+            .single();
+
+        if (error) {
+            console.error("Save Project Error", error);
+            throw error;
+        }
+
+        // Return merged data (DB truth)
+        // Ensure we merge back the full 'data' json column into the object structure
+        // The DB returns: { id, name, owner_id, data: {...}, created_at }
+        // We want to return the 'expanded' object.
+        const merged = { ...data.data, id: data.id, name: data.name, owner_id: data.owner_id };
+        return merged;
+    },
+
+    // Helper to find users (for collaboration)
+    findUserByEmail: async (email) => {
+        // Requires RLS policy 'Public profiles are viewable by everyone'
+        const { data, error } = await window.supabaseClient
+            .from('profiles')
+            .select('*')
+            .eq('email', email)
+            .single();
+
+        if (error || !data) return null;
+
+        return {
+            username: data.email, // Map email to legacy username field
+            email: data.email,
+            fullName: data.full_name,
+            independentProfile: data.independent_profile
+        };
+    },
+
+    // Helper: Map of all users (Deprecated in Async World, but used by Project.js)
+    // We must replace usages of `Store.getUsers()` with individual lookups or a batch fetch.
+    // For now, we can implement a method that fetches ALL profiles if the user base is small, 
+    // OR we change the project logic.
+    // Given the prompt "collaborators to observe", let's try to fetch all needed profiles via `getProjectTeam`.
+
+    getUsersMap: async (emailsArray) => {
+        if (!emailsArray || emailsArray.length === 0) return {};
+
+        const { data, error } = await window.supabaseClient
+            .from('profiles')
+            .select('*')
+            .in('email', emailsArray);
+
+        const map = {};
+        if (data) {
+            data.forEach(p => {
+                map[p.email] = {
+                    username: p.email,
+                    email: p.email,
+                    fullName: p.full_name,
+                    independentProfile: p.independent_profile
+                };
+            });
+        }
+        return map;
+    },
+
+    createProject: async (name) => {
+        const user = await Store.getCurrentUser();
+
+        // Fetch full profile for the creator
+        const profile = await Store.getIndependentProfile();
+
+        const newProject = {
+            id: crypto.randomUUID ? crypto.randomUUID() : undefined, // Let Supabase gen ID if crypto missing
+            name: name,
+            owner: user.email,
+            teamMembers: [],
+            incomeSources: [],
+            phases: [
+                {
+                    id: crypto.randomUUID(),
+                    name: 'Phase 1',
+                    schedule: {},
+                    lineItems: [],
+                    overrides: {}
+                }
+            ],
+            totalBudget: 0
+        };
+
+        // Auto-add creator
+        newProject.teamMembers.push({
+            id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(), // Fallback for file://
+            name: profile.fullName || "Me",
+            rate: 0,
+            days: 0,
+            username: user.email,
+            email: user.email
+        });
+
+        // Save and Return the DB version (which has the authoritative ID)
+        return await Store.saveProject(newProject);
+    }
 };
 
-// Base categories remain the same, reused for new users
+// Temp helper to check if ID is UUID (server side) vs something else? 
+// Supabase handles upsert if we pass ID.
+function isNew(id) {
+    // If we rely on UPSERT, we don't need this check.
+    return false;
+}
+
+// Re-export defaults
+// Ensure Utils is loaded first or duplicated constants
 const BASE_EXPENSE_CATEGORIES = [
     { label: 'Monthly rent/mortgage', type: 'Monthly', frequency: 1 },
     { label: 'Utilities', type: 'Monthly', frequency: 1 },
@@ -79,269 +437,6 @@ const DEFAULT_INDEPENDENT = {
     currentNetIncome: 0
 };
 
-const DEFAULT_PROJECT = {
-    teamMembers: [], // { id, name, rate, days, username, email }
-    expenses: [],    // { id, name, cost }
-    incomeSources: [], // { id, name, amount, status: 'Confirmed'|'Likely'|'Unconfirmed' }
-    totalBudget: 0
-};
-
-const Store = {
-    // --- Auth Methods ---
-
-    getUsers: () => {
-        const data = localStorage.getItem(STORAGE_KEYS.USERS);
-        return data ? JSON.parse(data) : {};
-    },
-
-    saveUsers: (users) => {
-        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
-    },
-
-    getCurrentUser: () => {
-        return localStorage.getItem(STORAGE_KEYS.SESSION);
-    },
-
-    checkSession: () => {
-        const user = Store.getCurrentUser();
-        if (!user) {
-            // Redirect to login if not on auth pages
-            if (!window.location.href.includes('login.html') && !window.location.href.includes('signup.html')) {
-                window.location.href = 'login.html';
-            }
-            return null;
-        }
-        return user;
-    },
-
-    login: (username, password) => {
-        const users = Store.getUsers();
-        if (users[username] && users[username].password === password) {
-            localStorage.setItem(STORAGE_KEYS.SESSION, username);
-            return true;
-        }
-        return false;
-    },
-
-    logout: () => {
-        localStorage.removeItem(STORAGE_KEYS.SESSION);
-        window.location.href = 'login.html';
-    },
-
-    register: (userData) => {
-        const users = Store.getUsers();
-        if (users[userData.username]) {
-            throw new Error('Username already exists');
-        }
-
-        // Initialize with default profile structure
-        users[userData.username] = {
-            ...userData,
-            independentProfile: { ...DEFAULT_INDEPENDENT }
-        };
-
-        Store.saveUsers(users);
-        // Auto-login after register
-        localStorage.setItem(STORAGE_KEYS.SESSION, userData.username);
-    },
-
-    updateUser: (username, newUserData) => {
-        const users = Store.getUsers();
-        if (!users[username]) {
-            throw new Error('User not found');
-        }
-
-        // Merge new data into existing user object
-        // Protect username from being changed here for simplicity
-        const updatedUser = {
-            ...users[username],
-            ...newUserData,
-            username: username // Force username to stay same
-        };
-
-        users[username] = updatedUser;
-        Store.saveUsers(users);
-        return updatedUser;
-    },
-
-    findUserByEmail: (email) => {
-        const users = Store.getUsers();
-        // Since users are keyed by username, we iterate
-        for (const username in users) {
-            if (users[username].email === email) {
-                return users[username];
-            }
-        }
-        return null;
-    },
-
-    // --- Profile Methods (Scoped to Session) ---
-
-    getIndependentProfile: () => {
-        const currentUser = Store.getCurrentUser();
-        if (!currentUser) return DEFAULT_INDEPENDENT;
-
-        const users = Store.getUsers();
-        const userProfile = users[currentUser].independentProfile || DEFAULT_INDEPENDENT;
-
-        // Shallow merge defaults
-        return { ...DEFAULT_INDEPENDENT, ...userProfile };
-    },
-
-    saveIndependentProfile: (profile) => {
-        const currentUser = Store.getCurrentUser();
-        if (!currentUser) return;
-
-        const users = Store.getUsers();
-        if (users[currentUser]) {
-            users[currentUser].independentProfile = profile;
-            Store.saveUsers(users);
-            window.dispatchEvent(new CustomEvent('pin-independent-update', { detail: profile }));
-        }
-    },
-
-    // --- Project Methods ---
-
-    // --- Project Methods ---
-
-    // 1. Get All Projects (Map)
-    getProjects: () => {
-        let projects = localStorage.getItem('pin_projects');
-        if (projects) {
-            return JSON.parse(projects);
-        }
-
-        // Migration: Check for old single project
-        const oldProject = localStorage.getItem(STORAGE_KEYS.PROJECT);
-        if (oldProject) {
-            const p = JSON.parse(oldProject);
-            // Ensure ID and Name
-            if (!p.id) p.id = crypto.randomUUID();
-            if (!p.name) p.name = "Legacy Project";
-
-            // Create new map
-            const newProjects = {};
-            newProjects[p.id] = p;
-
-            // Save new, remove old
-            localStorage.setItem('pin_projects', JSON.stringify(newProjects));
-            localStorage.removeItem(STORAGE_KEYS.PROJECT);
-            return newProjects;
-        }
-
-        return {};
-    },
-
-    // 2. Get Single Project (with Migration)
-    getProject: (id) => {
-        const projects = Store.getProjects();
-        let project = projects[id];
-        if (!project) return null;
-
-        // Migration: Add Phases if missing
-        if (!project.phases) {
-            project.phases = [{
-                id: crypto.randomUUID(),
-                name: 'Phase 1',
-                teamMembers: [], // Use project pool
-                lineItems: [], // Move old expenses/team allocs here? 
-                // For simplified migration, we keep old team/expenses at root for now
-                // and just add the structure. 
-                // Ideally, we move 'expenses' to 'lineItems'.
-                schedule: { start: '', end: '' }
-            }];
-
-            // If project has expenses, move to Phase 1 lineItems
-            if (project.expenses && project.expenses.length > 0) {
-                project.phases[0].lineItems = project.expenses.map(e => ({
-                    ...e,
-                    type: 'Expense',
-                    phaseId: project.phases[0].id
-                }));
-                project.expenses = []; // Clear root
-            }
-
-            Store.saveProject(project);
-        }
-        return project;
-    },
-
-    // 3. Save Project (Create/Update)
-    saveProject: (project) => {
-        const projects = Store.getProjects();
-        if (!project.id) project.id = crypto.randomUUID();
-
-        // Ensure defaults
-        if (!project.teamMembers) project.teamMembers = [];
-        if (!project.phases) project.phases = [];
-        if (!project.incomeSources) project.incomeSources = [];
-
-        projects[project.id] = project;
-        localStorage.setItem('pin_projects', JSON.stringify(projects));
-        window.dispatchEvent(new CustomEvent('pin-projects-update', { detail: projects }));
-        return project;
-    },
-
-    // 4. Create New Project
-    createProject: (name) => {
-        const currentUser = Store.getCurrentUser();
-        const users = Store.getUsers();
-        const userProfile = users[currentUser];
-
-        const newProject = {
-            id: crypto.randomUUID(),
-            name: name,
-            owner: currentUser,
-            teamMembers: [], // The Pool
-            incomeSources: [],
-            phases: [
-                {
-                    id: crypto.randomUUID(),
-                    name: 'Phase 1',
-                    schedule: {},
-                    lineItems: [],
-                    overrides: {}
-                }
-            ],
-            totalBudget: 0
-        };
-
-        // Auto-add creator as first team member (Pool)
-        if (userProfile) {
-            newProject.teamMembers.push({
-                id: crypto.randomUUID(),
-                name: userProfile.fullName || currentUser,
-                rate: 0,
-                days: 0,
-                username: currentUser,
-                email: userProfile.email
-            });
-        }
-
-        return Store.saveProject(newProject);
-    },
-
-    // Helper: Add Member to Specific Project
-    addProjectMember: (projectId, member) => {
-        const project = Store.getProject(projectId);
-        if (project) {
-            member.id = crypto.randomUUID();
-            project.teamMembers.push(member);
-            Store.saveProject(project);
-        }
-    },
-
-    // Helper: Remove Member from Specific Project
-    removeProjectMember: (projectId, memberId) => {
-        const project = Store.getProject(projectId);
-        if (project) {
-            project.teamMembers = project.teamMembers.filter(m => m.id !== memberId);
-            Store.saveProject(project);
-        }
-    },
-
-    ensureId: (item) => {
-        if (!item.id) item.id = crypto.randomUUID();
-        return item;
-    }
-};
+// Export to window
+window.Store = Store;
+window.DEFAULT_INDEPENDENT = DEFAULT_INDEPENDENT;

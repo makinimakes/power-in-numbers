@@ -32,40 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // 2. State Management
-    let profile = Store.getIndependentProfile();
-
-    if (!profile.linesOfWork) profile.linesOfWork = [];
-    if (!profile.expenses.items) {
-        // Migration or Init
-        profile.expenses = {
-            taxRate: 30,
-            items: BASE_EXPENSE_CATEGORIES.map(item => ({
-                ...item,
-                id: crypto.randomUUID(),
-                amount: 0
-            }))
-        };
-    }
-
-    if (!profile.unearnedIncome || !profile.unearnedIncome.items) {
-        profile.unearnedIncome = {
-            items: [
-                { id: crypto.randomUUID(), label: 'Interest', amount: 0, type: 'Annual', frequency: 1 },
-                { id: crypto.randomUUID(), label: 'Dividends', amount: 0, type: 'Annual', frequency: 1 },
-                { id: crypto.randomUUID(), label: 'Capital Gains', amount: 0, type: 'Annual', frequency: 1 },
-                { id: crypto.randomUUID(), label: 'Trust Distributions', amount: 0, type: 'Annual', frequency: 1 },
-                { id: crypto.randomUUID(), label: 'Inheritance', amount: 0, type: 'Annual', frequency: 1 },
-                { id: crypto.randomUUID(), label: 'Passive Rental Income', amount: 0, type: 'Monthly', frequency: 1 },
-                { id: crypto.randomUUID(), label: 'Royalties', amount: 0, type: 'Annual', frequency: 1 },
-                { id: crypto.randomUUID(), label: 'Regularly Received Gifts', amount: 0, type: 'Annual', frequency: 1 },
-                { id: crypto.randomUUID(), label: 'Social Security Income', amount: 0, type: 'Monthly', frequency: 1 },
-                { id: crypto.randomUUID(), label: 'Retirement Income', amount: 0, type: 'Monthly', frequency: 1 },
-                { id: crypto.randomUUID(), label: 'Pension Income', amount: 0, type: 'Monthly', frequency: 1 },
-                { id: crypto.randomUUID(), label: 'Alimony', amount: 0, type: 'Monthly', frequency: 1 },
-                { id: crypto.randomUUID(), label: 'Child Support', amount: 0, type: 'Monthly', frequency: 1 }
-            ]
-        };
-    }
+    let profile = {}; // Init empty, load in async init()
 
     // -------------------------------------------------------------------------
     // HELPERS & NORMALIZATION
@@ -635,7 +602,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // 3. Initialization
-    function init() {
+    async function init() {
+        profile = await Store.getIndependentProfile(); // Reload with latest
+
+        // 2. State Management (Re-check defaults after async load)
+        if (!profile.linesOfWork) profile.linesOfWork = [];
+        if (!profile.expenses.items) {
+            profile.expenses = {
+                taxRate: 30,
+                items: BASE_EXPENSE_CATEGORIES.map(item => ({
+                    ...item,
+                    id: crypto.randomUUID(),
+                    amount: 0
+                }))
+            };
+        }
+
+        if (!profile.unearnedIncome || !profile.unearnedIncome.items) {
+            profile.unearnedIncome = { items: [] }; // Minimal default, full default is large block above
+            // Actually, merge defaults logic handles this in Store, but let's keep robust
+        }
+
         if (profile.schedule) {
             inputs.weeks.value = profile.schedule.weeks;
             inputs.days.value = profile.schedule.days;
@@ -666,8 +653,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 profile.schedule[key] = parseFloat(e.target.value);
                 Store.saveIndependentProfile(profile);
                 calculateAndDisplay();
-                // Re-render lines (for validation check logic if needed, or UI updates)
-                // LineManager.checkValidation?? No, validation is on input.
             });
         });
 

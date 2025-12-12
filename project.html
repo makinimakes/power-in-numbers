@@ -58,6 +58,7 @@
             text-transform: uppercase;
         }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body>
@@ -85,6 +86,21 @@
                     style="display:block; font-size:0.8rem; font-weight:bold; margin-top:5px; color:var(--color-text-inverse); text-decoration:none;"></a>
             </div>
         </header>
+
+        <!-- Collaborators Section -->
+        <section class="ledger-section"
+            style="margin-top:20px; padding:var(--spacing-sm); border:2px solid #000; background:#fff;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="margin:0;">Collaborators</h3>
+                <button class="btn btn-primary" onclick="window.openInviteModal()" style="font-size:0.8rem;">+ Invite
+                    Member</button>
+            </div>
+
+            <div id="collaborators-list" style="margin-top:15px; display:flex; gap:10px; flex-wrap:wrap;">
+                <!-- JS Injected -->
+                <div style="padding:10px; background:#eee; border-radius:4px;">Loading...</div>
+            </div>
+        </section>
 
         <!-- 0. PROJECT GLOBAL RATES -->
         <section class="ledger-section"
@@ -648,6 +664,28 @@
             </div>
         </div>
 
+        <!-- Modal: Invite Member -->
+        <div id="modal-invite-member" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">Invite Collaborator</div>
+                <div style="padding: var(--spacing-md);">
+                    <p style="margin-bottom:15px; font-size:0.9rem;">
+                        Enter the email address of the user you want to invite.
+                        <br><small style="color:red;">Note: They must already have an account.</small>
+                    </p>
+                    <div class="input-group">
+                        <label>User Email</label>
+                        <input type="email" id="invite-email" placeholder="user@example.com">
+                    </div>
+                    <div
+                        style="display: flex; justify-content: flex-end; gap: var(--spacing-sm); margin-top: var(--spacing-md);">
+                        <button class="btn"
+                            onclick="document.getElementById('modal-invite-member').style.display='none'">Cancel</button>
+                        <button class="btn btn-primary" id="btn-confirm-invite">Send Invite</button>
+                    </div>
+                </div>
+            </div>
+        </div>
         <!-- Modal: Math Log -->
         <div id="modal-math-log" class="modal">
             <div class="modal-content" style="max-width: 600px;">
@@ -667,6 +705,7 @@
         </div>
 
         <script src="js/utils.js"></script>
+        <script src="js/supabase_client.js"></script>
         <script src="js/store.js"></script>
         <script src="js/budget_engine.js"></script>
         <script src="js/project.js"></script>

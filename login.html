@@ -68,6 +68,7 @@
             display: none;
         }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body>
@@ -99,24 +100,42 @@
         </form>
     </div>
 
+    <script src="js/supabase_client.js"></script>
     <script src="js/store.js"></script>
     <script>
-        // Check if already logged in
-        if (Store.getCurrentUser()) {
-            window.location.href = 'independent.html';
-        }
+        // Check if already logged in (Async)
+        (async () => {
+            const user = await Store.checkSession();
+            if (user) {
+                window.location.href = 'independent.html';
+            }
+        })();
 
-        document.getElementById('login-form').addEventListener('submit', (e) => {
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const user = document.getElementById('username').value.trim();
+            const user = document.getElementById('username').value.trim(); // actually email for supabase usually, but we'll see
             const pass = document.getElementById('password').value;
 
-            if (Store.login(user, pass)) {
-                window.location.href = 'independent.html';
-            } else {
-                const err = document.getElementById('login-error');
-                err.style.display = 'block';
-                err.textContent = 'Invalid username or password';
+            const btn = e.target.querySelector('button');
+            btn.disabled = true;
+            btn.textContent = 'Logging in...';
+
+            try {
+                // For Supabase, username is email.
+                const success = await Store.login(user, pass);
+                if (success) {
+                    window.location.href = 'independent.html';
+                } else {
+                    const err = document.getElementById('login-error');
+                    err.style.display = 'block';
+                    err.textContent = 'Invalid email or password';
+                    btn.disabled = false;
+                    btn.textContent = 'Log In';
+                }
+            } catch (error) {
+                console.error(error);
+                btn.disabled = false;
+                btn.textContent = 'Log In';
             }
         });
     </script>

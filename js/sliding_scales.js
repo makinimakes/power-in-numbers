@@ -11,7 +11,7 @@ const outTotalAllocated = document.getElementById('out-total-allocated');
 const outRecalibratedNet = document.getElementById('out-recalibrated-net');
 const outRecalibratedGross = document.getElementById('out-recalibrated-gross');
 
-let profile = Store.getIndependentProfile();
+let profile = {}; // Init empty
 
 // Local state
 let expenseState = [];
@@ -19,9 +19,13 @@ let driverIndex = -1; // -1 means no driver (Fixed Income Mode)
 let currentDrivenNet = 0; // The calculated Net Income
 let currentDriverOverride = 0; // The user's manual input for the driver
 
-function init() {
+async function init() {
     // Load data
-    profile = Store.getIndependentProfile();
+    profile = await Store.getIndependentProfile();
+
+    // If profile is empty or default not fully populated yet (race condition?), handle gracefully
+    if (!profile.expenses) profile.expenses = { items: [] };
+
     currentDrivenNet = profile.currentNetIncome || 0;
 
     // 1. Calculate Goal Net (Total) based on Main Profile to determine percentages
@@ -86,7 +90,7 @@ function init() {
     updateCalculations();
 
     // Listeners
-    btnReset.addEventListener('click', resetLocks);
+    if (btnReset) btnReset.addEventListener('click', resetLocks);
 }
 
 function resetLocks() {
