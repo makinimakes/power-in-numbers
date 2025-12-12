@@ -1466,7 +1466,21 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Helper to format stats
             const getStats = (p) => {
                 const ip = p.independent_profile || {};
-                const goalRate = ip.goals?.hourlyRateTarget || ip.goals?.hourly || 0; // Check specific field name
+                let goalRate = ip.goals?.hourlyRateTarget || ip.goals?.hourly || 0;
+
+                // Fallback: Calculate if missing
+                if (!goalRate || goalRate === 0) {
+                    try {
+                        // We need to map 'independent_profile' to the structure BudgetEngine expects (which is usually the whole user object or the profile itself)
+                        // BudgetEngine.getWorkerRates expects { unearnedIncome:..., schedule:..., goals:... }
+                        // ip IS that structure.
+                        const rates = BudgetEngine.getWorkerRates(ip);
+                        if (rates && rates.goal) goalRate = rates.goal;
+                    } catch (e) {
+                        console.warn("Rate Calc Error", e);
+                    }
+                }
+
                 const sched = ip.schedule || {};
                 const hours = sched.hours || 0;
                 const weeks = sched.weeks || 0;
