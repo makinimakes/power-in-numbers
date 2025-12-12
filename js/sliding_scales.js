@@ -8,7 +8,6 @@
 const expensesList = document.getElementById('expenses-list');
 const btnReset = document.getElementById('btn-reset');
 const outTotalAllocated = document.getElementById('out-total-allocated');
-const outRecalibratedNet = document.getElementById('out-recalibrated-net');
 const outRecalibratedGross = document.getElementById('out-recalibrated-gross');
 
 let profile = {}; // Init empty
