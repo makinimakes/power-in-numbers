@@ -987,6 +987,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 4. Global Event Delegation (Robust Handling)
     document.addEventListener('click', (e) => {
+        // console.log("Global Click:", e.target); // DEBUG
         const btn = e.target.closest('button');
         if (!btn) return; // Only care about buttons
 
@@ -1001,51 +1002,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('new-phase-name').value = '';
             document.getElementById('modal-add-phase').style.display = 'flex';
             document.getElementById('new-phase-name').focus();
-            btnSave.onclick = async () => {
-                try {
-                    btnSave.disabled = true;
-                    btnSave.textContent = "Inviting...";
-                    const result = await Store.inviteUser(project.id, foundUser ? foundUser.email : email);
-
-                    // Handle result (added or invited)
-                    if (result.status === 'added') {
-                        alert('User successfully added!');
-                    } else {
-                        alert('User invited! They will be added automatically when they sign up.');
-                    }
-
-                    window.closeModal();
-                    renderFn(); // Reload list
-                } catch (e) {
-                    alert("Error inviting user: " + e.message);
-                    btnSave.disabled = false;
-                    btnSave.textContent = "Add / Invite";
-                }
-            };
-
-        } else {
-            foundUser = null;
-            // Pending Logic Support
-            statusMsg.textContent = "User not found. Click to send an Invite.";
-            statusMsg.style.color = 'orange';
-            btnSave.style.display = 'block';
-            btnSave.textContent = "Send Invite";
-
-            // Re-bind save for Pending
-            btnSave.onclick = async () => {
-                try {
-                    btnSave.disabled = true;
-                    btnSave.textContent = "Sending...";
-                    const result = await Store.inviteUser(project.id, email); // email from input
-                    alert('Invitation sent! They will join the project upon signup.');
-                    window.closeModal();
-                    renderFn();
-                } catch (e) {
-                    alert("Error sending invite: " + e.message);
-                    btnSave.disabled = false;
-                    btnSave.textContent = "Send Invite";
-                }
-            };
+            // Legacy direct binding moved to separate handler or global save
         }
 
         // Button: Rename Phase
