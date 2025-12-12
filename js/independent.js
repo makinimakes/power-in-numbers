@@ -613,13 +613,31 @@ document.addEventListener('DOMContentLoaded', () => {
         setVal('out-now-hourly', nowFees.hourly);
         setVal('out-now-daily', nowFees.daily);
         setVal('out-now-weekly', nowFees.weekly);
+        setVal('out-now-monthly', nowFees.monthly);
+
+        // Calculate breakdown for logs
+        let monthlySum = 0;
+        let periodicSum = 0;
+        profile.expenses.items.forEach(item => {
+            const amount = parseFloat(item.amount) || 0;
+            if (item.type === 'Monthly') monthlySum += amount;
+            if (item.type === 'Periodic') periodicSum += (amount * (item.frequency || 1));
+        });
+
+        // Helper aliases
+        const schedule = profile.schedule;
+        const totalBillable = totalBillableHours; // from scope above
+        const formatNumber = Utils.formatNumber;
+        const formatCurrency = Utils.formatCurrency;
+        const taxRateVal = taxRate;
+
         // Populate Math Logs
         window._mathLogs = {
             goalNet: [
-                { formula: "Sum of Expenses (Monthly Items)", value: totals.monthly * 12 },
-                { formula: "Sum of Expenses (Periodic Items)", value: totals.periodic },
-                { formula: "Total Expenses (Before Tax)", value: totals.monthly * 12 + totals.periodic },
-                { formula: "Goal Net Income (Expenses + Savings/Profit)", value: goalNet }
+                { formula: "Sum of Expenses (Monthly Items)", value: monthlySum * 12 },
+                { formula: "Sum of Expenses (Periodic Items)", value: periodicSum },
+                { formula: "Total Expenses (Before Tax)", value: (monthlySum * 12) + periodicSum },
+                { formula: "Goal Net Income (Expenses + Savings/Profit)", value: goalNetWork }
             ],
             currentGross: [
                 { formula: "Current Net Income (Input)", value: currentNet },
