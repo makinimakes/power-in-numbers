@@ -89,12 +89,15 @@ function updateCalculations() {
         totalAdjustmentAnnual += (goalAnnual - currentAnnual);
     });
 
+    // Constraint: Adjustment cannot be negative (User request: "show a $0 value if it calculates to a negative")
+    const displayAdjustment = Math.max(0, totalAdjustmentAnnual);
+
     // Adjustment Display
-    const sign = totalAdjustmentAnnual >= 0 ? '+' : '';
-    outAdjustment.textContent = sign + Utils.formatCurrency(totalAdjustmentAnnual);
+    const sign = displayAdjustment > 0 ? '+' : '';
+    outAdjustment.textContent = sign + Utils.formatCurrency(displayAdjustment);
 
     // NetPRIME
-    const netPrime = currentNet + totalAdjustmentAnnual;
+    const netPrime = currentNet + displayAdjustment;
     outNetPrime.textContent = Utils.formatCurrency(netPrime);
 
     // Update Count UI
