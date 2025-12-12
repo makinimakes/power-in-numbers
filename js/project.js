@@ -1100,6 +1100,43 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
         // Button: Phase Settings
+        // Button: Save Funding / Income
+        if (btn.id === 'btn-save-income') {
+            const id = document.getElementById('income-id').value;
+            const name = document.getElementById('income-name').value;
+            const amount = parseFloat(document.getElementById('income-amount').value) || 0;
+            const status = document.getElementById('income-status') ? document.getElementById('income-status').value : 'Confirmed';
+
+            if (!name) {
+                alert('Please enter a name for the funding source.');
+                return;
+            }
+
+            if (!project.incomeSources) project.incomeSources = [];
+
+            if (id) {
+                // Update
+                const source = project.incomeSources.find(s => s.id === id);
+                if (source) {
+                    source.name = name;
+                    source.amount = amount;
+                    source.status = status;
+                }
+            } else {
+                // Create
+                project.incomeSources.push({
+                    id: Utils.generateId(),
+                    name: name,
+                    amount: amount,
+                    status: status
+                });
+            }
+
+            Store.saveProject(project);
+            document.getElementById('modal-add-income').style.display = 'none';
+            render();
+        }
+
         if (btn.classList.contains('btn-phase-settings')) {
             const pId = btn.dataset.phase;
             const phase = project.phases.find(p => p.id === pId);
