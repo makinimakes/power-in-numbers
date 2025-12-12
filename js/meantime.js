@@ -42,15 +42,11 @@ function toggleSelection(index) {
             // Revert checkbox explicitly is handled by re-render
         } else {
             // Add new selection with defaults
-            // Default Current: Whatever is in the main profile (normalized to monthly for consistency? Or kept as input?)
-            // The prompt says: "enter a current amount that they pay... Then, they should enter the amount that they would like to spend"
-            // We'll initialize with the profile amount as a suggestion.
-            const amount = parseFloat(item.amount) || 0;
-
+            // Default Current: 0 (User Request: "do not list values... confused")
             selectedItems.push({
                 id: item.id,
-                currentVal: amount,
-                goalVal: amount // Default goal = current
+                currentVal: 0,
+                goalVal: 0
             });
         }
     }
@@ -150,24 +146,26 @@ function renderList() {
             rightHtml = `
                 <div style="display:flex; flex-direction:column; gap:5px; align-items:flex-end;">
                     <div style="display:flex; align-items:center; gap:5px;">
-                        <span style="font-size:0.7rem; color:#777;">Pay Now:</span>
+                        <span style="font-size:0.7rem; color:#777;">What I Pay Now:</span>
                         <input type="number" 
                             style="width:80px; text-align:right; font-size:0.9rem; padding:2px;"
-                            value="${selectionData.currentVal}"
+                            value="${selectionData.currentVal || ''}"
+                            placeholder="0"
                             onchange="handleInputChange('${item.id}', 'currentVal', this.value)">
                     </div>
                     <div style="display:flex; align-items:center; gap:5px;">
                         <span style="font-size:0.7rem; color:#777;">Goal:</span>
                         <input type="number" 
                             style="width:80px; text-align:right; font-size:0.9rem; padding:2px; border-color:var(--color-primary);"
-                            value="${selectionData.goalVal}"
+                            value="${selectionData.goalVal || ''}"
+                            placeholder="0"
                             onchange="handleInputChange('${item.id}', 'goalVal', this.value)">
                     </div>
                 </div>
             `;
         } else {
-            // Just show standard amount if not selected
-            rightHtml = `<div style="color:#aaa;">${Utils.formatCurrency(parseFloat(item.amount) || 0)}</div>`;
+            // User Request: "do not list values"
+            rightHtml = `<div style="color:#aaa;"></div>`;
         }
 
         row.innerHTML = leftHtml + rightHtml;
