@@ -632,66 +632,80 @@ document.addEventListener('DOMContentLoaded', () => {
         const taxRateVal = taxRate;
 
         // Populate Math Logs
-        window._mathLogs = {
-            goalNet: [
-                { formula: "Sum of Expenses (Monthly Items)", value: monthlySum * 12 },
-                { formula: "Sum of Expenses (Periodic Items)", value: periodicSum },
-                { formula: "Total Expenses (Before Tax)", value: (monthlySum * 12) + periodicSum },
-                { formula: "Goal Net Income (Expenses + Savings/Profit)", value: goalNetWork }
-            ],
-            currentGross: [
-                { formula: "Current Net Income (Input)", value: currentNet },
-                { formula: `Gross Up Factor: 1 / (1 - ${formatNumber(taxRateVal)}%)`, value: 1 / ((100 - taxRateVal) / 100) },
-                { formula: `Current Gross = ${formatCurrency(currentNet)} / ${formatNumber((100 - taxRateVal) / 100)}`, value: currentGross }
-            ],
-            goalGross: [
-                { formula: "Goal Net Income (After Tax)", value: goalNet },
-                { formula: `Gross Up Factor: 1 / (1 - ${formatNumber(taxRateVal)}%)`, value: 1 / ((100 - taxRateVal) / 100) },
-                { formula: `Goal Gross = ${formatCurrency(goalNet)} / ${formatNumber((100 - taxRateVal) / 100)}`, value: goalGross }
-            ],
-            // NOW Fees
-            nowHourly: [
-                { formula: "Current Gross Income", value: currentGross },
-                { formula: `Total Billable Hours (${formatNumber(schedule.weeks)} wks * ${formatNumber(schedule.days)} days * ${formatNumber(schedule.hours)} hrs)`, value: schedule.hours * schedule.days * schedule.weeks },
-                { formula: "Hourly Rate = Gross / Total Hours", value: nowFees.hourly }
-            ],
-            nowDaily: [
-                { formula: "Current Gross Income", value: currentGross },
-                { formula: `Total Billable Days (${formatNumber(schedule.weeks)} wks * ${formatNumber(schedule.days)} days)`, value: schedule.days * schedule.weeks },
-                { formula: "Daily Rate = Gross / Total Days", value: nowFees.daily }
-            ],
-            nowWeekly: [
-                { formula: "Current Gross Income", value: currentGross },
-                { formula: `Total Work Weeks`, value: schedule.weeks },
-                { formula: "Weekly Rate = Gross / Total Weeks", value: nowFees.weekly }
-            ],
-            nowMonthly: [
-                { formula: "Current Gross Income", value: currentGross },
-                { formula: "Months per Year", value: 12 },
-                { formula: "Monthly Rate = Gross / 12", value: nowFees.monthly }
-            ],
-            // GOAL Fees
-            goalHourly: [
-                { formula: "Goal Gross Income", value: goalGross },
-                { formula: `Total Billable Hours (${formatNumber(schedule.weeks)} wks * ${formatNumber(schedule.days)} days * ${formatNumber(schedule.hours)} hrs less non-billable)`, value: totalBillable },
-                { formula: "Hourly Rate = Gross / Total Billable Hours", value: goalFees.hourly }
-            ],
-            goalDaily: [
-                { formula: "Hourly Rate", value: goalFees.hourly },
-                { formula: `Hours per Day`, value: schedule.hours },
-                { formula: "Daily Rate = Hourly * Hours/Day", value: goalFees.daily }
-            ],
-            goalWeekly: [
-                { formula: "Goal Gross Income", value: goalGross },
-                { formula: `Total Work Weeks`, value: schedule.weeks },
-                { formula: "Weekly Rate = Gross / Total Weeks", value: goalFees.weekly }
-            ],
-            goalMonthly: [
-                { formula: "Goal Gross Income", value: goalGross },
-                { formula: "Months per Year", value: 12 },
-                { formula: "Monthly Rate = Gross / 12", value: goalFees.monthly }
-            ]
-        };
+        try {
+            window._mathLogs = {
+                goalNet: [
+                    { formula: "Sum of Expenses (Monthly Items)", value: monthlySum * 12 },
+                    { formula: "Sum of Expenses (Periodic Items)", value: periodicSum },
+                    { formula: "Total Expenses (Before Tax)", value: (monthlySum * 12) + periodicSum },
+                    { formula: "Goal Net Income (Expenses + Savings/Profit)", value: goalNetWork }
+                ],
+                currentGross: [
+                    { formula: "Current Net Income (Input)", value: currentNet },
+                    { formula: `Gross Up Factor: 1 / (1 - ${formatNumber(taxRateVal)}%)`, value: 1 / ((100 - taxRateVal) / 100) },
+                    { formula: `Current Gross = ${formatCurrency(currentNet)} / ${formatNumber((100 - taxRateVal) / 100)}`, value: currentGross }
+                ],
+                goalGross: [
+                    { formula: "Goal Net Income (After Tax)", value: goalNetWork },
+                    { formula: `Gross Up Factor: 1 / (1 - ${formatNumber(taxRateVal)}%)`, value: 1 / ((100 - taxRateVal) / 100) },
+                    { formula: `Goal Gross = ${formatCurrency(goalNetWork)} / ${formatNumber((100 - taxRateVal) / 100)}`, value: goalGross }
+                ],
+                // NOW Fees
+                nowHourly: [
+                    { formula: "Current Gross Income", value: currentGross },
+                    { formula: `Total Billable Hours (${formatNumber(schedule.weeks)} wks * ${formatNumber(schedule.days)} days * ${formatNumber(schedule.hours)} hrs)`, value: schedule.hours * schedule.days * schedule.weeks },
+                    { formula: "Hourly Rate = Gross / Total Hours", value: nowFees.hourly }
+                ],
+                nowDaily: [
+                    { formula: "Current Gross Income", value: currentGross },
+                    { formula: `Total Billable Days (${formatNumber(schedule.weeks)} wks * ${formatNumber(schedule.days)} days)`, value: schedule.days * schedule.weeks },
+                    { formula: "Daily Rate = Gross / Total Days", value: nowFees.daily }
+                ],
+                nowWeekly: [
+                    { formula: "Current Gross Income", value: currentGross },
+                    { formula: `Total Work Weeks`, value: schedule.weeks },
+                    { formula: "Weekly Rate = Gross / Total Weeks", value: nowFees.weekly }
+                ],
+                nowMonthly: [
+                    { formula: "Current Gross Income", value: currentGross },
+                    { formula: "Months per Year", value: 12 },
+                    { formula: "Monthly Rate = Gross / 12", value: nowFees.monthly }
+                ],
+                // GOAL Fees
+                goalHourly: [
+                    { formula: "Goal Gross Income", value: goalGross },
+                    { formula: `Total Billable Hours (${formatNumber(schedule.weeks)} wks * ${formatNumber(schedule.days)} days * ${formatNumber(schedule.hours)} hrs less non-billable)`, value: totalBillable },
+                    { formula: "Hourly Rate = Gross / Total Billable Hours", value: goalFees.hourly }
+                ],
+                goalDaily: [
+                    { formula: "Hourly Rate", value: goalFees.hourly },
+                    { formula: `Hours per Day`, value: schedule.hours },
+                    { formula: "Daily Rate = Hourly * Hours/Day", value: goalFees.daily }
+                ],
+                goalWeekly: [
+                    { formula: "Goal Gross Income", value: goalGross },
+                    { formula: `Total Work Weeks`, value: schedule.weeks },
+                    { formula: "Weekly Rate = Gross / Total Weeks", value: goalFees.weekly }
+                ],
+                goalMonthly: [
+                    { formula: "Goal Gross Income", value: goalGross },
+                    { formula: "Months per Year", value: 12 },
+                    { formula: "Monthly Rate = Gross / 12", value: goalFees.monthly }
+                ]
+            };
+        } catch (e) {
+            console.error("Math Log Logic Error:", e);
+            // alert("Debug Error in Math Logs: " + e.message); // Commented out to avoid spamming if loop, but user needs to see it.
+            // Actually, calculateAndDisplay is called often. Alerting might spam. 
+            // Better to alert ONLY if _mathLogs is missing when VIEWING?
+            // No, user can't see console.
+            // I'll put a one-time error flag on window.
+            if (!window._hasAlertedMathError) {
+                // alert("System Alert: Math Log Calculation Failed: " + e.message);
+                window._hasAlertedMathError = true;
+                window._lastMathError = e.message;
+            }
+        }
 
     }
 
@@ -706,7 +720,11 @@ document.addEventListener('DOMContentLoaded', () => {
         content.innerHTML = '';
 
         if (!logs || logs.length === 0) {
-            content.innerHTML = '<p>No calculation details available.</p>';
+            let msg = '<p>No calculation details available.</p>';
+            if (window._lastMathError) {
+                msg += `<p style="color:red; font-size:0.8rem; margin-top:10px;">Debug Error: ${window._lastMathError}</p>`;
+            }
+            content.innerHTML = msg;
         } else {
             logs.forEach(log => {
                 const div = document.createElement('div');
