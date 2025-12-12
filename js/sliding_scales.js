@@ -88,6 +88,12 @@ async function init() {
     if (btnReset) btnReset.addEventListener('click', resetLocks);
 }
 
+function checkAllLocked() {
+    const unlockedCount = expenseState.filter(i => !i.locked).length;
+    // We could show a visual cue if unlockedCount === 0
+    // But per user request "global effect", simply ensuring the math works is key.
+}
+
 function resetLocks() {
     expenseState.forEach(item => item.locked = false);
 
@@ -167,8 +173,9 @@ function updateCalculations() {
     outRecalibratedNet.textContent = formatMoney(profile.currentNetIncome || 0);
 
     // Gross
+    // Gross (Match logic from independent.js: Net * (1 + TaxRate))
     const taxRate = (profile.expenses && profile.expenses.taxRate) ? parseFloat(profile.expenses.taxRate) / 100 : 0.3;
-    const gross = (profile.currentNetIncome || 0) / (1 - taxRate);
+    const gross = (profile.currentNetIncome || 0) * (1 + taxRate);
     outRecalibratedGross.textContent = formatMoney(gross);
 }
 
