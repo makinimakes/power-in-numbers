@@ -30,8 +30,6 @@ const Store = {
 
     login: async (email, password) => {
         const cleanEmail = email.trim();
-        // DEBUG: Temporary Alert
-        alert(`DEBUG: Sending Login\nEmail: [${cleanEmail}]\nPass Length: ${password.length}`);
 
         const { data, error } = await window.supabaseClient.auth.signInWithPassword({
             email: cleanEmail,
