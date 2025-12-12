@@ -82,6 +82,54 @@ document.addEventListener('DOMContentLoaded', async () => {
     const Wizard = {
         state: {},
 
+        loadForEdit: (phaseId, itemId) => {
+            const proj = window._project || project;
+            const phase = proj.phases.find(p => p.id === phaseId);
+            if (!phase) return;
+            const item = phase.lineItems.find(i => i.id === itemId);
+            if (!item) return;
+
+            // Reset UI first
+            document.querySelectorAll('[id^="wizard-step-"]').forEach(el => el.style.display = 'none');
+            document.getElementById('btn-wizard-finish').style.display = 'block'; // Direct to finish
+
+            // Populate State
+            Wizard.state = {
+                phaseId: phaseId,
+                itemId: itemId,
+                type: item.itemType,
+                isTime: item.method === 'Time',
+                fixedType: item.method === 'LumpSum' ? 'Lump' : 'Unit'
+            };
+
+            // Common
+            document.getElementById('wiz-name').value = item.name;
+
+            // Show Specifics
+            if (item.itemType === 'Percentage') {
+                document.getElementById('wizard-step-percent').style.display = 'block';
+                document.getElementById('wiz-percent').value = item.percentage;
+            } else {
+                if (item.method === 'Time') {
+                    document.getElementById('wizard-step-time').style.display = 'block';
+                    document.getElementById('wiz-time-count').value = item.count;
+                    document.getElementById('wiz-time-duration').value = item.duration;
+                    document.getElementById('wiz-time-unit').value = item.unit;
+                    document.getElementById('wiz-time-rate').value = item.rate;
+                } else if (item.method === 'LumpSum') {
+                    document.getElementById('wizard-step-lump').style.display = 'block';
+                    document.getElementById('wiz-lump-amount').value = item.amount;
+                } else {
+                    document.getElementById('wizard-step-unit').style.display = 'block';
+                    document.getElementById('wiz-unit-qty').value = item.count;
+                    document.getElementById('wiz-unit-cost').value = item.rate;
+                }
+            }
+
+            // Show Modal
+            document.getElementById('modal-line-item-wizard').style.display = 'flex';
+        },
+
         reset: (phaseId) => {
             Wizard.state = { phaseId: phaseId, type: null, subType: null };
             // Reset UI
@@ -136,7 +184,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const s = Wizard.state;
             let item = {
-                id: crypto.randomUUID(),
+                id: s.itemId || crypto.randomUUID(), // Preserve ID if editing
                 name: name,
                 itemType: s.type // 'Percentage' or 'Flat'
             };
@@ -167,7 +215,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             const phase = project.phases.find(p => p.id === s.phaseId);
             if (phase) {
                 if (!phase.lineItems) phase.lineItems = [];
-                phase.lineItems.push(item);
+
+                if (s.itemId) {
+                    // Update existing
+                    const idx = phase.lineItems.findIndex(i => i.id === s.itemId);
+                    if (idx !== -1) {
+                        phase.lineItems[idx] = { ...phase.lineItems[idx], ...item };
+                    }
+                } else {
+                    // Create new
+                    phase.lineItems.push(item);
+                }
+
                 Store.saveProject(project);
                 render();
             }
@@ -981,7 +1040,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <td>${item.name}</td>
                 <td><span style="color:#666;">${item._calc.desc}</span></td>
                 <td style="text-align:right; font-weight:bold;">${Utils.formatCurrency(item._calc.cost)}</td>
-                <td><button class="btn-remove-line" data-phase="${phase.id}" data-item="${item.id}" style="color:red; background:none; border:none; cursor:pointer;">&times;</button></td>
+                <td style="text-align:right;">
+                    <button class="btn-edit-line" data-phase="${phase.id}" data-item="${item.id}" style="color:#666; background:none; border:none; cursor:pointer; margin-right:5px;">&#9998;</button>
+                    <button class="btn-remove-line" data-phase="${phase.id}" data-item="${item.id}" style="color:red; background:none; border:none; cursor:pointer;">&times;</button>
+                </td>
             </tr>
         `).join('');
     }
@@ -1084,6 +1146,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Open Wizard
             document.getElementById('modal-line-item-wizard').style.display = 'flex';
             Wizard.reset(phaseId);
+        }
+
+        // Button: Edit Line Item
+        if (btn.classList.contains('btn-edit-line')) {
+            const pId = btn.dataset.phase;
+            const iId = btn.dataset.item;
+            Wizard.loadForEdit(pId, iId);
         }
 
         // Button: Wizard Finish
