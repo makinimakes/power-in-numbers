@@ -1102,6 +1102,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Button: Phase Settings
         // Button: Save Funding / Income
         if (btn.id === 'btn-save-income') {
+            // alert("Debug: Saving Source..."); // Verified click catch
             const id = document.getElementById('income-id').value;
             const name = document.getElementById('income-name').value;
             const amount = parseFloat(document.getElementById('income-amount').value) || 0;
@@ -1112,11 +1113,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            if (!project.incomeSources) project.incomeSources = [];
+            // Ensure we use the global project reference
+            const proj = window._project;
+            if (!proj) {
+                alert("Error: Project not found in scope.");
+                return;
+            }
+
+            if (!proj.incomeSources) proj.incomeSources = [];
 
             if (id) {
                 // Update
-                const source = project.incomeSources.find(s => s.id === id);
+                const source = proj.incomeSources.find(s => s.id === id);
                 if (source) {
                     source.name = name;
                     source.amount = amount;
@@ -1124,7 +1132,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             } else {
                 // Create
-                project.incomeSources.push({
+                proj.incomeSources.push({
                     id: Utils.generateId(),
                     name: name,
                     amount: amount,
@@ -1132,7 +1140,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
             }
 
-            Store.saveProject(project);
+            Store.saveProject(proj);
             document.getElementById('modal-add-income').style.display = 'none';
             render();
         }
