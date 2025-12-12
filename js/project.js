@@ -1102,7 +1102,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Button: Phase Settings
         // Button: Save Funding / Income
         if (btn.id === 'btn-save-income') {
-            // alert("Debug: Saving Source..."); // Verified click catch
+            alert("Debug: Clicked Save Source!"); // FORCE DEBUG
             const id = document.getElementById('income-id').value;
             const name = document.getElementById('income-name').value;
             const amount = parseFloat(document.getElementById('income-amount').value) || 0;
