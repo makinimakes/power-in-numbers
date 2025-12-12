@@ -1046,550 +1046,559 @@ document.addEventListener('DOMContentLoaded', async () => {
                     btnSave.textContent = "Send Invite";
                 }
             };
-        } (btn.classList.contains('btn-edit-phase')) {
-            const id = btn.dataset.phase;
-            const phase = project.phases.find(p => p.id === id);
-            if (phase) {
-                const newName = prompt("Enter new phase name:", phase.name);
-                if (newName && newName.trim() !== "") {
-                    phase.name = newName.trim();
-                    Store.saveProject(project);
-                    render();
-                }
-            }
+        } catch (e) {
+            alert("Error sending invite: " + e.message);
+            btnSave.disabled = false;
+            btnSave.textContent = "Send Invite";
         }
-
-        // Button: Remove Pool Member
-        if (btn.classList.contains('btn-remove-pool')) {
-            const id = btn.dataset.id;
-            if (confirm('Remove this collaborator from the project?')) {
-                project.teamMembers = project.teamMembers.filter(m => m.id !== id);
-                Store.saveProject(project);
-                render();
-            }
-        }
-
-        // Button: Add Funding (Open Modal - Clean)
-        if (btn.id === 'btn-open-income-modal') {
-            document.getElementById('income-id').value = '';
-            document.getElementById('income-name').value = '';
-            document.getElementById('income-amount').value = '';
-            document.getElementById('modal-add-income').style.display = 'flex';
-        }
-
-        // Button: Edit Funding (Open Modal - Populate)
-        if (btn.classList.contains('btn-edit-funding')) {
-            const id = btn.dataset.id;
-            const source = project.incomeSources.find(s => s.id === id);
-            if (source) {
-                document.getElementById('income-id').value = source.id;
-                document.getElementById('income-name').value = source.name;
-                document.getElementById('income-amount').value = source.amount;
-                document.getElementById('income-status').value = source.status;
-                document.getElementById('modal-add-income').style.display = 'flex';
-            }
-        }
-
-        // Button: Add Line Item
-        if (btn.classList.contains('btn-add-line')) {
-            const phaseId = btn.dataset.phase;
-            // Open Wizard
-            document.getElementById('modal-line-item-wizard').style.display = 'flex';
-            Wizard.reset(phaseId);
-        }
-
-        // Button: Wizard Finish
-        if (btn.id === 'btn-wizard-finish') {
-            Wizard.finish();
-        }
-
-        // Button: Remove Line Item
-        if (btn.classList.contains('btn-remove-line')) {
-            const pId = btn.dataset.phase;
-            const iId = btn.dataset.item;
-            if (confirm('Remove this line item?')) {
-                const phase = project.phases.find(p => p.id === pId);
-                if (phase) {
-                    phase.lineItems = phase.lineItems.filter(i => i.id !== iId);
-                    Store.saveProject(project);
-                    render();
-                }
-            }
-        }
-
-        // Button: Delete Phase
-        if (btn.classList.contains('btn-delete-phase')) {
-            const id = btn.dataset.phase;
-            if (confirm('Delete this phase?')) {
-                project.phases = project.phases.filter(p => p.id !== id);
-                Store.saveProject(project);
-                render();
-            }
-        }
-
-        // Button: Remove Funding
-        if (btn.classList.contains('btn-delete-funding')) {
-            const id = btn.dataset.id;
-            if (confirm('Delete this funding source?')) {
-                project.incomeSources = project.incomeSources.filter(i => i.id !== id);
-                Store.saveProject(project);
-                render();
-            }
-        }
-
-        // Button: Add Funding (Open Modal)
-        if (btn.id === 'btn-open-income-modal') {
-            document.getElementById('modal-add-income').style.display = 'flex';
-        }
-
-        // Button: Phase Settings
-        if (btn.classList.contains('btn-phase-settings')) {
-            const pId = btn.dataset.phase;
-            const phase = project.phases.find(p => p.id === pId);
-            if (phase) {
-                // Populate Modal
-                document.getElementById('phase-settings-id').value = pId;
-                document.getElementById('phase-name-edit').value = phase.name;
-                document.getElementById('phase-weeks').value = phase.weeks || '';
-                document.getElementById('phase-hours').value = phase.hours || '';
-                document.getElementById('phase-pay-rate').value = phase.payRate || '';
-                document.getElementById('phase-expense-rate').value = phase.expenseRate || '';
-
-                document.getElementById('modal-phase-settings').style.display = 'flex';
-            }
-        }
-
-        // Button: Worker Override
-        if (btn.classList.contains('btn-worker-override')) {
-            const pId = btn.dataset.phase;
-            const wId = btn.dataset.worker;
-            const phase = project.phases.find(p => p.id === pId);
-            const member = project.teamMembers.find(m => m.id === wId);
-
-            if (phase && member) {
-                // Populate Modal
-                document.getElementById('override-phase-id').value = pId;
-                document.getElementById('override-worker-id').value = wId;
-                document.getElementById('override-worker-name').textContent = member.name;
-
-                // Toggle Sections based on Mode
-                const mode = btn.dataset.mode; // 'rate' or 'schedule'
-                const sectionRate = document.getElementById('section-override-rate');
-                const sectionSched = document.getElementById('section-override-schedule');
-
-                if (mode === 'rate') {
-                    sectionRate.style.display = 'block';
-                    sectionSched.style.display = 'none';
-                    document.querySelector('#modal-worker-override .modal-header').textContent = 'Override Worker Rate';
-                } else if (mode === 'schedule') {
-                    sectionRate.style.display = 'none';
-                    sectionSched.style.display = 'block';
-                    document.querySelector('#modal-worker-override .modal-header').textContent = 'Override Worker Schedule';
-                } else {
-                    // Fallback (Show Both)
-                    sectionRate.style.display = 'block';
-                    sectionSched.style.display = 'block';
-                    document.querySelector('#modal-worker-override .modal-header').textContent = 'Override Worker Specs';
-                }
-
-                const state = (phase.workers && phase.workers[wId]) || {};
-
-                // Set Radio states (Simple implementation for now - reset to Auto if undefined)
-                // In production, checking specific 'checked' attributes based on state is needed.
-                // For MVP, we just open the modal. User re-selects if they want to change.
-
-                // Show/Hide Inputs for existing values
-                if (state.overrideRateMethod === 'custom') {
-                    document.querySelector('input[name="rate-rule"][value="custom"]').checked = true;
-                    document.getElementById('override-rate-val').style.display = 'inline-block';
-                    document.getElementById('override-rate-val').value = state.overrideRateVal;
-                } else if (state.overrideRateMethod) {
-                    document.querySelector('input[name="rate-rule"][value="' + state.overrideRateMethod + '"]').checked = true;
-                } else {
-                    document.querySelector('input[name="rate-rule"][value="auto"]').checked = true;
-                }
-
-                if (state.overrideSchedMethod === 'custom-weekly') {
-                    document.querySelector('input[name="sched-rule"][value="custom-weekly"]').checked = true;
-                    document.getElementById('override-sched-weekly-val').style.display = 'inline-block';
-                    document.getElementById('override-sched-weekly-val').value = state.overrideSchedWeeklyVal;
-                } else if (state.overrideSchedMethod === 'lump') {
-                    document.querySelector('input[name="sched-rule"][value="lump"]').checked = true;
-                    document.getElementById('override-sched-lump-val').style.display = 'inline-block';
-                    document.getElementById('override-sched-lump-val').value = state.overrideSchedLumpVal;
-                } else if (state.overrideSchedMethod === 'project') {
-                    document.querySelector('input[name="sched-rule"][value="project"]').checked = true;
-                } else {
-                    document.querySelector('input[name="sched-rule"][value="auto"]').checked = true;
-                }
-
-                document.getElementById('modal-worker-override').style.display = 'flex';
-            }
-        }
-
-        // Button: Save Phase Settings
-        if (btn.id === 'btn-save-phase-settings') {
-            const pId = document.getElementById('phase-settings-id').value;
-            const phase = project.phases.find(p => p.id === pId);
-            if (phase) {
-                phase.name = document.getElementById('phase-name-edit').value;
-                phase.weeks = parseFloat(document.getElementById('phase-weeks').value) || 0;
-                phase.hours = parseFloat(document.getElementById('phase-hours').value) || 0;
-                phase.payRate = parseFloat(document.getElementById('phase-pay-rate').value) || null;
-                phase.expenseRate = parseFloat(document.getElementById('phase-expense-rate').value) || null;
-
-                Store.saveProject(project);
-                render();
-                document.getElementById('modal-phase-settings').style.display = 'none';
-            }
-        }
-
-        // Button: Save Worker Override
-        if (btn.id === 'btn-save-worker-override') {
-            const pId = document.getElementById('override-phase-id').value;
-            const wId = document.getElementById('override-worker-id').value;
-            const phase = project.phases.find(p => p.id === pId);
-
-            if (phase) {
-                if (!phase.workers) phase.workers = {};
-                if (!phase.workers[wId]) phase.workers[wId] = {};
-
-                const wState = phase.workers[wId];
-
-                // Get Rate Rule
-                const rateRule = document.querySelector('input[name="rate-rule"]:checked').value;
-                wState.overrideRateMethod = rateRule;
-                if (rateRule === 'custom') {
-                    wState.overrideRateVal = parseFloat(document.getElementById('override-rate-val').value) || 0;
-                }
-
-                // Get Schedule Rule
-                const schedRule = document.querySelector('input[name="sched-rule"]:checked').value;
-                wState.overrideSchedMethod = schedRule;
-                if (schedRule === 'custom-weekly') {
-                    wState.overrideSchedWeeklyVal = parseFloat(document.getElementById('override-sched-weekly-val').value) || 0;
-                }
-                if (schedRule === 'lump') {
-                    wState.overrideSchedLumpVal = parseFloat(document.getElementById('override-sched-lump-val').value) || 0;
-                }
-
-                Store.saveProject(project);
-                render();
-                document.getElementById('modal-worker-override').style.display = 'none';
-            }
-        }
-    });
-
-    // 5. Global Change Listener (Toggles, Inputs)
-    document.addEventListener('change', (e) => {
-        const target = e.target;
-
-        // Toggle Worker Presence
-        if (target.classList.contains('cb-worker-present')) {
-            // ...
-        }
-
-        // Project Wage Modifiers
-        if (target.id === 'project-min-mod' || target.id === 'project-max-mod') {
-            const minVal = parseFloat(document.getElementById('project-min-mod').value) || 100;
-            const maxVal = parseFloat(document.getElementById('project-max-mod').value) || 100;
-
-            project.minModifier = minVal;
-            project.maxModifier = maxVal;
-
-            Store.saveProject(project);
-            render();
-        }
-
-        // Project Global Rates (Pay/Expense)
-        if (target.id === 'project-global-pay-rate' || target.id === 'project-global-expense-rate') {
-            project.payRate = parseFloat(document.getElementById('project-global-pay-rate').value) || 100;
-            project.expenseRate = parseFloat(document.getElementById('project-global-expense-rate').value) || 100;
-
-            Store.saveProject(project);
-            render();
-        }
-
-        if (target.classList.contains('cb-worker-present')) {
-            const pId = target.dataset.phase;
-            const wId = target.dataset.worker;
-            const phase = project.phases.find(p => p.id === pId);
-            if (phase) {
-                if (!phase.workers) phase.workers = {};
-                if (!phase.workers[wId]) phase.workers[wId] = {};
-
-                phase.workers[wId].isPresent = target.checked;
-                Store.saveProject(project);
-                render();
-            }
-        }
-
-        // Toggle All Labor
-        if (target.classList.contains('cb-toggle-all-labor')) {
-            const pId = target.dataset.phase;
-            const phase = project.phases.find(p => p.id === pId);
-            if (phase) {
-                if (!phase.workers) phase.workers = {};
-
-                project.teamMembers.forEach(m => {
-                    if (!phase.workers[m.id]) phase.workers[m.id] = {};
-                    phase.workers[m.id].isPresent = target.checked;
-                });
-                Store.saveProject(project);
-                render();
-            }
-        }
-
-        // Toggle Phase Active/Inactive
-        if (target.classList.contains('cb-phase-active')) {
-            const pId = target.dataset.phase;
-            const phase = project.phases.find(p => p.id === pId);
-            if (phase) {
-                phase.isActive = target.checked;
-                Store.saveProject(project);
-                render();
-            }
-        }
-
-        // Modal Validations/Visibility (Radio Buttons)
-        if (target.name === 'rate-rule') {
-            const valInput = document.getElementById('override-rate-val');
-            if (target.value === 'custom') {
-                valInput.style.display = 'inline-block';
-            } else {
-                valInput.style.display = 'none';
-            }
-        }
-        if (target.name === 'sched-rule') {
-            document.getElementById('override-sched-weekly-val').style.display = 'none';
-            document.getElementById('override-sched-lump-val').style.display = 'none';
-
-            if (target.value === 'custom-weekly') document.getElementById('override-sched-weekly-val').style.display = 'inline-block';
-            if (target.value === 'lump') document.getElementById('override-sched-lump-val').style.display = 'inline-block';
-        }
-    });
-
-    // Init
-    try {
-        render();
-    } catch (err) {
-        console.error("Render Failed:", err);
-    }
-
-    // Globalize access for modal callbacks if needed
-    // setupModalLogic(project, render); // Moved to end of file with try/catch
-
-    function setupModalLogic(project, renderFn) {
-        console.log("Debug: setupModalLogic temporarily disabled for syntax check.");
-    }
-
-    function _adjustDummyData() {
-        console.log("Debug: _adjustDummyData temporarily disabled.");
-    }
-
-    // Call it
-    setTimeout(_adjustDummyData, 1000);
-
-    // Initial Render
-    render();
-
-    // [Duplicate renderDistributionModal removed]
-
-    // --- Collaboration Logic ---
-
-    // Expose Modal Opener
-    window.openInviteModal = () => {
-        const emailInput = document.getElementById('invite-email');
-        if (emailInput) emailInput.value = '';
-        const modal = document.getElementById('modal-invite-member');
-        if (modal) modal.style.display = 'flex';
     };
+}
 
-    // Bind Confirm Button
-    const btnConfirmInvite = document.getElementById('btn-confirm-invite');
-    if (btnConfirmInvite) {
-        btnConfirmInvite.onclick = async () => {
-            const email = document.getElementById('invite-email').value.trim();
-            const btn = document.getElementById('btn-confirm-invite');
+        // Button: Rename Phase
+        if (btn.classList.contains('btn-edit-phase')) {
+    const id = btn.dataset.phase;
+    const phase = project.phases.find(p => p.id === id);
+    if (phase) {
+        const newName = prompt("Enter new phase name:", phase.name);
+        if (newName && newName.trim() !== "") {
+            phase.name = newName.trim();
+            Store.saveProject(project);
+            render();
+        }
+    }
+}
 
-            if (!email) {
-                alert("Please enter an email.");
-                return;
-            }
+// Button: Remove Pool Member
+if (btn.classList.contains('btn-remove-pool')) {
+    const id = btn.dataset.id;
+    if (confirm('Remove this collaborator from the project?')) {
+        project.teamMembers = project.teamMembers.filter(m => m.id !== id);
+        Store.saveProject(project);
+        render();
+    }
+}
 
-            btn.innerText = "Inviting...";
-            btn.disabled = true;
+// Button: Add Funding (Open Modal - Clean)
+if (btn.id === 'btn-open-income-modal') {
+    document.getElementById('income-id').value = '';
+    document.getElementById('income-name').value = '';
+    document.getElementById('income-amount').value = '';
+    document.getElementById('modal-add-income').style.display = 'flex';
+}
 
-            try {
-                // Ensure we have project ID
-                const currentId = window._project ? window._project.id : (new URLSearchParams(window.location.search).get('id'));
-                await Store.inviteUser(currentId, email);
-                alert(`Invited ${email} successfully!`);
-                document.getElementById('modal-invite-member').style.display = 'none';
-                await loadAndRenderCollaborators();
-            } catch (e) {
-                alert("Error inviting user: " + e.message);
-            } finally {
-                btn.innerText = "Send Invite";
-                btn.disabled = false;
-            }
-        };
+// Button: Edit Funding (Open Modal - Populate)
+if (btn.classList.contains('btn-edit-funding')) {
+    const id = btn.dataset.id;
+    const source = project.incomeSources.find(s => s.id === id);
+    if (source) {
+        document.getElementById('income-id').value = source.id;
+        document.getElementById('income-name').value = source.name;
+        document.getElementById('income-amount').value = source.amount;
+        document.getElementById('income-status').value = source.status;
+        document.getElementById('modal-add-income').style.display = 'flex';
+    }
+}
+
+// Button: Add Line Item
+if (btn.classList.contains('btn-add-line')) {
+    const phaseId = btn.dataset.phase;
+    // Open Wizard
+    document.getElementById('modal-line-item-wizard').style.display = 'flex';
+    Wizard.reset(phaseId);
+}
+
+// Button: Wizard Finish
+if (btn.id === 'btn-wizard-finish') {
+    Wizard.finish();
+}
+
+// Button: Remove Line Item
+if (btn.classList.contains('btn-remove-line')) {
+    const pId = btn.dataset.phase;
+    const iId = btn.dataset.item;
+    if (confirm('Remove this line item?')) {
+        const phase = project.phases.find(p => p.id === pId);
+        if (phase) {
+            phase.lineItems = phase.lineItems.filter(i => i.id !== iId);
+            Store.saveProject(project);
+            render();
+        }
+    }
+}
+
+// Button: Delete Phase
+if (btn.classList.contains('btn-delete-phase')) {
+    const id = btn.dataset.phase;
+    if (confirm('Delete this phase?')) {
+        project.phases = project.phases.filter(p => p.id !== id);
+        Store.saveProject(project);
+        render();
+    }
+}
+
+// Button: Remove Funding
+if (btn.classList.contains('btn-delete-funding')) {
+    const id = btn.dataset.id;
+    if (confirm('Delete this funding source?')) {
+        project.incomeSources = project.incomeSources.filter(i => i.id !== id);
+        Store.saveProject(project);
+        render();
+    }
+}
+
+// Button: Add Funding (Open Modal)
+if (btn.id === 'btn-open-income-modal') {
+    document.getElementById('modal-add-income').style.display = 'flex';
+}
+
+// Button: Phase Settings
+if (btn.classList.contains('btn-phase-settings')) {
+    const pId = btn.dataset.phase;
+    const phase = project.phases.find(p => p.id === pId);
+    if (phase) {
+        // Populate Modal
+        document.getElementById('phase-settings-id').value = pId;
+        document.getElementById('phase-name-edit').value = phase.name;
+        document.getElementById('phase-weeks').value = phase.weeks || '';
+        document.getElementById('phase-hours').value = phase.hours || '';
+        document.getElementById('phase-pay-rate').value = phase.payRate || '';
+        document.getElementById('phase-expense-rate').value = phase.expenseRate || '';
+
+        document.getElementById('modal-phase-settings').style.display = 'flex';
+    }
+}
+
+// Button: Worker Override
+if (btn.classList.contains('btn-worker-override')) {
+    const pId = btn.dataset.phase;
+    const wId = btn.dataset.worker;
+    const phase = project.phases.find(p => p.id === pId);
+    const member = project.teamMembers.find(m => m.id === wId);
+
+    if (phase && member) {
+        // Populate Modal
+        document.getElementById('override-phase-id').value = pId;
+        document.getElementById('override-worker-id').value = wId;
+        document.getElementById('override-worker-name').textContent = member.name;
+
+        // Toggle Sections based on Mode
+        const mode = btn.dataset.mode; // 'rate' or 'schedule'
+        const sectionRate = document.getElementById('section-override-rate');
+        const sectionSched = document.getElementById('section-override-schedule');
+
+        if (mode === 'rate') {
+            sectionRate.style.display = 'block';
+            sectionSched.style.display = 'none';
+            document.querySelector('#modal-worker-override .modal-header').textContent = 'Override Worker Rate';
+        } else if (mode === 'schedule') {
+            sectionRate.style.display = 'none';
+            sectionSched.style.display = 'block';
+            document.querySelector('#modal-worker-override .modal-header').textContent = 'Override Worker Schedule';
+        } else {
+            // Fallback (Show Both)
+            sectionRate.style.display = 'block';
+            sectionSched.style.display = 'block';
+            document.querySelector('#modal-worker-override .modal-header').textContent = 'Override Worker Specs';
+        }
+
+        const state = (phase.workers && phase.workers[wId]) || {};
+
+        // Set Radio states (Simple implementation for now - reset to Auto if undefined)
+        // In production, checking specific 'checked' attributes based on state is needed.
+        // For MVP, we just open the modal. User re-selects if they want to change.
+
+        // Show/Hide Inputs for existing values
+        if (state.overrideRateMethod === 'custom') {
+            document.querySelector('input[name="rate-rule"][value="custom"]').checked = true;
+            document.getElementById('override-rate-val').style.display = 'inline-block';
+            document.getElementById('override-rate-val').value = state.overrideRateVal;
+        } else if (state.overrideRateMethod) {
+            document.querySelector('input[name="rate-rule"][value="' + state.overrideRateMethod + '"]').checked = true;
+        } else {
+            document.querySelector('input[name="rate-rule"][value="auto"]').checked = true;
+        }
+
+        if (state.overrideSchedMethod === 'custom-weekly') {
+            document.querySelector('input[name="sched-rule"][value="custom-weekly"]').checked = true;
+            document.getElementById('override-sched-weekly-val').style.display = 'inline-block';
+            document.getElementById('override-sched-weekly-val').value = state.overrideSchedWeeklyVal;
+        } else if (state.overrideSchedMethod === 'lump') {
+            document.querySelector('input[name="sched-rule"][value="lump"]').checked = true;
+            document.getElementById('override-sched-lump-val').style.display = 'inline-block';
+            document.getElementById('override-sched-lump-val').value = state.overrideSchedLumpVal;
+        } else if (state.overrideSchedMethod === 'project') {
+            document.querySelector('input[name="sched-rule"][value="project"]').checked = true;
+        } else {
+            document.querySelector('input[name="sched-rule"][value="auto"]').checked = true;
+        }
+
+        document.getElementById('modal-worker-override').style.display = 'flex';
+    }
+}
+
+// Button: Save Phase Settings
+if (btn.id === 'btn-save-phase-settings') {
+    const pId = document.getElementById('phase-settings-id').value;
+    const phase = project.phases.find(p => p.id === pId);
+    if (phase) {
+        phase.name = document.getElementById('phase-name-edit').value;
+        phase.weeks = parseFloat(document.getElementById('phase-weeks').value) || 0;
+        phase.hours = parseFloat(document.getElementById('phase-hours').value) || 0;
+        phase.payRate = parseFloat(document.getElementById('phase-pay-rate').value) || null;
+        phase.expenseRate = parseFloat(document.getElementById('phase-expense-rate').value) || null;
+
+        Store.saveProject(project);
+        render();
+        document.getElementById('modal-phase-settings').style.display = 'none';
+    }
+}
+
+// Button: Save Worker Override
+if (btn.id === 'btn-save-worker-override') {
+    const pId = document.getElementById('override-phase-id').value;
+    const wId = document.getElementById('override-worker-id').value;
+    const phase = project.phases.find(p => p.id === pId);
+
+    if (phase) {
+        if (!phase.workers) phase.workers = {};
+        if (!phase.workers[wId]) phase.workers[wId] = {};
+
+        const wState = phase.workers[wId];
+
+        // Get Rate Rule
+        const rateRule = document.querySelector('input[name="rate-rule"]:checked').value;
+        wState.overrideRateMethod = rateRule;
+        if (rateRule === 'custom') {
+            wState.overrideRateVal = parseFloat(document.getElementById('override-rate-val').value) || 0;
+        }
+
+        // Get Schedule Rule
+        const schedRule = document.querySelector('input[name="sched-rule"]:checked').value;
+        wState.overrideSchedMethod = schedRule;
+        if (schedRule === 'custom-weekly') {
+            wState.overrideSchedWeeklyVal = parseFloat(document.getElementById('override-sched-weekly-val').value) || 0;
+        }
+        if (schedRule === 'lump') {
+            wState.overrideSchedLumpVal = parseFloat(document.getElementById('override-sched-lump-val').value) || 0;
+        }
+
+        Store.saveProject(project);
+        render();
+        document.getElementById('modal-worker-override').style.display = 'none';
+    }
+}
+    });
+
+// 5. Global Change Listener (Toggles, Inputs)
+document.addEventListener('change', (e) => {
+    const target = e.target;
+
+    // Toggle Worker Presence
+    if (target.classList.contains('cb-worker-present')) {
+        // ...
     }
 
-    async function loadAndRenderCollaborators() {
+    // Project Wage Modifiers
+    if (target.id === 'project-min-mod' || target.id === 'project-max-mod') {
+        const minVal = parseFloat(document.getElementById('project-min-mod').value) || 100;
+        const maxVal = parseFloat(document.getElementById('project-max-mod').value) || 100;
+
+        project.minModifier = minVal;
+        project.maxModifier = maxVal;
+
+        Store.saveProject(project);
+        render();
+    }
+
+    // Project Global Rates (Pay/Expense)
+    if (target.id === 'project-global-pay-rate' || target.id === 'project-global-expense-rate') {
+        project.payRate = parseFloat(document.getElementById('project-global-pay-rate').value) || 100;
+        project.expenseRate = parseFloat(document.getElementById('project-global-expense-rate').value) || 100;
+
+        Store.saveProject(project);
+        render();
+    }
+
+    if (target.classList.contains('cb-worker-present')) {
+        const pId = target.dataset.phase;
+        const wId = target.dataset.worker;
+        const phase = project.phases.find(p => p.id === pId);
+        if (phase) {
+            if (!phase.workers) phase.workers = {};
+            if (!phase.workers[wId]) phase.workers[wId] = {};
+
+            phase.workers[wId].isPresent = target.checked;
+            Store.saveProject(project);
+            render();
+        }
+    }
+
+    // Toggle All Labor
+    if (target.classList.contains('cb-toggle-all-labor')) {
+        const pId = target.dataset.phase;
+        const phase = project.phases.find(p => p.id === pId);
+        if (phase) {
+            if (!phase.workers) phase.workers = {};
+
+            project.teamMembers.forEach(m => {
+                if (!phase.workers[m.id]) phase.workers[m.id] = {};
+                phase.workers[m.id].isPresent = target.checked;
+            });
+            Store.saveProject(project);
+            render();
+        }
+    }
+
+    // Toggle Phase Active/Inactive
+    if (target.classList.contains('cb-phase-active')) {
+        const pId = target.dataset.phase;
+        const phase = project.phases.find(p => p.id === pId);
+        if (phase) {
+            phase.isActive = target.checked;
+            Store.saveProject(project);
+            render();
+        }
+    }
+
+    // Modal Validations/Visibility (Radio Buttons)
+    if (target.name === 'rate-rule') {
+        const valInput = document.getElementById('override-rate-val');
+        if (target.value === 'custom') {
+            valInput.style.display = 'inline-block';
+        } else {
+            valInput.style.display = 'none';
+        }
+    }
+    if (target.name === 'sched-rule') {
+        document.getElementById('override-sched-weekly-val').style.display = 'none';
+        document.getElementById('override-sched-lump-val').style.display = 'none';
+
+        if (target.value === 'custom-weekly') document.getElementById('override-sched-weekly-val').style.display = 'inline-block';
+        if (target.value === 'lump') document.getElementById('override-sched-lump-val').style.display = 'inline-block';
+    }
+});
+
+// Init
+try {
+    render();
+} catch (err) {
+    console.error("Render Failed:", err);
+}
+
+// Globalize access for modal callbacks if needed
+// setupModalLogic(project, render); // Moved to end of file with try/catch
+
+function setupModalLogic(project, renderFn) {
+    console.log("Debug: setupModalLogic temporarily disabled for syntax check.");
+}
+
+function _adjustDummyData() {
+    console.log("Debug: _adjustDummyData temporarily disabled.");
+}
+
+// Call it
+setTimeout(_adjustDummyData, 1000);
+
+// Initial Render
+render();
+
+// [Duplicate renderDistributionModal removed]
+
+// --- Collaboration Logic ---
+
+// Expose Modal Opener
+window.openInviteModal = () => {
+    const emailInput = document.getElementById('invite-email');
+    if (emailInput) emailInput.value = '';
+    const modal = document.getElementById('modal-invite-member');
+    if (modal) modal.style.display = 'flex';
+};
+
+// Bind Confirm Button
+const btnConfirmInvite = document.getElementById('btn-confirm-invite');
+if (btnConfirmInvite) {
+    btnConfirmInvite.onclick = async () => {
+        const email = document.getElementById('invite-email').value.trim();
+        const btn = document.getElementById('btn-confirm-invite');
+
+        if (!email) {
+            alert("Please enter an email.");
+            return;
+        }
+
+        btn.innerText = "Inviting...";
+        btn.disabled = true;
+
         try {
+            // Ensure we have project ID
             const currentId = window._project ? window._project.id : (new URLSearchParams(window.location.search).get('id'));
-            if (!currentId) return;
+            await Store.inviteUser(currentId, email);
+            alert(`Invited ${email} successfully!`);
+            document.getElementById('modal-invite-member').style.display = 'none';
+            await loadAndRenderCollaborators();
+        } catch (e) {
+            alert("Error inviting user: " + e.message);
+        } finally {
+            btn.innerText = "Send Invite";
+            btn.disabled = false;
+        }
+    };
+}
 
-            const list = document.getElementById('collaborators-list');
-            if (!list) return;
+async function loadAndRenderCollaborators() {
+    try {
+        const currentId = window._project ? window._project.id : (new URLSearchParams(window.location.search).get('id'));
+        if (!currentId) return;
 
-            // 1. Render Owner immediately (Client Side)
-            list.innerHTML = '';
-            const ownerName = (window._project && window._project.owner) ? window._project.owner : 'Owner';
-            const ownerDiv = document.createElement('div');
-            ownerDiv.className = 'summary-card';
-            ownerDiv.style.padding = '10px';
-            ownerDiv.style.minWidth = '200px';
-            ownerDiv.innerHTML = `<strong>Owner</strong><br>${ownerName}`;
-            list.appendChild(ownerDiv);
+        const list = document.getElementById('collaborators-list');
+        if (!list) return;
 
-            // 2. Fetch Members
-            const { data: memberData, error: memberError } = await window.supabaseClient
-                .from('project_members')
-                .select('user_id, role')
-                .eq('project_id', currentId);
+        // 1. Render Owner immediately (Client Side)
+        list.innerHTML = '';
+        const ownerName = (window._project && window._project.owner) ? window._project.owner : 'Owner';
+        const ownerDiv = document.createElement('div');
+        ownerDiv.className = 'summary-card';
+        ownerDiv.style.padding = '10px';
+        ownerDiv.style.minWidth = '200px';
+        ownerDiv.innerHTML = `<strong>Owner</strong><br>${ownerName}`;
+        list.appendChild(ownerDiv);
 
-            if (memberError) throw memberError;
+        // 2. Fetch Members
+        const { data: memberData, error: memberError } = await window.supabaseClient
+            .from('project_members')
+            .select('user_id, role')
+            .eq('project_id', currentId);
 
-            // 3. Fetch Profiles (Members + Owner)
-            let userIds = (memberData || []).map(m => m.user_id);
+        if (memberError) throw memberError;
 
-            // Add Owner ID if available
-            const ownerId = window._project ? window._project.owner_id : null;
-            if (ownerId && !userIds.includes(ownerId)) {
-                userIds.push(ownerId);
-            }
+        // 3. Fetch Profiles (Members + Owner)
+        let userIds = (memberData || []).map(m => m.user_id);
 
-            if (userIds.length === 0) return;
+        // Add Owner ID if available
+        const ownerId = window._project ? window._project.owner_id : null;
+        if (ownerId && !userIds.includes(ownerId)) {
+            userIds.push(ownerId);
+        }
 
-            const { data: profileData, error: profileError } = await window.supabaseClient
-                .from('profiles')
-                .select('id, email, full_name, independent_profile')
-                .in('id', userIds);
+        if (userIds.length === 0) return;
 
-            if (profileError) throw profileError;
+        const { data: profileData, error: profileError } = await window.supabaseClient
+            .from('profiles')
+            .select('id, email, full_name, independent_profile')
+            .in('id', userIds);
 
-            // Map profiles
-            const profileMap = {};
-            if (profileData) {
-                profileData.forEach(p => profileMap[p.id] = p);
-            }
+        if (profileError) throw profileError;
 
-            // Helper to format stats
-            const getStats = (p) => {
-                const ip = p.independent_profile || {};
-                let goalRate = ip.goals?.hourlyRateTarget || ip.goals?.hourly || 0;
+        // Map profiles
+        const profileMap = {};
+        if (profileData) {
+            profileData.forEach(p => profileMap[p.id] = p);
+        }
 
-                // Fallback: Calculate if missing
-                if (!goalRate || goalRate === 0) {
-                    try {
-                        // We need to map 'independent_profile' to the structure BudgetEngine expects (which is usually the whole user object or the profile itself)
-                        // BudgetEngine.getWorkerRates expects { unearnedIncome:..., schedule:..., goals:... }
-                        // ip IS that structure.
-                        const rates = BudgetEngine.getWorkerRates(ip);
-                        if (rates && rates.goal) goalRate = rates.goal;
-                    } catch (e) {
-                        console.warn("Rate Calc Error", e);
-                    }
+        // Helper to format stats
+        const getStats = (p) => {
+            const ip = p.independent_profile || {};
+            let goalRate = ip.goals?.hourlyRateTarget || ip.goals?.hourly || 0;
+
+            // Fallback: Calculate if missing
+            if (!goalRate || goalRate === 0) {
+                try {
+                    // We need to map 'independent_profile' to the structure BudgetEngine expects (which is usually the whole user object or the profile itself)
+                    // BudgetEngine.getWorkerRates expects { unearnedIncome:..., schedule:..., goals:... }
+                    // ip IS that structure.
+                    const rates = BudgetEngine.getWorkerRates(ip);
+                    if (rates && rates.goal) goalRate = rates.goal;
+                } catch (e) {
+                    console.warn("Rate Calc Error", e);
                 }
-
-                const sched = ip.schedule || {};
-                const hours = parseFloat(sched.hours) || 0;
-                const days = parseFloat(sched.days) || 0;
-                // const weeks = sched.weeks || 0; // Not needed for this specific display
-
-                // Calculate Billable Capacity (accounting for Admin/Non-Billable work)
-                // Use Utils (which is already loaded)
-                const capacity = Utils.calculateBillableCapacity(ip);
-                const pBillable = capacity.billableRatio || 0; // e.g., 0.85
-
-                let stats = [];
-                if (goalRate > 0) stats.push(`Goal: ${Utils.formatCurrency(goalRate)}/hr`);
-
-                // Total Weekly Hours = Hours/Day * Days/Week (Already in variables hours, days)
-                const totalWeeklyHours = hours * days;
-
-                // Effective Billable Hours = Total * Ratio
-                // Round to 1 decimal for cleanliness
-                const effectiveBillable = Math.round((totalWeeklyHours * pBillable) * 10) / 10;
-
-                if (effectiveBillable > 0) stats.push(`Billable Hours per week: ${effectiveBillable}`);
-
-                return stats.length > 0 ? `<br><span style="font-size:0.7rem; color:#666; font-style:italic;">${stats.join(' • ')}</span>` : '';
-            };
-
-            // Update Owner Card with Real Name & Stats
-            if (ownerId && profileMap[ownerId]) {
-                const p = profileMap[ownerId];
-                const statsHtml = getStats(p);
-                ownerDiv.innerHTML = `<strong>Owner</strong><br>${p.full_name || 'Unknown Name'}<br><span style="font-size:0.7rem; color:gray;">${p.email}</span>${statsHtml}`;
             }
 
-            // 5. Fetch Pending Invites (Project Invites table)
-            const { data: inviteData } = await window.supabaseClient
-                .from('project_invites')
-                .select('email, invited_at')
-                .eq('project_id', currentId);
+            const sched = ip.schedule || {};
+            const hours = parseFloat(sched.hours) || 0;
+            const days = parseFloat(sched.days) || 0;
+            // const weeks = sched.weeks || 0; // Not needed for this specific display
 
-            // Render Pending Invites
-            if (inviteData && inviteData.length > 0) {
-                inviteData.forEach(inv => {
+            // Calculate Billable Capacity (accounting for Admin/Non-Billable work)
+            // Use Utils (which is already loaded)
+            const capacity = Utils.calculateBillableCapacity(ip);
+            const pBillable = capacity.billableRatio || 0; // e.g., 0.85
+
+            let stats = [];
+            if (goalRate > 0) stats.push(`Goal: ${Utils.formatCurrency(goalRate)}/hr`);
+
+            // Total Weekly Hours = Hours/Day * Days/Week (Already in variables hours, days)
+            const totalWeeklyHours = hours * days;
+
+            // Effective Billable Hours = Total * Ratio
+            // Round to 1 decimal for cleanliness
+            const effectiveBillable = Math.round((totalWeeklyHours * pBillable) * 10) / 10;
+
+            if (effectiveBillable > 0) stats.push(`Billable Hours per week: ${effectiveBillable}`);
+
+            return stats.length > 0 ? `<br><span style="font-size:0.7rem; color:#666; font-style:italic;">${stats.join(' • ')}</span>` : '';
+        };
+
+        // Update Owner Card with Real Name & Stats
+        if (ownerId && profileMap[ownerId]) {
+            const p = profileMap[ownerId];
+            const statsHtml = getStats(p);
+            ownerDiv.innerHTML = `<strong>Owner</strong><br>${p.full_name || 'Unknown Name'}<br><span style="font-size:0.7rem; color:gray;">${p.email}</span>${statsHtml}`;
+        }
+
+        // 5. Fetch Pending Invites (Project Invites table)
+        const { data: inviteData } = await window.supabaseClient
+            .from('project_invites')
+            .select('email, invited_at')
+            .eq('project_id', currentId);
+
+        // Render Pending Invites
+        if (inviteData && inviteData.length > 0) {
+            inviteData.forEach(inv => {
+                const d = document.createElement('div');
+                d.className = 'summary-card';
+                d.style.padding = '10px';
+                d.style.minWidth = '200px';
+                d.style.border = '1px dashed #ccc'; // Distinct style for pending
+                d.innerHTML = `<strong>Invited</strong><br>${inv.email}<br><span style="font-size:0.7rem; color:orange;">Pending Signup</span>`;
+                list.appendChild(d);
+            });
+        }
+
+        // 4. Render Members (Skip Owner)
+        if (memberData) {
+            memberData.forEach(m => {
+                const profile = profileMap[m.user_id];
+                if (profile) {
+                    if (profile.id === ownerId) return; // Skip Owner if in list
                     const d = document.createElement('div');
                     d.className = 'summary-card';
                     d.style.padding = '10px';
                     d.style.minWidth = '200px';
-                    d.style.border = '1px dashed #ccc'; // Distinct style for pending
-                    d.innerHTML = `<strong>Invited</strong><br>${inv.email}<br><span style="font-size:0.7rem; color:orange;">Pending Signup</span>`;
+                    const statsHtml = getStats(profile);
+                    d.innerHTML = `<strong>${profile.full_name || 'Collaborator'}</strong><br>${profile.email}<br><span style="font-size:0.7rem; color:gray;">${m.role}</span>${statsHtml}`;
                     list.appendChild(d);
-                });
-            }
-
-            // 4. Render Members (Skip Owner)
-            if (memberData) {
-                memberData.forEach(m => {
-                    const profile = profileMap[m.user_id];
-                    if (profile) {
-                        if (profile.id === ownerId) return; // Skip Owner if in list
-                        const d = document.createElement('div');
-                        d.className = 'summary-card';
-                        d.style.padding = '10px';
-                        d.style.minWidth = '200px';
-                        const statsHtml = getStats(profile);
-                        d.innerHTML = `<strong>${profile.full_name || 'Collaborator'}</strong><br>${profile.email}<br><span style="font-size:0.7rem; color:gray;">${m.role}</span>${statsHtml}`;
-                        list.appendChild(d);
-                    }
-                });
-            }
-
-        } catch (err) {
-            console.error("Error loading collaborators:", err);
-            const list = document.getElementById('collaborators-list');
-            // DEBUG: Show actual error on screen
-            if (list) list.innerHTML += `<div style="color:red; font-size:0.8rem;">Error: ${err.message || err.toString()}</div>`;
+                }
+            });
         }
+
+    } catch (err) {
+        console.error("Error loading collaborators:", err);
+        const list = document.getElementById('collaborators-list');
+        // DEBUG: Show actual error on screen
+        if (list) list.innerHTML += `<div style="color:red; font-size:0.8rem;">Error: ${err.message || err.toString()}</div>`;
     }
+}
 
-    // Explicitly Expose
-    window.loadAndRenderCollaborators = loadAndRenderCollaborators;
+// Explicitly Expose
+window.loadAndRenderCollaborators = loadAndRenderCollaborators;
 
-    // --- Final Init ---
-    try {
-        setupModalLogic(project, render);
-    } catch (e) { console.error("Modal Logic Error", e); }
+// --- Final Init ---
+try {
+    setupModalLogic(project, render);
+} catch (e) { console.error("Modal Logic Error", e); }
 
-    try {
-        await loadAndRenderCollaborators();
-    } catch (e) { console.error("Collab Logic Error", e); }
+try {
+    await loadAndRenderCollaborators();
+} catch (e) { console.error("Collab Logic Error", e); }
 
 });
