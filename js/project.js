@@ -1102,7 +1102,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Button: Phase Settings
         // Button: Save Funding / Income
         if (btn.id === 'btn-save-income') {
-            alert("Debug: Clicked Save Source!"); // FORCE DEBUG
+            // alert("Debug: Clicked Save Source!"); // FORCE DEBUG
             const id = document.getElementById('income-id').value;
             const name = document.getElementById('income-name').value;
             const amount = parseFloat(document.getElementById('income-amount').value) || 0;
@@ -1119,6 +1119,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 alert("Error: Project not found in scope.");
                 return;
             }
+            // alert("Debug: Project found, saving...");
 
             if (!proj.incomeSources) proj.incomeSources = [];
 
@@ -1140,9 +1141,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
             }
 
-            Store.saveProject(proj);
-            document.getElementById('modal-add-income').style.display = 'none';
-            render();
+            try {
+                await Store.saveProject(proj);
+                // alert("Debug: Saved to Store!");
+                document.getElementById('modal-add-income').style.display = 'none';
+                render();
+            } catch (e) {
+                alert("Error Saving: " + e.message);
+                console.error(e);
+            }
         }
 
         if (btn.classList.contains('btn-phase-settings')) {
