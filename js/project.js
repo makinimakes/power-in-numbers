@@ -1452,7 +1452,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const { data: profileData, error: profileError } = await window.supabaseClient
                 .from('profiles')
-                .select('id, email, full_name')
+                .select('id, email, full_name, independent_profile')
                 .in('id', userIds);
 
             if (profileError) throw profileError;
@@ -1463,12 +1463,26 @@ document.addEventListener('DOMContentLoaded', async () => {
                 profileData.forEach(p => profileMap[p.id] = p);
             }
 
-            // Update Owner Card with Real Name
+            // Helper to format stats
+            const getStats = (p) => {
+                const ip = p.independent_profile || {};
+                const goalRate = ip.goals?.hourlyRateTarget || ip.goals?.hourly || 0; // Check specific field name
+                const sched = ip.schedule || {};
+                const hours = sched.hours || 0;
+                const weeks = sched.weeks || 0;
+
+                let stats = [];
+                if (goalRate > 0) stats.push(`Goal: ${Utils.formatCurrency(goalRate)}/hr`);
+                if (hours > 0 && weeks > 0) stats.push(`Sched: ${weeks}wks @ ${hours}hrs`);
+
+                return stats.length > 0 ? `<br><span style="font-size:0.7rem; color:#666; font-style:italic;">${stats.join(' • ')}</span>` : '';
+            };
+
+            // Update Owner Card with Real Name & Stats
             if (ownerId && profileMap[ownerId]) {
                 const p = profileMap[ownerId];
-                // const ownerTitle = (p.email === ownerName) ? 'Owner' : 'Owner (' + ownerName + ')'; 
-                // Actually ownerName is usually email.
-                ownerDiv.innerHTML = `<strong>Owner</strong><br>${p.full_name || 'Unknown Name'}<br><span style="font-size:0.7rem; color:gray;">${p.email}</span>`;
+                const statsHtml = getStats(p);
+                ownerDiv.innerHTML = `<strong>Owner</strong><br>${p.full_name || 'Unknown Name'}<br><span style="font-size:0.7rem; color:gray;">${p.email}</span>${statsHtml}`;
             }
 
             // 4. Render Members (Skip Owner)
@@ -1481,7 +1495,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         d.className = 'summary-card';
                         d.style.padding = '10px';
                         d.style.minWidth = '200px';
-                        d.innerHTML = `<strong>${profile.full_name || 'Collaborator'}</strong><br>${profile.email}<br><span style="font-size:0.7rem; color:gray;">${m.role}</span>`;
+                        const statsHtml = getStats(profile);
+                        d.innerHTML = `<strong>${profile.full_name || 'Collaborator'}</strong><br>${profile.email}<br><span style="font-size:0.7rem; color:gray;">${m.role}</span>${statsHtml}`;
                         list.appendChild(d);
                     }
                 });
