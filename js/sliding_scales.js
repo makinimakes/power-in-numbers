@@ -170,7 +170,7 @@ function updateCalculations() {
     // Recalibrated Values - In pure "Lock" mode, this usually just matches Current Net 
     // unless we allow "Squeezing" (where locks exceed income).
     // For now, it stays as Current Net because we aren't driving it.
-    outRecalibratedNet.textContent = formatMoney(profile.currentNetIncome || 0);
+    // outRecalibratedNet.textContent = formatMoney(profile.currentNetIncome || 0);
 
     // Gross
     // Gross (Match logic from independent.js: Net * (1 + TaxRate))
