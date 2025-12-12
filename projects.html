@@ -89,7 +89,13 @@
                     card.className = 'summary-card';
                     card.style.cursor = 'pointer';
                     card.style.transition = 'transform 0.2s';
-                    card.onclick = () => window.location.href = `project.html?id=${p.id}`;
+                    // We'll handle the click on the card body slightly differently now to avoid conflict with delete button
+                    card.onclick = (e) => {
+                        // If the clicked element is NOT the delete button or its child, navigate
+                        if (!e.target.closest('.btn-delete')) {
+                            window.location.href = `project.html?id=${p.id}`;
+                        }
+                    };
                     card.onmouseover = () => card.style.transform = 'translateY(-2px)';
                     card.onmouseout = () => card.style.transform = 'translateY(0)';
 
@@ -99,9 +105,25 @@
 
                     // Owner Display Logic (handle email vs string)
                     const ownerDisplay = p.owner || 'Unknown';
+                    const isOwner = (p.owner_id === user.id) || (p.owner === user.email); // Fallback check
+
+                    let deleteBtnHtml = '';
+                    if (isOwner) {
+                        deleteBtnHtml = `
+                            <button class="btn-delete" 
+                                onclick="deleteProject('${p.id}', '${(p.name || 'Untitled').replace(/'/g, "\\'")}', event)"
+                                style="background:none; border:none; color:#d9534f; cursor:pointer; font-size:1.2rem; padding:5px; border-radius:4px;"
+                                title="Delete Project">
+                                &times;
+                            </button>
+                        `;
+                    }
 
                     card.innerHTML = `
-                        <h3>${p.name || 'Untitled Project'}</h3>
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                            <h3>${p.name || 'Untitled Project'}</h3>
+                            ${deleteBtnHtml}
+                        </div>
                         <p style="margin-top:10px; color:var(--color-text-muted); font-size:0.9rem;">
                             Owner: ${ownerDisplay}<br>
                             Team Members: ${teamCount}
@@ -109,6 +131,19 @@
                     `;
                     grid.appendChild(card);
                 });
+
+                // Global Delete Handler
+                window.deleteProject = async (id, name, event) => {
+                    event.stopPropagation();
+                    if (confirm(`Are you sure you want to delete project "${name}"? This cannot be undone.`)) {
+                        try {
+                            await Store.deleteProject(id);
+                            window.location.reload();
+                        } catch (e) {
+                            alert("Failed to delete project: " + e.message);
+                        }
+                    }
+                };
             }
 
             document.getElementById('btn-confirm-create').onclick = async () => {

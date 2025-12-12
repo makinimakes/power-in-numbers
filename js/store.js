@@ -277,6 +277,27 @@ const Store = {
         return merged;
     },
 
+    /**
+     * Delete a project by ID
+     */
+    deleteProject: async (id) => {
+        const user = await Store.getCurrentUser();
+        if (!user) return;
+
+        // Perform delete
+        // RLS policies should prevent deleting projects you don't own
+        const { error } = await window.supabaseClient
+            .from('projects')
+            .delete()
+            .eq('id', id);
+
+        if (error) {
+            console.error("Delete Project Error:", error);
+            throw error;
+        }
+        return true;
+    },
+
     // Helper to find users (for collaboration)
     findUserByEmail: async (email) => {
         // Requires RLS policy 'Public profiles are viewable by everyone'
