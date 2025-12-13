@@ -915,7 +915,21 @@
                     if (line.overheadProjectId) {
                         const linkedProj = overheadProjects.find(p => p.id === line.overheadProjectId);
                         if (linkedProj) {
-                            const totalOverhead = (linkedProj.expenses || []).reduce((acc, i) => acc + (parseFloat(i.amount) || 0), 0);
+                            // Calculate Total Overhead using Gross-Up Logic (Matching BusinessProfileManager)
+                            let projFixed = 0;
+                            let projPercent = 0;
+                            (linkedProj.expenses || []).forEach(e => {
+                                if (e.type === 'Percent') {
+                                    projPercent += (e.baseAmount || e.amount || 0);
+                                } else {
+                                    projFixed += (e.amount || 0);
+                                }
+                            });
+
+                            let totalOverhead = projFixed;
+                            if (projPercent > 0 && projPercent < 100) {
+                                totalOverhead = projFixed / (1 - (projPercent / 100));
+                            }
 
                             let lineWeeks = parseFloat(line.duration.value) || 0;
                             if (line.duration.unit === 'Months') lineWeeks *= 4.33;
