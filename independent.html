@@ -1503,97 +1503,101 @@
             // Ensure Close Button works
             document.getElementById('close-scenarios').onclick = () => {
                 document.getElementById('modal-scenarios').style.display = 'none';
-            }; try {
-                logToScreen("Fetching Profile...");
-                try {
-                    profile = await Store.getIndependentProfile();
-                    logToScreen("Profile loaded: " + (profile ? "Found" : "Null"));
-                } catch (e) {
-                    logToScreen("Profile Fetch Error: " + e.message);
-                }
+            };
 
-                // 2. Load Overhead (Always run this)
+            // 3. Initialization
+            async function init() {
                 try {
-                    overheadProjects = await Store.getOverheadProjects();
-                    if (!Array.isArray(overheadProjects)) overheadProjects = [];
-                    if (window.calculateOverheadScenarios) {
-                        console.table(window.calculateOverheadScenarios());
+                    logToScreen("Fetching Profile...");
+                    try {
+                        profile = await Store.getIndependentProfile();
+                        logToScreen("Profile loaded: " + (profile ? "Found" : "Null"));
+                    } catch (e) {
+                        logToScreen("Profile Fetch Error: " + e.message);
                     }
-                } catch (e) {
-                    console.error("Overhead Load Error:", e);
-                    overheadProjects = [];
-                }
 
-                if (!profile) profile = {};
-                if (!profile.linesOfWork) profile.linesOfWork = [];
-                if (!profile.expenses) profile.expenses = {};
+                    // 2. Load Overhead (Always run this)
+                    try {
+                        overheadProjects = await Store.getOverheadProjects();
+                        if (!Array.isArray(overheadProjects)) overheadProjects = [];
+                        if (window.calculateOverheadScenarios) {
+                            console.table(window.calculateOverheadScenarios());
+                        }
+                    } catch (e) {
+                        console.error("Overhead Load Error:", e);
+                        overheadProjects = [];
+                    }
 
-                if (!profile.expenses.items || profile.expenses.items.length === 0) {
-                    logToScreen("Expenses empty/missing. Restoring Defaults...");
-                    profile.expenses.items = BASE_EXPENSE_CATEGORIES.map(item => ({
-                        id: crypto.randomUUID(),
-                        ...item,
-                        amount: 0
-                    }));
-                    if (profile.expenses.taxRate === undefined) profile.expenses.taxRate = 30;
-                }
+                    if (!profile) profile = {};
+                    if (!profile.linesOfWork) profile.linesOfWork = [];
+                    if (!profile.expenses) profile.expenses = {};
 
-                if (!profile.unearnedIncome || !profile.unearnedIncome.items) {
-                    profile.unearnedIncome = { items: [] };
-                }
+                    if (!profile.expenses.items || profile.expenses.items.length === 0) {
+                        logToScreen("Expenses empty/missing. Restoring Defaults...");
+                        profile.expenses.items = BASE_EXPENSE_CATEGORIES.map(item => ({
+                            id: crypto.randomUUID(),
+                            ...item,
+                            amount: 0
+                        }));
+                        if (profile.expenses.taxRate === undefined) profile.expenses.taxRate = 30;
+                    }
 
-                if (profile.schedule) {
-                    inputs.weeks.value = profile.schedule.weeks;
-                    inputs.days.value = profile.schedule.days;
-                    inputs.hours.value = profile.schedule.hours;
-                } else {
-                    // Defaults if new user
-                    inputs.weeks.value = 50;
-                    inputs.days.value = 5;
-                    inputs.hours.value = 8;
-                    profile.schedule = { weeks: 50, days: 5, hours: 8 }; // Save defaults to state
-                    Store.saveIndependentProfile(profile); // FORCE SAVE DEFAULTS
-                }
+                    if (!profile.unearnedIncome || !profile.unearnedIncome.items) {
+                        profile.unearnedIncome = { items: [] };
+                    }
 
-                if (profile.expenses.taxRate !== undefined) {
-                    inputs.taxRate.value = profile.expenses.taxRate;
-                }
+                    if (profile.schedule) {
+                        inputs.weeks.value = profile.schedule.weeks;
+                        inputs.days.value = profile.schedule.days;
+                        inputs.hours.value = profile.schedule.hours;
+                    } else {
+                        // Defaults if new user
+                        inputs.weeks.value = 50;
+                        inputs.days.value = 5;
+                        inputs.hours.value = 8;
+                        profile.schedule = { weeks: 50, days: 5, hours: 8 }; // Save defaults to state
+                        Store.saveIndependentProfile(profile); // FORCE SAVE DEFAULTS
+                    }
 
-                const currentNetInput = document.getElementById('in-current-net-income');
-                if (currentNetInput) {
-                    currentNetInput.value = profile.currentNetIncome || 0;
-                    currentNetInput.addEventListener('input', (e) => {
-                        profile.currentNetIncome = parseFloat(e.target.value) || 0;
-                        Store.saveIndependentProfile(profile);
+                    if (profile.expenses.taxRate !== undefined) {
+                        inputs.taxRate.value = profile.expenses.taxRate;
+                    }
+
+                    const currentNetInput = document.getElementById('in-current-net-income');
+                    if (currentNetInput) {
+                        currentNetInput.value = profile.currentNetIncome || 0;
+                        currentNetInput.addEventListener('input', (e) => {
+                            profile.currentNetIncome = parseFloat(e.target.value) || 0;
+                            Store.saveIndependentProfile(profile);
+                        });
+                    }
+
+                    LineManager.render();
+                    ExpenseManager.render();
+                    logToScreen("Expenses Rendered. Count: " + (profile.expenses.items ? profile.expenses.items.length : 0));
+                    IncomeManager.render();
+                    BusinessProfileManager.render();
+                    calculateAndDisplay();
+                    logToScreen("Init Complete. UI should be ready.");
+
+                    ['weeks', 'days', 'hours'].forEach(key => {
+                        inputs[key].addEventListener('input', (e) => {
+                            profile.schedule[key] = parseFloat(e.target.value);
+                            Store.saveIndependentProfile(profile);
+                            LineManager.render(); // Update overhead rates based on new capacity
+                            calculateAndDisplay();
+                        });
                     });
-                }
 
-                LineManager.render();
-                ExpenseManager.render();
-                logToScreen("Expenses Rendered. Count: " + (profile.expenses.items ? profile.expenses.items.length : 0));
-                IncomeManager.render();
-                BusinessProfileManager.render();
-                calculateAndDisplay();
-                logToScreen("Init Complete. UI should be ready.");
-
-                ['weeks', 'days', 'hours'].forEach(key => {
-                    inputs[key].addEventListener('input', (e) => {
-                        profile.schedule[key] = parseFloat(e.target.value);
+                    inputs.taxRate.addEventListener('input', (e) => {
+                        profile.expenses.taxRate = parseFloat(e.target.value);
                         Store.saveIndependentProfile(profile);
-                        LineManager.render(); // Update overhead rates based on new capacity
                         calculateAndDisplay();
                     });
-                });
-
-                inputs.taxRate.addEventListener('input', (e) => {
-                    profile.expenses.taxRate = parseFloat(e.target.value);
-                    Store.saveIndependentProfile(profile);
-                    calculateAndDisplay();
-                });
-            } catch (e) {
-                console.error("Critical Init Error:", e);
-                logToScreen("CRITICAL ERROR: " + e.message);
-            }
+                } catch (e) {
+                    console.error("Critical Init Error:", e);
+                    logToScreen("CRITICAL ERROR: " + e.message);
+                }
             }
 
             // Start
