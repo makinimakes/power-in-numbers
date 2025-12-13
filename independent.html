@@ -39,6 +39,17 @@
         <div id="debug-console"
             style="background: #ffebee; border: 2px solid #ef5350; color: #c62828; padding: 10px; margin: 10px; font-family: monospace; white-space: pre-wrap; display: block;">
             Debug Log Initializing...</div>
+        <script>
+            window.onerror = function (msg, url, line, col, error) {
+                const el = document.getElementById('debug-console');
+                if (el) el.innerHTML += `\nGLOBAL ERROR: ${msg}\nLine: ${line}`;
+                return false;
+            };
+            window.addEventListener('unhandledrejection', function (event) {
+                const el = document.getElementById('debug-console');
+                if (el) el.innerHTML += `\nUNHANDLED PROMISE: ${event.reason}`;
+            });
+        </script>
 
         <div class="grid-header">
             <div style="display:flex; justify-content:space-between; width:100%; align-items:baseline;">
