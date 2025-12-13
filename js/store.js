@@ -4,6 +4,8 @@
  */
 
 const Store = {
+    // Debug Log
+    _debug: console.log("Store.js Loading..."),
     // --- Auth Methods ---
 
     /**
@@ -456,14 +458,14 @@ const Store = {
         const profile = await Store.getIndependentProfile();
 
         const newProject = {
-            id: Utils.generateId(),
+            id: window.Utils ? window.Utils.generateId() : 'fallback-' + Math.random(),
             name: name,
             owner: user.email,
             teamMembers: [],
             incomeSources: [],
             phases: [
                 {
-                    id: Utils.generateId(),
+                    id: window.Utils ? window.Utils.generateId() : 'fallback-' + Math.random(),
                     name: 'Phase 1',
                     schedule: {},
                     lineItems: [],
@@ -475,7 +477,7 @@ const Store = {
 
         // Auto-add creator
         newProject.teamMembers.push({
-            id: Utils.generateId(), // Fallback for file://
+            id: window.Utils ? window.Utils.generateId() : 'fallback-' + Math.random(), // Fallback for file://
             name: profile.fullName || "Me",
             rate: 0,
             days: 0,
@@ -530,7 +532,7 @@ const DEFAULT_INDEPENDENT = {
         taxRate: 30,
         items: BASE_EXPENSE_CATEGORIES.map(item => ({
             ...item,
-            id: Utils.generateId(),
+            id: window.Utils ? window.Utils.generateId() : 'fallback-' + Math.random(),
             amount: 0
         }))
     },
