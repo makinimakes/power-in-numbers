@@ -1341,31 +1341,6 @@
                     });
                 }
 
-                window.showOverheadScenarios = () => {
-                    const scenarios = calculateOverheadScenarios();
-                    const tbody = document.getElementById('scenarios-table-body');
-                    tbody.innerHTML = '';
-
-                    scenarios.forEach(sc => {
-                        const tr = document.createElement('tr');
-                        tr.style.borderBottom = "1px solid #eee";
-
-                        // Highlight "Personal Baseline" row
-                        const isBase = sc.name.includes("Baseline");
-                        if (isBase) tr.style.background = "var(--color-bg-subtle)";
-
-                        tr.innerHTML = `
-                        <td style="padding:10px; font-weight:${isBase ? 'bold' : 'normal'}">${sc.name}</td>
-                        <td style="padding:10px; text-align:right;">${Utils.formatCurrency(sc.fixed)}</td>
-                        <td style="padding:10px; text-align:right;">${sc.percent.toFixed(1)}%</td>
-                        <td style="padding:10px; text-align:right;">${Utils.formatCurrency(sc.totalNet)}</td>
-                        <td style="padding:10px; text-align:right; font-weight:bold; color:var(--color-accent-primary);">${Utils.formatCurrency(sc.hourly)}/hr</td>
-                    `;
-                        tbody.appendChild(tr);
-                    });
-
-                    document.getElementById('modal-scenarios').showModal();
-                };
                 const pBillable = totalWorkHours > 0 ? (totalBillableHours / totalWorkHours) : 0;
                 const weeksPerYear = weeks || 0;
                 const calculateFees = (grossAmount, isGoal = false) => {
@@ -1392,6 +1367,33 @@
                 setVal('out-now-weekly', nowFees.weekly);
                 setVal('out-now-monthly', nowFees.monthly);
             }
+
+            // --- SCENARIO ANALYSIS UI ---
+            window.showOverheadScenarios = () => {
+                const scenarios = calculateOverheadScenarios();
+                const tbody = document.getElementById('scenarios-table-body');
+                tbody.innerHTML = '';
+
+                scenarios.forEach(sc => {
+                    const tr = document.createElement('tr');
+                    tr.style.borderBottom = "1px solid #eee";
+
+                    // Highlight "Personal Baseline" row
+                    const isBase = sc.name.includes("Baseline");
+                    if (isBase) tr.style.background = "var(--color-bg-subtle)";
+
+                    tr.innerHTML = `
+                        <td style="padding:10px; font-weight:${isBase ? 'bold' : 'normal'}">${sc.name}</td>
+                        <td style="padding:10px; text-align:right;">${Utils.formatCurrency(sc.fixed)}</td>
+                        <td style="padding:10px; text-align:right;">${sc.percent.toFixed(1)}%</td>
+                        <td style="padding:10px; text-align:right;">${Utils.formatCurrency(sc.totalNet)}</td>
+                        <td style="padding:10px; text-align:right; font-weight:bold; color:var(--color-accent-primary);">${Utils.formatCurrency(sc.hourly)}/hr</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                document.getElementById('modal-scenarios').showModal();
+            };
 
             // 3. Initialization
             async function init() {
