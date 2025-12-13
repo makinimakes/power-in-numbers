@@ -486,8 +486,11 @@
             cachedPersonalRateNow = parseFloat(nowRateText) || 0;
             cachedPersonalRateGoal = parseFloat(goalRateText) || 0;
 
-            renderTable(tableNow, cachedPersonalRateNow);
-            renderTable(tableGoal, cachedPersonalRateGoal);
+            const rateNowWithOverhead = cachedPersonalRateNow + selectedOverheadRate;
+            const rateGoalWithOverhead = cachedPersonalRateGoal + selectedOverheadRate;
+
+            renderTable(tableNow, rateNowWithOverhead);
+            renderTable(tableGoal, rateGoalWithOverhead);
         }
 
         function renderTable(tbody, baseRate) {
