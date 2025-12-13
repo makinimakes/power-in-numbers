@@ -25,6 +25,7 @@ const Store = {
     },
 
     getCurrentUser: async () => {
+        if (!window.supabaseClient) await Store.init();
         const { data: { user } } = await window.supabaseClient.auth.getUser();
         return user;
     },

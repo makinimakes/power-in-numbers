@@ -77,6 +77,7 @@ async function openSpectrumModal() {
         }
     } catch (err) {
         console.error("Error in openSpectrumModal:", err);
+        alert("System Error: " + err.message);
     }
 }
 
