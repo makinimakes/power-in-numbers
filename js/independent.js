@@ -1089,5 +1089,3 @@ window.toggleSection = (id, btn) => {
 
         init();
     });
-
-</content >
