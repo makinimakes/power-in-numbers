@@ -5,13 +5,106 @@
 const modalSpectrum = document.getElementById('modal-spectrum');
 const tableNow = document.getElementById('spectrum-table-now');
 const tableGoal = document.getElementById('spectrum-table-goal');
+const overheadList = document.getElementById('overhead-toggles-list');
+
+// State for Overheads
+let overheadProjects = [];
+let selectedOverheadRate = 0; // Cumulative hourly rate to add
+let cachedPersonalRateNow = 0;
+let cachedPersonalRateGoal = 0;
+
+// Spectrum Deltas: 10% to 90%
 
 // Spectrum Deltas: 10% to 90%
 const DELTAS = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9];
 
-function openSpectrumModal() {
+async function openSpectrumModal() {
+    // 1. Fetch Overheads (if not loaded)
+    // We need to fetch projects where type = 'overhead' (or check expenses)
+    // Actually, Store.getProjects() checks `projects` table.
+    // We filter by `data->>type == 'business_overhead'` or similar marker used in independent tool.
+    // In independent.html we used: profiles -> projects (via UUID?). 
+    // Wait, Store.getProjects() gets everything for user.
+
+    // Reset selection on open? Or persist? checking...
+    // Let's reset for simplicity or persist if global "overheadProjects" array is kept.
+    // We'll reload to be safe.
+
+    const allProjects = await Store.getProjects();
+    const profile = await Store.getIndependentProfile(); // Ensure fresh profile for Billable Hours
+
+    // Filter for Overhead Projects (Logic copied from independent.js/BusinessProfileManager)
+    overheadProjects = allProjects.filter(p => p.type === 'infrastructure' || (p.data && p.data.type === 'business_overhead'));
+
+    // Calculate Hourly Rate for each Project
+    const capacity = Utils.calculateBillableCapacity(profile);
+    const billableHours = capacity.totalBillableHours || 1; // Avoid div/0
+
+    overheadProjects.forEach(p => {
+        // Calculate Cost
+        let fixed = 0;
+        let percent = 0;
+        if (p.data && p.data.expenses) {
+            p.data.expenses.forEach(e => {
+                const val = parseFloat(e.amount) || 0;
+                if (e.type === 'Percent') percent += (e.baseAmount || val); // Access raw if needed
+                else fixed += val;
+            });
+        }
+
+        // Additive Logic (Isolated Cost)
+        let cost = 0;
+        if (percent < 100) {
+            cost = fixed / (1 - (percent / 100));
+        }
+        p.hourlyRate = cost / billableHours;
+    });
+
+    renderOverheadToggles();
     renderPairedSpectrum();
     if (modalSpectrum) modalSpectrum.showModal();
+}
+
+function renderOverheadToggles() {
+    if (!overheadList) return;
+    overheadList.innerHTML = '';
+
+    if (overheadProjects.length === 0) {
+        overheadList.innerHTML = '<span style="color:#888; font-size:0.8rem;">No business profiles found.</span>';
+        return;
+    }
+
+    overheadProjects.forEach(p => {
+        const label = document.createElement('label');
+        label.style.display = 'flex';
+        label.style.alignItems = 'center';
+        label.style.gap = '5px';
+        label.style.fontSize = '0.9rem';
+        label.style.cursor = 'pointer';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = false; // Default off
+        checkbox.dataset.rate = p.hourlyRate;
+
+        checkbox.onchange = () => {
+            recalculateSelectedOverhead();
+            renderPairedSpectrum();
+        };
+
+        label.appendChild(checkbox);
+        label.appendChild(document.createTextNode(`${p.name} (+$${Utils.formatCurrency(p.hourlyRate)}/hr)`));
+
+        overheadList.appendChild(label);
+    });
+}
+
+function recalculateSelectedOverhead() {
+    selectedOverheadRate = 0;
+    const checks = overheadList.querySelectorAll('input[type="checkbox"]');
+    checks.forEach(c => {
+        if (c.checked) selectedOverheadRate += parseFloat(c.dataset.rate);
+    });
 }
 
 function closeSpectrumModal() {
@@ -27,8 +120,12 @@ function renderPairedSpectrum() {
         return parseFloat(clean) || 0;
     };
 
-    const rateNow = parseRate('out-required-rate-now');
-    const rateGoal = parseRate('out-required-rate-goal');
+    const rateNowBase = parseRate('out-required-rate-now');
+    const rateGoalBase = parseRate('out-required-rate-goal');
+
+    // Apply Overhead
+    const rateNow = rateNowBase + selectedOverheadRate;
+    const rateGoal = rateGoalBase + selectedOverheadRate;
 
     // 2. Schedule
     const hoursPerDay = (profile.schedule && profile.schedule.hours) ? profile.schedule.hours : 6;
