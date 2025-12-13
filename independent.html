@@ -1190,6 +1190,14 @@
             document.getElementById('btn-add-overhead-profile').onclick = BusinessProfileManager.create;
 
             function calculateAndDisplay() {
+                const setVal = (id, val) => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') el.value = Utils.formatCurrency(val);
+                        else el.innerText = Utils.formatCurrency(val);
+                    }
+                };
+
                 const weeks = parseFloat(inputs.weeks.value) || 0;
                 const days = parseFloat(inputs.days.value) || 0;
                 const hours = parseFloat(inputs.hours.value) || 0;
