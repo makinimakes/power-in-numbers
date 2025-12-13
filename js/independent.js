@@ -35,6 +35,18 @@ document.addEventListener('DOMContentLoaded', () => {
     let profile = {}; // Init empty, load in async init()
     let overheadProjects = []; // Business Personalities
 
+    const BASE_EXPENSE_CATEGORIES = [
+        { label: 'Housing (Rent/Mortgage)', type: 'Monthly' },
+        { label: 'Utilities & Internet', type: 'Monthly' },
+        { label: 'Groceries & Household', type: 'Monthly' },
+        { label: 'Healthcare / Insurance', type: 'Monthly' },
+        { label: 'Transportation', type: 'Monthly' },
+        { label: 'Savings / Investments', type: 'Percent' },
+        { label: 'Debt Repayment', type: 'Monthly' },
+        { label: 'Entertainment / Leisure', type: 'Monthly' },
+        { label: 'Other', type: 'Monthly' }
+    ];
+
     // -------------------------------------------------------------------------
     // HELPERS & NORMALIZATION
     // -------------------------------------------------------------------------
@@ -1009,10 +1021,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (profile.expenses.taxRate === undefined) profile.expenses.taxRate = 30;
         }
 
+
         if (!profile.unearnedIncome || !profile.unearnedIncome.items) {
             profile.unearnedIncome = { items: [] };
-        }        // Actually, merge defaults logic handles this in Store, but let's keep robust
-
+        }
 
         if (profile.schedule) {
             inputs.weeks.value = profile.schedule.weeks;
@@ -1036,6 +1048,7 @@ document.addEventListener('DOMContentLoaded', () => {
         LineManager.render();
         ExpenseManager.render();
         IncomeManager.render();
+        BusinessProfileManager.render(); // Ensure Personalities are rendered
         calculateAndDisplay();
 
         // Listeners for Global Inputs
