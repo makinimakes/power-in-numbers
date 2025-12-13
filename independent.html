@@ -1074,10 +1074,15 @@
             updateLineDuration: (index, subField, value) => {
                 const newVal = subField === 'value' ? parseFloat(value) : value;
                 const currentObj = profile.linesOfWork[index].duration;
-                const proposedValue = subField === 'value' ? newVal : currentObj.value;
-                const proposedUnit = subField === 'unit' ? newVal : currentObj.unit;
+                let proposedValue = currentObj.value;
+                let proposedUnit = currentObj.unit;
+                if (subField === 'unit') proposedUnit = newVal;
+                if (subField === 'value') proposedValue = newVal;
+
                 const globalWeeks = parseFloat(inputs.weeks.value) || 0;
-                const proposedWeeks = Normalizer.getLineWeeks(proposedValue, proposedUnit, globalWeeks);
+                let proposedWeeks = Normalizer.getLineWeeks(proposedValue, proposedUnit, globalWeeks);
+                // Special check for Direct Input of % to ensure we aren't double counting if Normalizer changed
+                // Actually Normalizer handles it. But let's verify line 1092 logic mentioned earlier.
 
                 if (proposedWeeks > globalWeeks) {
                     LineManager.pendingOverride = { index, subField, value: newVal };
@@ -1459,6 +1464,7 @@
                     inputs.days.value = 5;
                     inputs.hours.value = 8;
                     profile.schedule = { weeks: 50, days: 5, hours: 8 }; // Save defaults to state
+                    Store.saveIndependentProfile(profile); // FORCE SAVE DEFAULTS
                 }
 
                 if (profile.expenses.taxRate !== undefined) {
