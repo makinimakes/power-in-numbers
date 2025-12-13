@@ -994,60 +994,65 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 3. Defaults
         if (!profile.linesOfWork) profile.linesOfWork = [];
-        if (!profile.expenses) {
-            profile.expenses = {
-                taxRate: 30,
-                items: BASE_EXPENSE_CATEGORIES.map(item => ({
-                    ...item,
-                    id: crypto.randomUUID(),
-                    amount: 0
-                }))
-            };
 
-            if (!profile.unearnedIncome || !profile.unearnedIncome.items) {
-                profile.unearnedIncome = { items: [] }; // Minimal default, full default is large block above
-                // Actually, merge defaults logic handles this in Store, but let's keep robust
-            }
+        // Ensure expenses object exists
+        if (!profile.expenses) profile.expenses = {};
 
-            if (profile.schedule) {
-                inputs.weeks.value = profile.schedule.weeks;
-                inputs.days.value = profile.schedule.days;
-                inputs.hours.value = profile.schedule.hours;
-            }
+        // Ensure items array exists (even if taxRate exists)
+        if (!profile.expenses.items) {
+            profile.expenses.items = BASE_EXPENSE_CATEGORIES.map(item => ({
+                id: crypto.randomUUID(),
+                ...item,
+                amount: 0
+            }));
+            // Default tax if missing
+            if (profile.expenses.taxRate === undefined) profile.expenses.taxRate = 30;
+        }
 
-            if (profile.expenses.taxRate !== undefined) {
-                inputs.taxRate.value = profile.expenses.taxRate;
-            }
+        if (!profile.unearnedIncome || !profile.unearnedIncome.items) {
+            profile.unearnedIncome = { items: [] };
+        }        // Actually, merge defaults logic handles this in Store, but let's keep robust
 
-            const currentNetInput = document.getElementById('in-current-net-income');
-            if (currentNetInput) {
-                currentNetInput.value = profile.currentNetIncome || 0;
-                currentNetInput.addEventListener('input', (e) => {
-                    profile.currentNetIncome = parseFloat(e.target.value) || 0;
-                    Store.saveIndependentProfile(profile);
-                });
-            }
 
-            LineManager.render();
-            ExpenseManager.render();
-            IncomeManager.render();
-            calculateAndDisplay();
+        if (profile.schedule) {
+            inputs.weeks.value = profile.schedule.weeks;
+            inputs.days.value = profile.schedule.days;
+            inputs.hours.value = profile.schedule.hours;
+        }
 
-            // Listeners for Global Inputs
-            ['weeks', 'days', 'hours'].forEach(key => {
-                inputs[key].addEventListener('input', (e) => {
-                    profile.schedule[key] = parseFloat(e.target.value);
-                    Store.saveIndependentProfile(profile);
-                    calculateAndDisplay();
-                });
-            });
+        if (profile.expenses.taxRate !== undefined) {
+            inputs.taxRate.value = profile.expenses.taxRate;
+        }
 
-            inputs.taxRate.addEventListener('input', (e) => {
-                profile.expenses.taxRate = parseFloat(e.target.value);
+        const currentNetInput = document.getElementById('in-current-net-income');
+        if (currentNetInput) {
+            currentNetInput.value = profile.currentNetIncome || 0;
+            currentNetInput.addEventListener('input', (e) => {
+                profile.currentNetIncome = parseFloat(e.target.value) || 0;
                 Store.saveIndependentProfile(profile);
-                calculateAndDisplay();
             });
         }
 
-        init();
-    });
+        LineManager.render();
+        ExpenseManager.render();
+        IncomeManager.render();
+        calculateAndDisplay();
+
+        // Listeners for Global Inputs
+        ['weeks', 'days', 'hours'].forEach(key => {
+            inputs[key].addEventListener('input', (e) => {
+                profile.schedule[key] = parseFloat(e.target.value);
+                Store.saveIndependentProfile(profile);
+                calculateAndDisplay();
+            });
+        });
+
+        inputs.taxRate.addEventListener('input', (e) => {
+            profile.expenses.taxRate = parseFloat(e.target.value);
+            Store.saveIndependentProfile(profile);
+            calculateAndDisplay();
+        });
+    }
+
+    init();
+});
