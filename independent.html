@@ -1148,25 +1148,17 @@
                 }
             });
 
+            /* 
+            // OVERHEAD DECOUPLED: 
+            // Business Overhead is now calculated separately for "Scenarios" and not included 
+            // in the base "Personal Survival Goal".
+            
             overheadProjects.forEach(proj => {
-                if (proj.expenses) {
-                    proj.expenses.forEach(item => {
-                        const amount = parseFloat(item.amount) || 0;
-                        // Handle varying types (legacy 'amount' was annual total)
-                        if (item.type === 'Monthly') {
-                            fixedSum += (item.baseAmount || amount) * 12;
-                        } else if (item.type === 'Periodic') {
-                            const freq = parseFloat(item.frequency) || 1;
-                            fixedSum += (item.baseAmount || amount) * freq;
-                        } else if (item.type === 'Percent') {
-                            percentSum += (item.baseAmount || amount);
-                        } else if (item.type === 'Annual' || !item.type) {
-                            // Default/Legacy
-                            fixedSum += (item.baseAmount || amount);
-                        }
-                    });
-                }
+                 if (proj.expenses) {
+                     proj.expenses.forEach(item => { ... });
+                 }
             });
+            */
 
             let unearnedSum = 0;
             profile.unearnedIncome.items.forEach(item => {
