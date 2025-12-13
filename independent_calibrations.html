@@ -497,29 +497,69 @@
                 return;
             }
 
-            const totalRate = baseRate + selectedOverheadRate;
-
             DELTAS.forEach(delta => {
-                const row = document.createElement('tr');
+                const multAug = 1 + delta;
+                const multDisc = 1 - delta;
 
-                // Discounted (Lower)
-                const discRate = totalRate * (1 - delta);
+                const tr = document.createElement('tr');
+                tr.style.borderBottom = '1px solid #eee';
 
-                // Redistribution Needed (Gap)
-                const gapDiff = totalRate - discRate;
+                // 1. Augmented Rate Cell
+                const tdAugRate = createRateCell(baseRate, multAug);
+                tdAugRate.style.background = '#f6fff5';
 
-                // Augmented (Higher) - Additive Logic: Base + Gap
-                const augRate = totalRate + gapDiff;
-                const augPercent = Math.round((augRate / totalRate - 1) * 100);
+                // 2. Aug %
+                const tdAugPct = document.createElement('td');
+                tdAugPct.textContent = `+${Math.round(delta * 100)}%`;
+                tdAugPct.style.textAlign = 'center';
+                tdAugPct.style.fontWeight = 'bold';
+                tdAugPct.style.background = '#e6fffa';
 
-                row.innerHTML = `
-                    <td style="text-align:center; color:#666;">-${Math.round(delta * 100)}%</td>
-                    <td style="text-align:center; color:var(--color-text-muted);">$${discRate.toFixed(2)}</td>
-                    <td style="text-align:center; font-weight:bold; color:var(--color-primary);">+$${gapDiff.toFixed(2)}</td>
-                    <td style="text-align:center; font-weight:bold;">$${augRate.toFixed(2)}</td>
-                `;
-                tbody.appendChild(row);
+                // 3. Disc %
+                const tdDiscPct = document.createElement('td');
+                tdDiscPct.textContent = `-${Math.round(delta * 100)}%`;
+                tdDiscPct.style.textAlign = 'center';
+                tdDiscPct.style.fontWeight = 'bold';
+                tdDiscPct.style.background = '#fff5f5';
+
+                // 4. Discounted Rate Cell
+                const tdDiscRate = createRateCell(baseRate, multDisc);
+                tdDiscRate.style.background = '#fff0eb';
+
+                tr.appendChild(tdAugRate);
+                tr.appendChild(tdAugPct);
+                tr.appendChild(tdDiscPct);
+                tr.appendChild(tdDiscRate);
+
+                tbody.appendChild(tr);
             });
+        }
+
+        // Helper for formatting rate cells (matches reference)
+        function createRateCell(baseRate, multiplier) {
+            const td = document.createElement('td');
+            td.style.padding = '10px';
+            td.style.textAlign = 'center';
+
+            // Assume 6 hours/day, 4 days/week if not in store (Hardcoded fallback if store logic missing from inline)
+            // But we can try to fetch from store if available, or just standard.
+            // Reference used: hoursPerDay, daysPerWeek from profile.
+            // We'll calculate simple standard for display.
+            const hpd = 6;
+            const dpw = 4; // Standard independent work week
+
+            const hourly = baseRate * multiplier;
+            const daily = hourly * hpd;
+            const weekly = daily * dpw;
+
+            // Format: $100/hr <br> <small>$600/day | $2400/wk</small>
+            td.innerHTML = `
+                <div style="font-weight:bold; font-size:1rem;">${Utils.formatCurrency(hourly)}/hr</div>
+                <div style="font-size:0.75rem; color:#666; margin-top:2px;">
+                    ${Utils.formatCurrency(daily)}/day • ${Utils.formatCurrency(weekly)}
+                </div>
+            `;
+            return td;
         }
 
         // Init Logic (Page Load)

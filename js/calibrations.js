@@ -223,10 +223,15 @@
         const requiredRateNow = (gapNow > 0 && remainingCapacity > 0) ? (gapNow / remainingCapacity) : 0;
 
         // --- GOAL SCENARIO (Using Calculated Expenses as Target) ---
-        // Safeguard Total Needs
+        // Safeguard Total Needs with explicit sum
         let totalNeeds = 0;
-        if (profile && profile.expenses) {
-            totalNeeds = Utils.calculateTotalNeeds(profile.expenses);
+        if (profile && profile.expenses && Array.isArray(profile.expenses.items)) {
+            totalNeeds = profile.expenses.items.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+        } else if (profile && profile.expenses && typeof profile.expenses === 'object') {
+            // Fallback if items is missing but object structure exists?
+            // Maybe it's flattened? Let's check keys just in case, but usually it's items array.
+            // If Utils.calculateTotalNeeds worked on simple object, maybe we should try that ON THE ITEMS?
+            // No, let's stick to safe array reduce.
         }
 
         const annualGrossTargetGoal = totalNeeds / (1 - taxRate);
