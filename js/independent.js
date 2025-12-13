@@ -1,6 +1,8 @@
 /**
  * Independent Tool Logic - Final Refactor
  */
+alert("HEARTBEAT: Script is Loading!");
+console.log("HEARTBEAT: Script is Loading!");
 
 // Global Toggle Function
 window.toggleSection = (id, btn) => {
