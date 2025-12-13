@@ -1600,6 +1600,85 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
     }
 
+    // Bind Add Member Modal Buttons (Re-applying missing code)
+    const btnLookup = document.getElementById('btn-lookup-email');
+    if (btnLookup) {
+        btnLookup.onclick = async () => {
+            const email = document.getElementById('lookup-email').value.trim();
+            if (!email) return alert("Enter email");
+
+            const originalText = btnLookup.innerText;
+            btnLookup.innerText = "...";
+            try {
+                const user = await Store.checkUser(email);
+
+                document.getElementById('step-details').style.display = 'block';
+                const msg = document.getElementById('invite-status-msg');
+                const btnSave = document.getElementById('btn-save-member');
+                const btnSend = document.getElementById('btn-send-invite');
+
+                if (user) {
+                    msg.innerHTML = `User found: <strong>${user.full_name || email}</strong>`;
+                    msg.style.color = 'green';
+                    btnSave.style.display = 'inline-block';
+                    btnSend.style.display = 'none';
+                } else {
+                    msg.textContent = "User not found. Send an invite?";
+                    msg.style.color = '#d97706'; // Amber/Orange
+                    btnSave.style.display = 'none';
+                    btnSend.style.display = 'inline-block';
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Error checking user: " + e.message);
+            }
+            btnLookup.innerText = originalText;
+        };
+    }
+
+    const handleAddMember = async () => {
+        const email = document.getElementById('lookup-email').value.trim();
+        if (!email) return;
+
+        // Determine button state/loading...
+
+        try {
+            const proj = window._project || project;
+            if (!proj) throw new Error("Project state missing.");
+            const currentId = proj.id;
+
+            // 1. Backend Invite/Add
+            await Store.inviteUser(currentId, email);
+
+            // 2. Add to Roster (Frontend State)
+            const existing = proj.teamMembers.find(m => m.username === email || m.email === email);
+            if (!existing) {
+                proj.teamMembers.push({
+                    id: Utils.generateId(),
+                    name: email.split('@')[0],
+                    rate: 0,
+                    days: 0,
+                    username: email,
+                    email: email
+                });
+                await Store.saveProject(proj);
+                render();
+            }
+
+            alert("Member added/invited!");
+            document.getElementById('modal-add-member').style.display = 'none';
+            await loadAndRenderCollaborators();
+        } catch (e) {
+            alert("Error: " + e.message);
+        }
+    };
+
+    const btnSaveMember = document.getElementById('btn-save-member');
+    if (btnSaveMember) btnSaveMember.onclick = handleAddMember;
+
+    const btnSendInvite = document.getElementById('btn-send-invite');
+    if (btnSendInvite) btnSendInvite.onclick = handleAddMember;
+
     async function loadAndRenderCollaborators() {
         try {
             const currentId = window._project ? window._project.id : (new URLSearchParams(window.location.search).get('id'));
