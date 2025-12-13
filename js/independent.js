@@ -11,7 +11,11 @@ window.toggleSection = (id, btn) => {
     }
 };
 
+console.log("Independent.js Loaded");
+// alert("Debug: Script Loaded");
+
 document.addEventListener('DOMContentLoaded', () => {
+    console.log("DOM Content Loaded");
     // 1. Get Elements
     const inputs = {
         weeks: document.getElementById('in-weeks'),
@@ -998,6 +1002,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 3. Initialization
     async function init() {
+        console.log("Init Started");
         try {
             // 1. Load Profile
             try {
@@ -1083,7 +1088,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         } catch (e) {
             console.error("Critical Init Error:", e);
-            alert("Failed to load application data. Please refresh.");
+            alert("Init Error: " + e.message);
         }
     }
 
