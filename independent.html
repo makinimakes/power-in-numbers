@@ -1211,9 +1211,95 @@
             };
             Store.saveIndependentProfile(profile);
 
-            const setVal = (id, val) => {
-                const el = document.getElementById(id);
-                if (el) el.textContent = Utils.formatCurrency(val);
+            // --- SCENARIO ANALYSIS (New Feature) ---
+            window.calculateOverheadScenarios = () => {
+                // 1. Get Base Personal Numbers
+                const personalFixed = fixedSum; // Calculated in calculateAndDisplay (Personal Expense + Unearned)
+                const personalPercent = percentSum; // Personal Percent Expense
+                const taxRate = parseFloat(inputs.taxRate.value) || 0;
+                const capacity = Utils.calculateBillableCapacity(profile);
+                const billableHours = capacity.totalBillableHours;
+
+                const scenarios = [];
+
+                // Base Scenario (Personal Only)
+                scenarios.push({
+                    name: "Personal Baseline (You)",
+                    fixed: personalFixed,
+                    percent: personalPercent,
+                    tax: taxRate,
+                    totalNet: profile.goals.net, // Already stored
+                    totalGross: profile.goals.gross // Already stored
+                });
+
+                // Business Scenarios
+                overheadProjects.forEach(proj => {
+                    let bizFixed = 0;
+                    let bizPercent = 0;
+
+                    if (proj.expenses) {
+                        proj.expenses.forEach(item => {
+                            const amount = parseFloat(item.amount) || 0;
+                            if (item.type === 'Percent') {
+                                bizPercent += (item.baseAmount || item.amount || 0);
+                            } else {
+                                bizFixed += (item.amount || 0); // Annualized amount
+                            }
+                        });
+                    }
+
+                    // Combined Calculation
+                    // Goal Net = (Personal Fixed + Biz Fixed) / (1 - (Personal % + Biz %))
+                    const combinedFixed = personalFixed + bizFixed;
+                    const combinedPercent = personalPercent + bizPercent;
+
+                    let combinedNet = Infinity;
+                    if (combinedPercent < 100) {
+                        combinedNet = combinedFixed / (1 - (combinedPercent / 100));
+                    }
+
+                    const combinedGross = combinedNet * (1 + (taxRate / 100));
+
+                    scenarios.push({
+                        name: `+ ${proj.name}`,
+                        fixed: combinedFixed,
+                        percent: combinedPercent,
+                        totalNet: combinedNet,
+                        totalGross: combinedGross,
+                        hourly: (billableHours > 0) ? (combinedGross / billableHours) : 0
+                    });
+                });
+
+                // All Combined Scenario (if > 1 project)
+                if (overheadProjects.length > 1) {
+                    let allBizFixed = 0;
+                    let allBizPercent = 0;
+                    overheadProjects.forEach(proj => {
+                        if (proj.expenses) {
+                            proj.expenses.forEach(item => {
+                                if (item.type === 'Percent') allBizPercent += (item.baseAmount || item.amount || 0);
+                                else allBizFixed += (item.amount || 0);
+                            });
+                        }
+                    });
+
+                    const totalFixed = personalFixed + allBizFixed;
+                    const totalPercent = personalPercent + allBizPercent;
+                    let totalNet = Infinity;
+                    if (totalPercent < 100) totalNet = totalFixed / (1 - (totalPercent / 100));
+                    const totalGross = totalNet * (1 + (taxRate / 100));
+
+                    scenarios.push({
+                        name: "+ All Business Overhead",
+                        fixed: totalFixed,
+                        percent: totalPercent,
+                        totalNet: totalNet,
+                        totalGross: totalGross,
+                        hourly: (billableHours > 0) ? (totalGross / billableHours) : 0
+                    });
+                }
+
+                return scenarios;
             };
 
             const hasBillableHours = totalBillableHours > 0;
@@ -1254,95 +1340,98 @@
                     logToScreen("Profile loaded: " + (profile ? "Found" : "Null"));
                 } catch (e) {
                     logToScreen("Profile Fetch Error: " + e.message);
-                }
 
-                try {
-                    overheadProjects = await Store.getOverheadProjects();
-                    if (!Array.isArray(overheadProjects)) overheadProjects = [];
-                } catch (e) {
-                    console.error("Overhead Load Error:", e);
-                    overheadProjects = [];
-                }
+                    try {
+                        overheadProjects = await Store.getOverheadProjects();
+                        if (!Array.isArray(overheadProjects)) overheadProjects = [];
+                        if (window.calculateOverheadScenarios) {
+                            console.table(window.calculateOverheadScenarios());
+                        }
+                        overheadProjects = [];
+                    } catch (e) {
+                        console.error("Overhead Load Error:", e);
+                        overheadProjects = [];
+                    }
 
-                if (!profile) profile = {};
-                if (!profile.linesOfWork) profile.linesOfWork = [];
-                if (!profile.expenses) profile.expenses = {};
+                    if (!profile) profile = {};
+                    if (!profile.linesOfWork) profile.linesOfWork = [];
+                    if (!profile.expenses) profile.expenses = {};
 
-                if (!profile.expenses.items || profile.expenses.items.length === 0) {
-                    logToScreen("Expenses empty/missing. Restoring Defaults...");
-                    profile.expenses.items = BASE_EXPENSE_CATEGORIES.map(item => ({
-                        id: crypto.randomUUID(),
-                        ...item,
-                        amount: 0
-                    }));
-                    if (profile.expenses.taxRate === undefined) profile.expenses.taxRate = 30;
-                }
+                    if (!profile.expenses.items || profile.expenses.items.length === 0) {
+                        logToScreen("Expenses empty/missing. Restoring Defaults...");
+                        profile.expenses.items = BASE_EXPENSE_CATEGORIES.map(item => ({
+                            id: crypto.randomUUID(),
+                            ...item,
+                            amount: 0
+                        }));
+                        if (profile.expenses.taxRate === undefined) profile.expenses.taxRate = 30;
+                    }
 
-                if (!profile.unearnedIncome || !profile.unearnedIncome.items) {
-                    profile.unearnedIncome = { items: [] };
-                }
+                    if (!profile.unearnedIncome || !profile.unearnedIncome.items) {
+                        profile.unearnedIncome = { items: [] };
+                    }
 
-                if (profile.schedule) {
-                    inputs.weeks.value = profile.schedule.weeks;
-                    inputs.days.value = profile.schedule.days;
-                    inputs.hours.value = profile.schedule.hours;
-                } else {
-                    // Defaults if new user
-                    inputs.weeks.value = 50;
-                    inputs.days.value = 5;
-                    inputs.hours.value = 8;
-                    profile.schedule = { weeks: 50, days: 5, hours: 8 }; // Save defaults to state
-                }
+                    if (profile.schedule) {
+                        inputs.weeks.value = profile.schedule.weeks;
+                        inputs.days.value = profile.schedule.days;
+                        inputs.hours.value = profile.schedule.hours;
+                    } else {
+                        // Defaults if new user
+                        inputs.weeks.value = 50;
+                        inputs.days.value = 5;
+                        inputs.hours.value = 8;
+                        profile.schedule = { weeks: 50, days: 5, hours: 8 }; // Save defaults to state
+                    }
 
-                if (profile.expenses.taxRate !== undefined) {
-                    inputs.taxRate.value = profile.expenses.taxRate;
-                }
+                    if (profile.expenses.taxRate !== undefined) {
+                        inputs.taxRate.value = profile.expenses.taxRate;
+                    }
 
-                const currentNetInput = document.getElementById('in-current-net-income');
-                if (currentNetInput) {
-                    currentNetInput.value = profile.currentNetIncome || 0;
-                    currentNetInput.addEventListener('input', (e) => {
-                        profile.currentNetIncome = parseFloat(e.target.value) || 0;
-                        Store.saveIndependentProfile(profile);
+                    const currentNetInput = document.getElementById('in-current-net-income');
+                    if (currentNetInput) {
+                        currentNetInput.value = profile.currentNetIncome || 0;
+                        currentNetInput.addEventListener('input', (e) => {
+                            profile.currentNetIncome = parseFloat(e.target.value) || 0;
+                            Store.saveIndependentProfile(profile);
+                        });
+                    }
+
+                    LineManager.render();
+                    ExpenseManager.render();
+                    logToScreen("Expenses Rendered. Count: " + (profile.expenses.items ? profile.expenses.items.length : 0));
+                    IncomeManager.render();
+                    BusinessProfileManager.render();
+                    calculateAndDisplay();
+                    logToScreen("Init Complete. UI should be ready.");
+
+                    ['weeks', 'days', 'hours'].forEach(key => {
+                        inputs[key].addEventListener('input', (e) => {
+                            profile.schedule[key] = parseFloat(e.target.value);
+                            Store.saveIndependentProfile(profile);
+                            calculateAndDisplay();
+                        });
                     });
-                }
 
-                LineManager.render();
-                ExpenseManager.render();
-                logToScreen("Expenses Rendered. Count: " + (profile.expenses.items ? profile.expenses.items.length : 0));
-                IncomeManager.render();
-                BusinessProfileManager.render();
-                calculateAndDisplay();
-                logToScreen("Init Complete. UI should be ready.");
-
-                ['weeks', 'days', 'hours'].forEach(key => {
-                    inputs[key].addEventListener('input', (e) => {
-                        profile.schedule[key] = parseFloat(e.target.value);
+                    inputs.taxRate.addEventListener('input', (e) => {
+                        profile.expenses.taxRate = parseFloat(e.target.value);
                         Store.saveIndependentProfile(profile);
                         calculateAndDisplay();
                     });
-                });
-
-                inputs.taxRate.addEventListener('input', (e) => {
-                    profile.expenses.taxRate = parseFloat(e.target.value);
-                    Store.saveIndependentProfile(profile);
-                    calculateAndDisplay();
-                });
-            } catch (e) {
-                console.error("Critical Init Error:", e);
-                logToScreen("CRITICAL ERROR: " + e.message);
+                } catch (e) {
+                    console.error("Critical Init Error:", e);
+                    logToScreen("CRITICAL ERROR: " + e.message);
+                }
             }
-        }
 
         // Start
         init();
     </script>
     <script>
-        // Authentication Check
-        (async () => {
-            const user = await Store.checkSession();
-            if (!user) return;
-        })();
+            // Authentication Check
+            (async () => {
+                const user = await Store.checkSession();
+                if (!user) return;
+            })();
     </script>
 </body>
 
