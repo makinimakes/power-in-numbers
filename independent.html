@@ -730,21 +730,23 @@
                 if (type === 'Percent') totalPercent += cost;
             });
 
-            let text = Utils.formatCurrency(totalFixed);
-            if (totalPercent > 0) {
-                text += ` + ${totalPercent}%`;
+            // User Logic: Total = Fixed / (1 - Rate)
+            // Example: 9000 / (1 - 0.10) = 10,000
+            let finalTotal = totalFixed;
+            if (totalPercent > 0 && totalPercent < 100) {
+                finalTotal = totalFixed / (1 - (totalPercent / 100));
             }
-            document.getElementById('modal-biz-total').innerText = text;
+
+            document.getElementById('modal-biz-total').innerText = Utils.formatCurrency(finalTotal);
         };
 
         window.saveBusinessExpenses = async () => {
-            console.log("saveBusinessExpenses called. CurrentBizId:", window.currentBizId);
+            console.log("Saving business expenses...");
             const id = window.currentBizId;
             const proj = overheadProjects.find(p => p.id === id);
 
             if (!proj) {
-                console.error("Project not found for ID:", id);
-                alert("Error: Could not find project to save.");
+                alert("Error: Project not found.");
                 return;
             }
 
@@ -761,15 +763,15 @@
                 if (type === 'Annual') annualAmount = cost;
                 if (type === 'Monthly') annualAmount = cost * 12;
                 if (type === 'Periodic') annualAmount = cost * freq;
-                if (type === 'Percent') annualAmount = cost; // Stored as is
+                if (type === 'Percent') annualAmount = cost; // Stored as raw percentage
 
-                if (name && cost > 0) {
+                if (name) { // Allow 0 cost items, but require a name
                     newExpenses.push({
                         label: name,
                         baseAmount: cost,
                         type: type,
                         frequency: freq,
-                        amount: annualAmount // For legacy compatibility
+                        amount: annualAmount
                     });
                 }
             });
@@ -778,9 +780,19 @@
 
             try {
                 await Store.saveOverheadProject(proj);
+                console.log("Saved to Supabase.");
+
                 BusinessProfileManager.render();
                 calculateAndDisplay();
+
+                // Force Close
+                const modal = document.getElementById('modal-business-expenses');
+                if (modal) {
+                    modal.close();
+                    console.log("Modal closed.");
+                }
             } catch (e) {
+                console.error("Save failed:", e);
                 alert("Error saving: " + e.message);
             }
         };
