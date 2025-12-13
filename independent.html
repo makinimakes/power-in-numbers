@@ -216,153 +216,122 @@
                 </span>
             </div>
         </div>
-    </div>
+    </div> <!-- End Left Column -->
 
-    <!-- Right Column: Results Dock -->
-    <div>
+    <!-- Right Column: Results & Navigation -->
+    <div style="padding-left: var(--spacing-md);">
+
+        <!-- Results Dock -->
         <aside class="result-dock">
-            <div style="margin-bottom: var(--spacing-lg); margin-top: var(--spacing-lg);">
-                <div class="result-label">Goal Annual Income<br><span style="font-weight:400; font-size:0.8em;">(Net
-                        / After Tax)</span>
-                    <button onclick="window.viewIndependentLog('goalNet')"
-                        style="background:none; border:none; cursor:pointer; opacity:0.6;">ℹ️</button>
-                </div>
-                <div class="result-value" id="out-goal-net">$0</div>
-            </div>
 
+            <!-- GOAL FEES (Promoted to Top) -->
             <div style="margin-bottom: var(--spacing-lg);">
-                <div class="result-label">Goal Annual Income<br><span style="font-weight:400; font-size:0.8em;">(Gross /
-                        Accounting for Taxes)</span>
-                    <button onclick="window.viewIndependentLog('goalGross')"
-                        style="background:none; border:none; cursor:pointer; opacity:0.6;">ℹ️</button>
+                <div class="result-label"
+                    style="text-align:center; color: var(--color-accent-primary); margin-bottom: 10px; font-size: 1.1rem; border-bottom: 2px solid var(--color-accent-primary); padding-bottom: 5px;">
+                    GOAL Rates
                 </div>
-                <div class="result-value" id="out-goal-gross" style="color: var(--color-accent-primary);">$0
+                <table style="width:100%; border-collapse: collapse; font-size: 0.95rem;">
+                    <tr style="border-bottom: 1px dashed #eee;">
+                        <td style="padding: 8px 0; color: var(--color-text-muted);">Hourly</td>
+                        <td
+                            style="text-align:right; font-weight:bold; color: var(--color-accent-primary); font-size: 1.1rem;">
+                            <span id="out-goal-hourly">$0</span>
+                        </td>
+                    </tr>
+                    <tr style="border-bottom: 1px dashed #eee;">
+                        <td style="padding: 8px 0; color: var(--color-text-muted);">Daily</td>
+                        <td style="text-align:right; font-weight:bold;">
+                            <span id="out-goal-daily">$0</span>
+                        </td>
+                    </tr>
+                    <tr style="border-bottom: 1px dashed #eee;">
+                        <td style="padding: 8px 0; color: var(--color-text-muted);">Weekly</td>
+                        <td style="text-align:right; font-weight:bold;">
+                            <span id="out-goal-weekly">$0</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; color: var(--color-text-muted);">Monthly</td>
+                        <td style="text-align:right; font-weight:bold;">
+                            <span id="out-goal-monthly">$0</span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Annual Totals -->
+            <div
+                style="margin-bottom: var(--spacing-lg); background: var(--color-bg-subtle); padding: var(--spacing-sm); border-radius: 4px;">
+                <div style="margin-bottom: 15px;">
+                    <div class="result-label" style="font-size:0.8rem;">Goal Annual Net</div>
+                    <div class="result-value" id="out-goal-net" style="font-size:1.2rem;">$0</div>
+                </div>
+                <div>
+                    <div class="result-label" style="font-size:0.8rem;">Goal Annual Gross</div>
+                    <div class="result-value" id="out-goal-gross"
+                        style="color: var(--color-accent-primary); font-size:1.4rem;">$0</div>
                 </div>
             </div>
 
-            <!-- Hours Dock -->
+            <!-- Hours Summary (Moved from Left) -->
             <div
                 style="margin-bottom: var(--spacing-lg); padding-top: var(--spacing-sm); border-top: 1px dotted var(--color-border);">
                 <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom: 5px;">
-                    <span class="text-muted">Total Non-Billable</span>
-                    <span id="out-dock-total-non-billable" style="font-weight:bold;">0</span>
+                    <span class="text-muted">Total Work Hours</span>
+                    <span id="out-total-work-hours" style="font-weight:bold;">0</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom: 5px;">
+                    <span class="text-muted">Non-Billable</span>
+                    <span id="out-total-non-billable-hours">0</span>
                 </div>
                 <div style="display:flex; justify-content:space-between; font-size:0.8rem;">
-                    <span class="text-muted" style="font-weight:bold;">Total Billable</span>
-                    <span id="out-dock-total-billable"
+                    <span class="text-muted" style="font-weight:bold;">Billable Hours</span>
+                    <span id="out-total-billable-hours"
                         style="font-weight:bold; color: var(--color-accent-primary);">0</span>
                 </div>
             </div>
 
-            <!-- FEES Separation -->
+            <!-- NOW FEES (Comparison) -->
             <div
-                style="margin-top: var(--spacing-lg); padding-top: var(--spacing-sm); border-top: 2px solid var(--color-border);">
-
-                <!-- NOW FEES -->
-                <div style="margin-bottom: var(--spacing-md);">
-                    <div class="result-label"
-                        style="text-align:center; color: var(--color-text-muted); margin-bottom: 5px;">NOW Fees
-                    </div>
-                    <table style="width:100%; border-collapse: collapse; font-size: 0.9rem;">
-                        <tr>
-                            <td style="padding: 4px 0; color: var(--color-text-muted);">Hourly</td>
-                            <td style="text-align:right;">
-                                <strong id="out-now-hourly">$0</strong>
-                                <button onclick="window.viewIndependentLog('nowHourly')"
-                                    style="background:none; border:none; cursor:pointer; opacity:0.6; font-size:0.8rem;">ℹ️</button>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 4px 0; color: var(--color-text-muted);">Daily</td>
-                            <td style="text-align:right;">
-                                <strong id="out-now-daily">$0</strong>
-                                <button onclick="window.viewIndependentLog('nowDaily')"
-                                    style="background:none; border:none; cursor:pointer; opacity:0.6; font-size:0.8rem;">ℹ️</button>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 4px 0; color: var(--color-text-muted);">Weekly</td>
-                            <td style="text-align:right;">
-                                <strong id="out-now-weekly">$0</strong>
-                                <button onclick="window.viewIndependentLog('nowWeekly')"
-                                    style="background:none; border:none; cursor:pointer; opacity:0.6; font-size:0.8rem;">ℹ️</button>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 4px 0; color: var(--color-text-muted);">Monthly</td>
-                            <td style="text-align:right;">
-                                <strong id="out-now-monthly">$0</strong>
-                                <button onclick="window.viewIndependentLog('nowMonthly')"
-                                    style="background:none; border:none; cursor:pointer; opacity:0.6; font-size:0.8rem;">ℹ️</button>
-                            </td>
-                        </tr>
-                    </table>
+                style="margin-top: var(--spacing-lg); padding-top: var(--spacing-sm); border-top: 2px solid var(--color-border); opacity: 0.7;">
+                <div class="result-label"
+                    style="text-align:center; color: var(--color-text-muted); margin-bottom: 5px; font-size:0.9rem;">
+                    Current (NOW) Rates
                 </div>
-
-                <!-- GOAL FEES -->
-                <div>
-                    <div class="result-label"
-                        style="text-align:center; color: var(--color-accent-primary); margin-bottom: 5px;">GOAL
-                        Fees</div>
-                    <table style="width:100%; border-collapse: collapse; font-size: 0.9rem;">
-                        <tr>
-                            <td style="padding: 4px 0; color: var(--color-text-muted);">Hourly</td>
-                            <td style="text-align:right; color: var(--color-accent-primary);">
-                                <strong id="out-goal-hourly">$0</strong>
-                                <button onclick="window.viewIndependentLog('goalHourly')"
-                                    style="background:none; border:none; cursor:pointer; opacity:0.6; font-size:0.8rem;">ℹ️</button>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 4px 0; color: var(--color-text-muted);">Daily</td>
-                            <td style="text-align:right; color: var(--color-accent-primary);">
-                                <strong id="out-goal-daily">$0</strong>
-                                <button onclick="window.viewIndependentLog('goalDaily')"
-                                    style="background:none; border:none; cursor:pointer; opacity:0.6; font-size:0.8rem;">ℹ️</button>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 4px 0; color: var(--color-text-muted);">Weekly</td>
-                            <td style="text-align:right; color: var(--color-accent-primary);">
-                                <strong id="out-goal-weekly">$0</strong>
-                                <button onclick="window.viewIndependentLog('goalWeekly')"
-                                    style="background:none; border:none; cursor:pointer; opacity:0.6; font-size:0.8rem;">ℹ️</button>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 4px 0; color: var(--color-text-muted);">Monthly</td>
-                            <td style="text-align:right; color: var(--color-accent-primary);">
-                                <strong id="out-goal-monthly">$0</strong>
-                                <button onclick="window.viewIndependentLog('goalMonthly')"
-                                    style="background:none; border:none; cursor:pointer; opacity:0.6; font-size:0.8rem;">ℹ️</button>
-                            </td>
-                        </tr>
-                    </table>
+                <div style="display:flex; justify-content: space-between; font-size: 0.8rem; margin-bottom:4px;">
+                    <span>Hourly</span> <strong id="out-now-hourly">$0</strong>
                 </div>
+                <div style="display:flex; justify-content: space-between; font-size: 0.8rem; margin-bottom:4px;">
+                    <span>Daily</span> <strong id="out-now-daily">$0</strong>
+                </div>
+                <div style="display:flex; justify-content: space-between; font-size: 0.8rem;">
+                    <span>Weekly</span> <strong id="out-now-weekly">$0</strong>
+                </div>
+            </div>
 
         </aside>
-    </div>
 
-    <!-- Sub-Dashboards Navigation -->
-    <div style="grid-column: 2; margin-top: var(--spacing-sm);">
-        <h4
-            style="margin-bottom: var(--spacing-sm); font-size: 0.8rem; text-transform: uppercase; color: var(--color-text-muted);">
-            Deep Dives</h4>
-        <a href="independent_sliding_scales.html" class="btn"
-            style="display:flex; width:100%; margin-bottom:10px; font-size: 0.8rem; justify-content: space-between; text-decoration:none;">
-            Some NOW Calibrations <span>&rarr;</span>
-        </a>
-        <a href="independent_meantime.html" class="btn"
-            style="display:flex; width:100%; margin-bottom:10px; font-size: 0.8rem; justify-content: space-between; text-decoration:none;">
-            Meantime Steps <span>&rarr;</span>
-        </a>
-        <a href="independent_calibrations.html" class="btn"
-            style="display:flex; width:100%; font-size: 0.8rem; justify-content: space-between; text-decoration:none;">
-            Period Planning <span>&rarr;</span>
-        </a>
-    </div>
-    </div>
-    </div>
+        <!-- Navigation -->
+        <div style="margin-top: var(--spacing-xl); padding-top: var(--spacing-md); border-top: var(--border-std);">
+            <h4
+                style="margin-bottom: var(--spacing-sm); font-size: 0.85rem; text-transform: uppercase; color: var(--color-text-muted); letter-spacing: 1px;">
+                Deep Dives
+            </h4>
+            <a href="independent_sliding_scales.html" class="btn"
+                style="display:flex; width:100%; margin-bottom:10px; font-size: 0.85rem; justify-content: space-between; text-decoration:none; background:white; border:1px solid #ddd; color: var(--color-text-main);">
+                Some NOW Calibrations <span>&rarr;</span>
+            </a>
+            <a href="independent_meantime.html" class="btn"
+                style="display:flex; width:100%; margin-bottom:10px; font-size: 0.85rem; justify-content: space-between; text-decoration:none; background:white; border:1px solid #ddd; color: var(--color-text-main);">
+                Meantime Steps <span>&rarr;</span>
+            </a>
+            <a href="independent_calibrations.html" class="btn"
+                style="display:flex; width:100%; font-size: 0.85rem; justify-content: space-between; text-decoration:none; background:white; border:1px solid #ddd; color: var(--color-text-main);">
+                Period Planning <span>&rarr;</span>
+            </a>
+        </div>
+    </div> <!-- End Right Column -->
+    </div> <!-- End Grid-2 -->
 
     <!-- Validation Modal -->
     <dialog id="modal-override"
