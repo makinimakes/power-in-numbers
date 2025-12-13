@@ -147,9 +147,47 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (type === 'Percentage') {
                 document.getElementById('wizard-step-percent').style.display = 'block';
                 Wizard.showFinish();
+            } else if (type === 'Import') {
+                document.getElementById('wizard-step-import').style.display = 'block';
+                Wizard.loadImportOptions();
+                Wizard.showFinish();
             } else {
                 document.getElementById('wizard-step-flat-type').style.display = 'block';
             }
+        },
+
+        loadImportOptions: async () => {
+            const select = document.getElementById('wiz-import-select');
+            if (!select) return;
+            select.innerHTML = '<option>Loading...</option>';
+
+            // Check cached overhead projects or fetch
+            // Since independent.js loads them into memory, but we are in project.js
+            // We need to fetch.
+            const projects = await Store.getOverheadProjects();
+
+            select.innerHTML = '<option value="">Select Provider...</option>';
+            projects.forEach(p => {
+                let costHint = '';
+                const phaseId = Wizard.state.phaseId;
+                const proj = window._project || project;
+                const phase = proj.phases.find(ph => ph.id === phaseId);
+                if (phase) {
+                    let weeks = parseFloat(phase.weeks) || 0;
+                    if (phase.durationUnit === 'Months') weeks *= 4.33; // Fallback if unit used? 
+                    // Phase object usually just has 'weeks' as canonical per schema (lines 1355)
+
+                    const totalAnnual = (p.expenses || []).reduce((s, i) => s + (parseFloat(i.amount) || 0), 0);
+                    const cost = (totalAnnual / 52) * weeks;
+                    costHint = ` (Est. $${Math.round(cost).toLocaleString()})`;
+                }
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = p.name + costHint;
+                const total = (p.expenses || []).reduce((s, i) => s + (parseFloat(i.amount) || 0), 0);
+                opt.dataset.annual = total;
+                select.appendChild(opt);
+            });
         },
 
         setTimeBased: (isTime) => {
@@ -186,11 +224,32 @@ document.addEventListener('DOMContentLoaded', async () => {
             let item = {
                 id: s.itemId || crypto.randomUUID(), // Preserve ID if editing
                 name: name,
-                itemType: s.type // 'Percentage' or 'Flat'
+                itemType: (s.type === 'Import') ? 'Flat' : s.type // 'Percentage' or 'Flat'
             };
 
             if (s.type === 'Percentage') {
                 item.percentage = parseFloat(document.getElementById('wiz-percent').value);
+            } else if (s.type === 'Import') {
+                // Handle Import
+                const select = document.getElementById('wiz-import-select');
+                const pId = select.value;
+                if (!pId) return alert("Select a provider");
+
+                const annual = parseFloat(select.options[select.selectedIndex].dataset.annual) || 0;
+
+                // Calculate Cost
+                const proj = window._project || project;
+                const phase = proj.phases.find(p => p.id === s.phaseId);
+                const weeks = parseFloat(phase.weeks) || 0;
+                const cost = (annual / 52) * weeks;
+
+                item.method = 'LumpSum';
+                item.amount = cost;
+                // Tag it
+                item.sourceType = 'Overhead';
+                item.sourceId = pId;
+                item.name = name + ` (Admin Infrastructure)`; // Append context
+
             } else {
                 // Flat
                 if (s.isTime) {
