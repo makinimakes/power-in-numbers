@@ -439,6 +439,16 @@
             }
         };
 
+        // Debug Logger
+        function logToScreen(msg) {
+            console.log(msg);
+            const el = document.getElementById('debug-console');
+            if (el) {
+                const time = new Date().toLocaleTimeString();
+                el.innerHTML += `\n[${time}] ${msg}`;
+            }
+        }
+
         const outputs = {
             goalNet: document.getElementById('out-goal-net'),
             goalGross: document.getElementById('out-goal-gross'),
