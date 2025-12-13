@@ -940,9 +940,11 @@
                             const globalHoursPerWeek = globalDays * globalHours;
                             const lineTotalCapacity = lineWeeks * globalHoursPerWeek;
 
-                            // Non-Billable for this line
-                            const weeklyNonBillable = (line.activities || []).reduce((sum, act) => sum + (parseFloat(act.amount) || 0), 0);
-                            const lineTotalNonBillable = lineWeeks * weeklyNonBillable;
+                            // Non-Billable using Activity Frequency Normalizer
+                            const lineTotalNonBillable = (line.activities || []).reduce((sum, act) => {
+                                const hrs = Normalizer.getActivityAnnualHours(act, lineWeeks, globalDays, globalHours);
+                                return sum + (hrs > 0 ? hrs : 0);
+                            }, 0);
 
                             // Derived Billable Hours
                             const lineBillableHours = Math.max(0, lineTotalCapacity - lineTotalNonBillable);
