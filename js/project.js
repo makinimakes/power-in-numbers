@@ -1648,7 +1648,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             const currentId = proj.id;
 
             // 1. Backend Invite/Add
-            await Store.inviteUser(currentId, email);
+            try {
+                await Store.inviteUser(currentId, email);
+            } catch (err) {
+                // Ignore "Already member" or "Already invited" errors
+                // so we can ensure they are added to the frontend roster below.
+                if (err.message && (err.message.includes('already') || err.message.code === '23505')) {
+                    console.warn("User already invited/member, ensuring roster is synced.");
+                } else {
+                    throw err;
+                }
+            }
 
             // 2. Add to Roster (Frontend State)
             const existing = proj.teamMembers.find(m => m.username === email || m.email === email);
