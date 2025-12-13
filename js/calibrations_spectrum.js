@@ -212,6 +212,17 @@ function createRateCell(baseRate, multiplier, hpd, dpw) {
     return td;
 }
 
-// Expose to window
+// Event Listener Binding
+document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('btn-view-spectrum');
+    if (btn) {
+        console.log("Attached event listener to btn-view-spectrum");
+        btn.addEventListener('click', openSpectrumModal);
+    } else {
+        console.warn("btn-view-spectrum not found on DOMContentLoaded");
+    }
+});
+
+// Expose to window (fallback)
 window.openSpectrumModal = openSpectrumModal;
 window.closeSpectrumModal = closeSpectrumModal;
