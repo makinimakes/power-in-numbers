@@ -208,6 +208,21 @@
         const sumP = (profile.calibrations && profile.calibrations.projected) ? profile.calibrations.projected.reduce((s, c) => s + c.amount, 0) : 0;
         const totalIncome = sumC + sumP;
 
+        // Calculate Unearned Income Sum (Annual)
+        let unearnedSum = 0;
+        if (profile && profile.unearnedIncome && Array.isArray(profile.unearnedIncome.items)) {
+            profile.unearnedIncome.items.forEach(item => {
+                const amount = parseFloat(item.amount) || 0;
+                const freq = parseFloat(item.frequency) || 1;
+                // Logic from independent_fixed.js: 
+                // Monthly=12, Periodic=*freq, Annual=1. 
+                // Wait, item.type check needed.
+                if (item.type === 'Monthly') unearnedSum += amount * 12;
+                else if (item.type === 'Periodic') unearnedSum += amount * freq;
+                else unearnedSum += amount; // Annual
+            });
+        }
+
         // --- NOW SCENARIO (Using Current Net Income as Target) ---
         // Safeguard Net Income
         const annualTargetNow = (profile && profile.currentNetIncome) ? parseFloat(profile.currentNetIncome) : 0;
@@ -216,28 +231,46 @@
         const rawTax = (profile && profile.expenses && profile.expenses.taxRate) ? profile.expenses.taxRate : 30;
         const taxRate = parseFloat(rawTax) / 100;
 
-        const annualGrossTargetNow = annualTargetNow / (1 - taxRate);
+        // MATCH LOGIC: Additive Tax (Net * 1.Tax)
+        const annualGrossTargetNow = annualTargetNow * (1 + taxRate);
         const periodTargetNow = annualGrossTargetNow * yearFraction;
 
-        const gapNow = periodTargetNow - totalIncome;
+        // Rate Calculation: (PeriodGross - PeriodUnearned) - ConfirmedIncome
+        // Wait, "Rate" in independent.js is (AdjustedGross / Billable). "AdjustedGross" = Gross - Unearned.
+        // Here we also subtract "Total Income" (Confirmed Contracts)?
+        // Yes, Gap = Needs - Haves.
+        // Needs = Target. Haves = Unearned + Confirmed + Projected.
+
+        const periodUnearned = unearnedSum * yearFraction;
+        const gapNow = periodTargetNow - periodUnearned - totalIncome;
+
         const requiredRateNow = (gapNow > 0 && remainingCapacity > 0) ? (gapNow / remainingCapacity) : 0;
 
         // --- GOAL SCENARIO (Using Calculated Expenses as Target) ---
         // Safeguard Total Needs with explicit sum
         let totalNeeds = 0;
+        let expensesPercent = 0;
         if (profile && profile.expenses && Array.isArray(profile.expenses.items)) {
-            totalNeeds = profile.expenses.items.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
-        } else if (profile && profile.expenses && typeof profile.expenses === 'object') {
-            // Fallback if items is missing but object structure exists?
-            // Maybe it's flattened? Let's check keys just in case, but usually it's items array.
-            // If Utils.calculateTotalNeeds worked on simple object, maybe we should try that ON THE ITEMS?
-            // No, let's stick to safe array reduce.
+            profile.expenses.items.forEach(item => {
+                const val = parseFloat(item.amount) || 0;
+                if (item.type === 'Percent') expensesPercent += val;
+                else if (item.type === 'Monthly') totalNeeds += val * 12;
+                else if (item.type === 'Periodic') totalNeeds += val * (item.frequency || 1);
+                else totalNeeds += val;
+            });
         }
 
-        const annualGrossTargetGoal = totalNeeds / (1 - taxRate);
+        // Goal Net = Fixed / (1 - Percent)
+        let goalNet = totalNeeds;
+        if (expensesPercent < 100) {
+            goalNet = totalNeeds / (1 - (expensesPercent / 100));
+        }
+
+        // Goal Gross = Goal Net * (1 + Tax) (Additive)
+        const annualGrossTargetGoal = goalNet * (1 + taxRate);
         const periodTargetGoal = annualGrossTargetGoal * yearFraction;
 
-        const gapGoal = periodTargetGoal - totalIncome;
+        const gapGoal = periodTargetGoal - periodUnearned - totalIncome;
         const requiredRateGoal = (gapGoal > 0 && remainingCapacity > 0) ? (gapGoal / remainingCapacity) : 0;
 
         // --- RENDER ---
