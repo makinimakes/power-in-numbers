@@ -1334,11 +1334,13 @@
 
             // --- SCENARIO ANALYSIS LOGIC (Decoupled & Global) ---
             window.calculateOverheadScenarios = () => {
-                // Re-calculate Personal Baselines from Profile
+                // 1. Get Global Parameters
+                const taxRate = (profile.expenses && profile.expenses.taxRate) ? parseFloat(profile.expenses.taxRate) : 30;
+
+                // 2. Personal Baselines (Survival/Goal)
                 let personalFixed = 0;
                 let personalPercent = 0;
 
-                // Personal Expenses
                 if (profile.expenses && profile.expenses.items) {
                     profile.expenses.items.forEach(item => {
                         const amount = parseFloat(item.amount) || 0;
@@ -1348,94 +1350,87 @@
                     });
                 }
 
-                const taxRate = (profile.expenses && profile.expenses.taxRate) ? parseFloat(profile.expenses.taxRate) : 30;
+                // 3. Current Reality Baseline (NOW)
+                // "Current Net Income" acts as the "Fixed" amount we need to clear to maintain current lifestyle
+                // We fetch directly from input to ensure it matches the user's latest type
+                const currentNetInput = document.getElementById('in-current-net-income'); // Corrected ID
+                const nowFixedBase = currentNetInput ? (parseFloat(currentNetInput.value) || 0) : 0;
+
+                // 4. Capacity Factors
                 const capacity = Utils.calculateBillableCapacity(profile);
                 const billableHours = capacity.totalBillableHours;
+                const weeksInput = document.getElementById('in-weeks-per-year'); // Corrected ID
+                const workWeeks = weeksInput ? (parseFloat(weeksInput.value) || 52) : 52;
+
+                // Helper: Calculate Metrics for a given Net Target & Overhead
+                const calculateMetrics = (baseFixed, bizFixed, basePercent, bizPercent) => {
+                    const totalFixed = baseFixed + bizFixed;
+                    const totalPercent = basePercent + bizPercent;
+
+                    let netObj = Infinity;
+                    if (totalPercent < 100) {
+                        netObj = totalFixed / (1 - (totalPercent / 100)); // The Net Income needed to cover Fixed + Percent
+                    }
+
+                    const grossObj = netObj * (1 + (taxRate / 100)); // Add Tax
+
+                    const hourly = (billableHours > 0) ? (grossObj / billableHours) : 0;
+                    const weekly = (workWeeks > 0) ? (grossObj / workWeeks) : 0;
+                    const monthly = grossObj / 12;
+
+                    return {
+                        fixed: totalFixed,
+                        percent: totalPercent,
+                        net: netObj,
+                        gross: grossObj,
+                        hourly: hourly,
+                        weekly: weekly,
+                        monthly: monthly
+                    };
+                };
 
                 const scenarios = [];
 
-                // Base Scenario (Personal Only)
-                // Note: Goal Net in profile is pre-calculated, but we can re-derive for consistency
-                let personalNet = Infinity;
-                if (personalPercent < 100) {
-                    personalNet = personalFixed / (1 - (personalPercent / 100));
-                }
-                const personalGross = personalNet * (1 + (taxRate / 100));
+                // --- Scenario Generation ---
+                const addScenario = (name, bizFixed, bizPercent) => {
+                    scenarios.push({
+                        name: name,
+                        goal: calculateMetrics(personalFixed, bizFixed, personalPercent, bizPercent),
+                        now: calculateMetrics(nowFixedBase, bizFixed, personalPercent, bizPercent) // NOW uses Current Net as Base
+                    });
+                };
 
-                scenarios.push({
-                    name: "Personal Baseline (You)",
-                    fixed: personalFixed,
-                    percent: personalPercent,
-                    tax: taxRate,
-                    totalNet: personalNet,
-                    totalGross: personalGross,
-                    hourly: (billableHours > 0) ? (personalGross / billableHours) : 0
-                });
+                // 1. Personal Baseline (No Business Overhead)
+                addScenario("Personal Baseline (You)", 0, 0);
 
-                // Business Scenarios
+                // 2. Individual Business Overheads
                 overheadProjects.forEach(proj => {
-                    let bizFixed = 0;
-                    let bizPercent = 0;
-
+                    let bFixed = 0;
+                    let bPercent = 0;
                     if (proj.expenses) {
                         proj.expenses.forEach(item => {
-                            const amount = parseFloat(item.amount) || 0;
-                            if (item.type === 'Percent') {
-                                bizPercent += (item.baseAmount || item.amount || 0);
-                            } else {
-                                bizFixed += (item.amount || 0); // Annualized amount
-                            }
+                            const val = parseFloat(item.amount) || 0;
+                            if (item.type === 'Percent') bPercent += (item.baseAmount || val);
+                            else bFixed += val;
                         });
                     }
-
-                    // Combined Calculation
-                    const combinedFixed = personalFixed + bizFixed;
-                    const combinedPercent = personalPercent + bizPercent;
-
-                    let combinedNet = Infinity;
-                    if (combinedPercent < 100) {
-                        combinedNet = combinedFixed / (1 - (combinedPercent / 100));
-                    }
-
-                    const combinedGross = combinedNet * (1 + (taxRate / 100));
-
-                    scenarios.push({
-                        name: `+ ${proj.name}`,
-                        fixed: combinedFixed,
-                        percent: combinedPercent,
-                        totalNet: combinedNet,
-                        totalGross: combinedGross,
-                        hourly: (billableHours > 0) ? (combinedGross / billableHours) : 0
-                    });
+                    addScenario(`+ ${proj.name}`, bFixed, bPercent);
                 });
 
-                // All Combined Scenario
+                // 3. Combined Business Overhead (if multiple)
                 if (overheadProjects.length > 1) {
-                    let allBizFixed = 0;
-                    let allBizPercent = 0;
+                    let allFixed = 0;
+                    let allPercent = 0;
                     overheadProjects.forEach(proj => {
                         if (proj.expenses) {
                             proj.expenses.forEach(item => {
-                                if (item.type === 'Percent') allBizPercent += (item.baseAmount || item.amount || 0);
-                                else allBizFixed += (item.amount || 0);
+                                const val = parseFloat(item.amount) || 0;
+                                if (item.type === 'Percent') allPercent += (item.baseAmount || val);
+                                else allFixed += val;
                             });
                         }
                     });
-
-                    const totalFixed = personalFixed + allBizFixed;
-                    const totalPercent = personalPercent + allBizPercent;
-                    let totalNet = Infinity;
-                    if (totalPercent < 100) totalNet = totalFixed / (1 - (totalPercent / 100));
-                    const totalGross = totalNet * (1 + (taxRate / 100));
-
-                    scenarios.push({
-                        name: "+ All Business Overhead",
-                        fixed: totalFixed,
-                        percent: totalPercent,
-                        totalNet: totalNet,
-                        totalGross: totalGross,
-                        hourly: (billableHours > 0) ? (totalGross / billableHours) : 0
-                    });
+                    addScenario("+ All Business Overhead", allFixed, allPercent);
                 }
 
                 return scenarios;
@@ -1444,129 +1439,161 @@
             // --- SCENARIO ANALYSIS UI (Global Scope) ---
             window.showOverheadScenarios = () => {
                 if (typeof window.calculateOverheadScenarios !== 'function') {
-                    console.error("calculateOverheadScenarios is not ready.");
-                    alert("Please wait for calculations to initialize.");
+                    alert("Calculations not ready yet. Please wait a moment.");
                     return;
                 }
                 const scenarios = window.calculateOverheadScenarios();
-                const tbody = document.getElementById('scenarios-table-body');
-                tbody.innerHTML = '';
+                const modalContent = document.getElementById('modal-scenarios-content'); // Assuming this is the container ID or we find tbody
+                // Actually, we usually target a specific container inside the modal. The previous code targeted 'scenarios-table-body'.
+                // We need to rewrite the innerHTML of the modal's MAIN container to support two tables.
+                // Let's find the table container.
 
-                scenarios.forEach(sc => {
-                    const tr = document.createElement('tr');
-                    tr.style.borderBottom = "1px solid #eee";
+                // REFACTORING MODAL DOM ON THE FLY TO SUPPORT 2 TABLES
+                const container = document.getElementById('scenarios-container');
+                if (!container) {
+                    console.error("Scenarios container not found");
+                    return;
+                }
 
-                    // Highlight "Personal Baseline" row
-                    const isBase = sc.name.includes("Baseline");
-                    if (isBase) tr.style.background = "var(--color-bg-subtle)";
+                const renderTable = (type) => { // type = 'goal' or 'now'
+                    const title = type === 'goal' ? 'GOAL SCENARIOS (Desired Lifestyle)' : 'NOW SCENARIOS (Current Reality)';
+                    let html = `
+            <div style="margin-bottom: 2rem;">
+            <h3 style="margin-bottom: 0.5rem; color: var(--text-color); font-weight: 600;">${title}</h3>
+            <table class="w-full text-left border-collapse" style="font-size: 0.9rem;">
+                <thead>
+                    <tr style="border-bottom: 2px solid #ddd; font-weight: bold; color: #555;">
+                        <th style="padding: 8px;">Scenario</th>
+                        <th style="padding: 8px;">Fixed Need</th>
+                        <th style="padding: 8px;">% Overhead</th>
+                        <th style="padding: 8px; color: var(--primary-color);">Hourly Rate</th>
+                        <th style="padding: 8px;">Weekly</th>
+                        <th style="padding: 8px;">Monthly</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
 
-                    tr.innerHTML = `
-                        <td style="padding:10px; font-weight:${isBase ? 'bold' : 'normal'}">${sc.name}</td>
-                        <td style="padding:10px; text-align:right;">${Utils.formatCurrency(sc.fixed)}</td>
-                        <td style="padding:10px; text-align:right;">${sc.percent.toFixed(1)}%</td>
-                        <td style="padding:10px; text-align:right;">${Utils.formatCurrency(sc.totalNet)}</td>
-                        <td style="padding:10px; text-align:right; font-weight:bold; color:var(--color-accent-primary);">${Utils.formatCurrency(sc.hourly)}/hr</td>
-                    `;
-                    tbody.appendChild(tr);
-                });
+                    scenarios.forEach(sc => {
+                        const data = sc[type];
+                        const isBase = sc.name.includes("Baseline");
+                        const rowStyle = isBase ? "background: #f9f9f9; font-weight: 600;" : "border-bottom: 1px solid #eee;";
 
-                document.getElementById('modal-scenarios').showModal();
+                        html += `
+                <tr style="${rowStyle}">
+                    <td style="padding: 8px;">${sc.name}</td>
+                    <td style="padding: 8px;">${Utils.formatCurrency(data.fixed)}</td>
+                    <td style="padding: 8px;">${data.percent.toFixed(1)}%</td>
+                    <td style="padding: 8px; color: var(--primary-color); font-weight: bold;">${Utils.formatCurrency(data.hourly)}</td>
+                    <td style="padding: 8px;">${Utils.formatCurrency(data.weekly)}</td>
+                    <td style="padding: 8px;">${Utils.formatCurrency(data.monthly)}</td>
+                </tr>
+            `;
+                    });
+
+                    html += `</tbody></table></div>`;
+                    return html;
+                };
+
+                container.innerHTML = renderTable('goal') + renderTable('now');
+
+                document.getElementById('modal-scenarios').style.display = 'flex';
             };
 
-            // 3. Initialization
-            async function init() {
-                logToScreen("Init() started.");
+            // Ensure Close Button works
+            document.getElementById('close-scenarios').onclick = () => {
+                document.getElementById('modal-scenarios').style.display = 'none';
+            }; try {
+                logToScreen("Fetching Profile...");
                 try {
-                    logToScreen("Fetching Profile...");
-                    try {
-                        profile = await Store.getIndependentProfile();
-                        logToScreen("Profile loaded: " + (profile ? "Found" : "Null"));
-                    } catch (e) {
-                        logToScreen("Profile Fetch Error: " + e.message);
+                    profile = await Store.getIndependentProfile();
+                    logToScreen("Profile loaded: " + (profile ? "Found" : "Null"));
+                } catch (e) {
+                    logToScreen("Profile Fetch Error: " + e.message);
+                }
+
+                // 2. Load Overhead (Always run this)
+                try {
+                    overheadProjects = await Store.getOverheadProjects();
+                    if (!Array.isArray(overheadProjects)) overheadProjects = [];
+                    if (window.calculateOverheadScenarios) {
+                        console.table(window.calculateOverheadScenarios());
                     }
+                } catch (e) {
+                    console.error("Overhead Load Error:", e);
+                    overheadProjects = [];
+                }
 
-                    // 2. Load Overhead (Always run this)
-                    try {
-                        overheadProjects = await Store.getOverheadProjects();
-                        if (!Array.isArray(overheadProjects)) overheadProjects = [];
-                        if (window.calculateOverheadScenarios) {
-                            console.table(window.calculateOverheadScenarios());
-                        }
-                    } catch (e) {
-                        console.error("Overhead Load Error:", e);
-                        overheadProjects = [];
-                    }
+                if (!profile) profile = {};
+                if (!profile.linesOfWork) profile.linesOfWork = [];
+                if (!profile.expenses) profile.expenses = {};
 
-                    if (!profile) profile = {};
-                    if (!profile.linesOfWork) profile.linesOfWork = [];
-                    if (!profile.expenses) profile.expenses = {};
+                if (!profile.expenses.items || profile.expenses.items.length === 0) {
+                    logToScreen("Expenses empty/missing. Restoring Defaults...");
+                    profile.expenses.items = BASE_EXPENSE_CATEGORIES.map(item => ({
+                        id: crypto.randomUUID(),
+                        ...item,
+                        amount: 0
+                    }));
+                    if (profile.expenses.taxRate === undefined) profile.expenses.taxRate = 30;
+                }
 
-                    if (!profile.expenses.items || profile.expenses.items.length === 0) {
-                        logToScreen("Expenses empty/missing. Restoring Defaults...");
-                        profile.expenses.items = BASE_EXPENSE_CATEGORIES.map(item => ({
-                            id: crypto.randomUUID(),
-                            ...item,
-                            amount: 0
-                        }));
-                        if (profile.expenses.taxRate === undefined) profile.expenses.taxRate = 30;
-                    }
+                if (!profile.unearnedIncome || !profile.unearnedIncome.items) {
+                    profile.unearnedIncome = { items: [] };
+                }
 
-                    if (!profile.unearnedIncome || !profile.unearnedIncome.items) {
-                        profile.unearnedIncome = { items: [] };
-                    }
+                if (profile.schedule) {
+                    inputs.weeks.value = profile.schedule.weeks;
+                    inputs.days.value = profile.schedule.days;
+                    inputs.hours.value = profile.schedule.hours;
+                } else {
+                    // Defaults if new user
+                    inputs.weeks.value = 50;
+                    inputs.days.value = 5;
+                    inputs.hours.value = 8;
+                    profile.schedule = { weeks: 50, days: 5, hours: 8 }; // Save defaults to state
+                    Store.saveIndependentProfile(profile); // FORCE SAVE DEFAULTS
+                }
 
-                    if (profile.schedule) {
-                        inputs.weeks.value = profile.schedule.weeks;
-                        inputs.days.value = profile.schedule.days;
-                        inputs.hours.value = profile.schedule.hours;
-                    } else {
-                        // Defaults if new user
-                        inputs.weeks.value = 50;
-                        inputs.days.value = 5;
-                        inputs.hours.value = 8;
-                        profile.schedule = { weeks: 50, days: 5, hours: 8 }; // Save defaults to state
-                        Store.saveIndependentProfile(profile); // FORCE SAVE DEFAULTS
-                    }
+                if (profile.expenses.taxRate !== undefined) {
+                    inputs.taxRate.value = profile.expenses.taxRate;
+                }
 
-                    if (profile.expenses.taxRate !== undefined) {
-                        inputs.taxRate.value = profile.expenses.taxRate;
-                    }
-
-                    const currentNetInput = document.getElementById('in-current-net-income');
-                    if (currentNetInput) {
-                        currentNetInput.value = profile.currentNetIncome || 0;
-                        currentNetInput.addEventListener('input', (e) => {
-                            profile.currentNetIncome = parseFloat(e.target.value) || 0;
-                            Store.saveIndependentProfile(profile);
-                        });
-                    }
-
-                    LineManager.render();
-                    ExpenseManager.render();
-                    logToScreen("Expenses Rendered. Count: " + (profile.expenses.items ? profile.expenses.items.length : 0));
-                    IncomeManager.render();
-                    BusinessProfileManager.render();
-                    calculateAndDisplay();
-                    logToScreen("Init Complete. UI should be ready.");
-
-                    ['weeks', 'days', 'hours'].forEach(key => {
-                        inputs[key].addEventListener('input', (e) => {
-                            profile.schedule[key] = parseFloat(e.target.value);
-                            Store.saveIndependentProfile(profile);
-                            LineManager.render(); // Update overhead rates based on new capacity
-                            calculateAndDisplay();
-                        });
-                    });
-
-                    inputs.taxRate.addEventListener('input', (e) => {
-                        profile.expenses.taxRate = parseFloat(e.target.value);
+                const currentNetInput = document.getElementById('in-current-net-income');
+                if (currentNetInput) {
+                    currentNetInput.value = profile.currentNetIncome || 0;
+                    currentNetInput.addEventListener('input', (e) => {
+                        profile.currentNetIncome = parseFloat(e.target.value) || 0;
                         Store.saveIndependentProfile(profile);
+                    });
+                }
+
+                LineManager.render();
+                ExpenseManager.render();
+                logToScreen("Expenses Rendered. Count: " + (profile.expenses.items ? profile.expenses.items.length : 0));
+                IncomeManager.render();
+                BusinessProfileManager.render();
+                calculateAndDisplay();
+                logToScreen("Init Complete. UI should be ready.");
+
+                ['weeks', 'days', 'hours'].forEach(key => {
+                    inputs[key].addEventListener('input', (e) => {
+                        profile.schedule[key] = parseFloat(e.target.value);
+                        Store.saveIndependentProfile(profile);
+                        LineManager.render(); // Update overhead rates based on new capacity
                         calculateAndDisplay();
                     });
-                } catch (e) {
-                    console.error("Critical Init Error:", e);
-                    logToScreen("CRITICAL ERROR: " + e.message);
-                }
+                });
+
+                inputs.taxRate.addEventListener('input', (e) => {
+                    profile.expenses.taxRate = parseFloat(e.target.value);
+                    Store.saveIndependentProfile(profile);
+                    calculateAndDisplay();
+                });
+            } catch (e) {
+                console.error("Critical Init Error:", e);
+                logToScreen("CRITICAL ERROR: " + e.message);
+            }
             }
 
             // Start
