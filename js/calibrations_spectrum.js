@@ -52,13 +52,16 @@ async function openSpectrumModal() {
             // Calculate Cost
             let fixed = 0;
             let percent = 0;
-            if (p.data && p.data.expenses) {
-                p.data.expenses.forEach(e => {
-                    const val = parseFloat(e.amount) || 0;
-                    if (e.type === 'Percent') percent += (e.baseAmount || val); // Access raw if needed
-                    else fixed += val;
-                });
-            }
+
+            // Check p.expenses (flattened) OR p.data.expenses (if nested differently)
+            // Store.getProjects flattens it, so p.expenses should work.
+            const expenses = p.expenses || (p.data && p.data.expenses) || [];
+
+            expenses.forEach(e => {
+                const val = parseFloat(e.amount) || 0;
+                if (e.type === 'Percent') percent += (e.baseAmount || val); // Access raw if needed
+                else fixed += val;
+            });
 
             // Additive Logic (Isolated Cost)
             let cost = 0;
