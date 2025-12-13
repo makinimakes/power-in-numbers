@@ -1341,161 +1341,164 @@
                     });
                 }
 
-                const pBillable = totalWorkHours > 0 ? (totalBillableHours / totalWorkHours) : 0;
-                const weeksPerYear = weeks || 0;
-                const calculateFees = (grossAmount, isGoal = false) => {
-                    if (weeksPerYear <= 0 || pBillable <= 0) {
-                        return { hourly: 0, daily: 0, weekly: 0, monthly: 0 };
-                    }
-                    const adjustedGross = Math.max(0, grossAmount - unearnedSum);
-                    const weekly = adjustedGross / weeksPerYear / pBillable;
-                    const monthly = weekly * weeksPerYear / 12;
-                    const daily = days > 0 ? (weekly / days) : 0;
-                    const hourly = hours > 0 ? (daily / hours) : 0;
-                    return { hourly, daily, weekly, monthly };
-                };
+                return scenarios;
+            };
 
-                const goalFees = calculateFees(goalGross, true);
-                setVal('out-goal-hourly', goalFees.hourly);
-                setVal('out-goal-daily', goalFees.daily);
-                setVal('out-goal-weekly', goalFees.weekly);
-                setVal('out-goal-monthly', goalFees.monthly);
+            const pBillable = totalWorkHours > 0 ? (totalBillableHours / totalWorkHours) : 0;
+            const weeksPerYear = weeks || 0;
+            const calculateFees = (grossAmount, isGoal = false) => {
+                if (weeksPerYear <= 0 || pBillable <= 0) {
+                    return { hourly: 0, daily: 0, weekly: 0, monthly: 0 };
+                }
+                const adjustedGross = Math.max(0, grossAmount - unearnedSum);
+                const weekly = adjustedGross / weeksPerYear / pBillable;
+                const monthly = weekly * weeksPerYear / 12;
+                const daily = days > 0 ? (weekly / days) : 0;
+                const hourly = hours > 0 ? (daily / hours) : 0;
+                return { hourly, daily, weekly, monthly };
+            };
 
-                const nowFees = calculateFees(currentGross, false);
-                setVal('out-now-hourly', nowFees.hourly);
-                setVal('out-now-daily', nowFees.daily);
-                setVal('out-now-weekly', nowFees.weekly);
-                setVal('out-now-monthly', nowFees.monthly);
-            }
+            const goalFees = calculateFees(goalGross, true);
+            setVal('out-goal-hourly', goalFees.hourly);
+            setVal('out-goal-daily', goalFees.daily);
+            setVal('out-goal-weekly', goalFees.weekly);
+            setVal('out-goal-monthly', goalFees.monthly);
 
-            // --- SCENARIO ANALYSIS UI (Global Scope) ---
-            window.showOverheadScenarios = () => {
-                const scenarios = calculateOverheadScenarios();
-                const tbody = document.getElementById('scenarios-table-body');
-                tbody.innerHTML = '';
+            const nowFees = calculateFees(currentGross, false);
+            setVal('out-now-hourly', nowFees.hourly);
+            setVal('out-now-daily', nowFees.daily);
+            setVal('out-now-weekly', nowFees.weekly);
+            setVal('out-now-monthly', nowFees.monthly);
+        }
 
-                scenarios.forEach(sc => {
-                    const tr = document.createElement('tr');
-                    tr.style.borderBottom = "1px solid #eee";
+        // --- SCENARIO ANALYSIS UI (Global Scope) ---
+        window.showOverheadScenarios = () => {
+            const scenarios = calculateOverheadScenarios();
+            const tbody = document.getElementById('scenarios-table-body');
+            tbody.innerHTML = '';
 
-                    // Highlight "Personal Baseline" row
-                    const isBase = sc.name.includes("Baseline");
-                    if (isBase) tr.style.background = "var(--color-bg-subtle)";
+            scenarios.forEach(sc => {
+                const tr = document.createElement('tr');
+                tr.style.borderBottom = "1px solid #eee";
 
-                    tr.innerHTML = `
+                // Highlight "Personal Baseline" row
+                const isBase = sc.name.includes("Baseline");
+                if (isBase) tr.style.background = "var(--color-bg-subtle)";
+
+                tr.innerHTML = `
                         <td style="padding:10px; font-weight:${isBase ? 'bold' : 'normal'}">${sc.name}</td>
                         <td style="padding:10px; text-align:right;">${Utils.formatCurrency(sc.fixed)}</td>
                         <td style="padding:10px; text-align:right;">${sc.percent.toFixed(1)}%</td>
                         <td style="padding:10px; text-align:right;">${Utils.formatCurrency(sc.totalNet)}</td>
                         <td style="padding:10px; text-align:right; font-weight:bold; color:var(--color-accent-primary);">${Utils.formatCurrency(sc.hourly)}/hr</td>
                     `;
-                    tbody.appendChild(tr);
-                });
+                tbody.appendChild(tr);
+            });
 
-                document.getElementById('modal-scenarios').showModal();
-            };
+            document.getElementById('modal-scenarios').showModal();
+        };
 
-            // 3. Initialization
-            async function init() {
-                logToScreen("Init() started.");
+        // 3. Initialization
+        async function init() {
+            logToScreen("Init() started.");
+            try {
+                logToScreen("Fetching Profile...");
                 try {
-                    logToScreen("Fetching Profile...");
+                    profile = await Store.getIndependentProfile();
+                    logToScreen("Profile loaded: " + (profile ? "Found" : "Null"));
+                } catch (e) {
+                    logToScreen("Profile Fetch Error: " + e.message);
+
                     try {
-                        profile = await Store.getIndependentProfile();
-                        logToScreen("Profile loaded: " + (profile ? "Found" : "Null"));
+                        overheadProjects = await Store.getOverheadProjects();
+                        if (!Array.isArray(overheadProjects)) overheadProjects = [];
+                        if (window.calculateOverheadScenarios) {
+                            console.table(window.calculateOverheadScenarios());
+                        }
                     } catch (e) {
-                        logToScreen("Profile Fetch Error: " + e.message);
+                        console.error("Overhead Load Error:", e);
+                        overheadProjects = [];
+                    }
 
-                        try {
-                            overheadProjects = await Store.getOverheadProjects();
-                            if (!Array.isArray(overheadProjects)) overheadProjects = [];
-                            if (window.calculateOverheadScenarios) {
-                                console.table(window.calculateOverheadScenarios());
-                            }
-                        } catch (e) {
-                            console.error("Overhead Load Error:", e);
-                            overheadProjects = [];
-                        }
+                    if (!profile) profile = {};
+                    if (!profile.linesOfWork) profile.linesOfWork = [];
+                    if (!profile.expenses) profile.expenses = {};
 
-                        if (!profile) profile = {};
-                        if (!profile.linesOfWork) profile.linesOfWork = [];
-                        if (!profile.expenses) profile.expenses = {};
+                    if (!profile.expenses.items || profile.expenses.items.length === 0) {
+                        logToScreen("Expenses empty/missing. Restoring Defaults...");
+                        profile.expenses.items = BASE_EXPENSE_CATEGORIES.map(item => ({
+                            id: crypto.randomUUID(),
+                            ...item,
+                            amount: 0
+                        }));
+                        if (profile.expenses.taxRate === undefined) profile.expenses.taxRate = 30;
+                    }
 
-                        if (!profile.expenses.items || profile.expenses.items.length === 0) {
-                            logToScreen("Expenses empty/missing. Restoring Defaults...");
-                            profile.expenses.items = BASE_EXPENSE_CATEGORIES.map(item => ({
-                                id: crypto.randomUUID(),
-                                ...item,
-                                amount: 0
-                            }));
-                            if (profile.expenses.taxRate === undefined) profile.expenses.taxRate = 30;
-                        }
+                    if (!profile.unearnedIncome || !profile.unearnedIncome.items) {
+                        profile.unearnedIncome = { items: [] };
+                    }
 
-                        if (!profile.unearnedIncome || !profile.unearnedIncome.items) {
-                            profile.unearnedIncome = { items: [] };
-                        }
+                    if (profile.schedule) {
+                        inputs.weeks.value = profile.schedule.weeks;
+                        inputs.days.value = profile.schedule.days;
+                        inputs.hours.value = profile.schedule.hours;
+                    } else {
+                        // Defaults if new user
+                        inputs.weeks.value = 50;
+                        inputs.days.value = 5;
+                        inputs.hours.value = 8;
+                        profile.schedule = { weeks: 50, days: 5, hours: 8 }; // Save defaults to state
+                    }
 
-                        if (profile.schedule) {
-                            inputs.weeks.value = profile.schedule.weeks;
-                            inputs.days.value = profile.schedule.days;
-                            inputs.hours.value = profile.schedule.hours;
-                        } else {
-                            // Defaults if new user
-                            inputs.weeks.value = 50;
-                            inputs.days.value = 5;
-                            inputs.hours.value = 8;
-                            profile.schedule = { weeks: 50, days: 5, hours: 8 }; // Save defaults to state
-                        }
+                    if (profile.expenses.taxRate !== undefined) {
+                        inputs.taxRate.value = profile.expenses.taxRate;
+                    }
 
-                        if (profile.expenses.taxRate !== undefined) {
-                            inputs.taxRate.value = profile.expenses.taxRate;
-                        }
-
-                        const currentNetInput = document.getElementById('in-current-net-income');
-                        if (currentNetInput) {
-                            currentNetInput.value = profile.currentNetIncome || 0;
-                            currentNetInput.addEventListener('input', (e) => {
-                                profile.currentNetIncome = parseFloat(e.target.value) || 0;
-                                Store.saveIndependentProfile(profile);
-                            });
-                        }
-
-                        LineManager.render();
-                        ExpenseManager.render();
-                        logToScreen("Expenses Rendered. Count: " + (profile.expenses.items ? profile.expenses.items.length : 0));
-                        IncomeManager.render();
-                        BusinessProfileManager.render();
-                        calculateAndDisplay();
-                        logToScreen("Init Complete. UI should be ready.");
-
-                        ['weeks', 'days', 'hours'].forEach(key => {
-                            inputs[key].addEventListener('input', (e) => {
-                                profile.schedule[key] = parseFloat(e.target.value);
-                                Store.saveIndependentProfile(profile);
-                                calculateAndDisplay();
-                            });
+                    const currentNetInput = document.getElementById('in-current-net-income');
+                    if (currentNetInput) {
+                        currentNetInput.value = profile.currentNetIncome || 0;
+                        currentNetInput.addEventListener('input', (e) => {
+                            profile.currentNetIncome = parseFloat(e.target.value) || 0;
+                            Store.saveIndependentProfile(profile);
                         });
+                    }
 
-                        inputs.taxRate.addEventListener('input', (e) => {
-                            profile.expenses.taxRate = parseFloat(e.target.value);
+                    LineManager.render();
+                    ExpenseManager.render();
+                    logToScreen("Expenses Rendered. Count: " + (profile.expenses.items ? profile.expenses.items.length : 0));
+                    IncomeManager.render();
+                    BusinessProfileManager.render();
+                    calculateAndDisplay();
+                    logToScreen("Init Complete. UI should be ready.");
+
+                    ['weeks', 'days', 'hours'].forEach(key => {
+                        inputs[key].addEventListener('input', (e) => {
+                            profile.schedule[key] = parseFloat(e.target.value);
                             Store.saveIndependentProfile(profile);
                             calculateAndDisplay();
                         });
-                    } catch (e) {
-                        console.error("Critical Init Error:", e);
-                        logToScreen("CRITICAL ERROR: " + e.message);
-                    }
+                    });
+
+                    inputs.taxRate.addEventListener('input', (e) => {
+                        profile.expenses.taxRate = parseFloat(e.target.value);
+                        Store.saveIndependentProfile(profile);
+                        calculateAndDisplay();
+                    });
+                } catch (e) {
+                    console.error("Critical Init Error:", e);
+                    logToScreen("CRITICAL ERROR: " + e.message);
                 }
+            }
 
         // Start
         init();
     </script>
     <script>
-                // Authentication Check
-                (async () => {
-                    const user = await Store.checkSession();
-                    if (!user) return;
-                })();
+            // Authentication Check
+            (async () => {
+                const user = await Store.checkSession();
+                if (!user) return;
+            })();
     </script>
 </body>
 
