@@ -255,7 +255,7 @@ const Store = {
     checkUser: async (email) => {
         const { data } = await window.supabaseClient
             .from('profiles')
-            .select('id, full_name')
+            .select('id, full_name, independent_profile')
             .eq('email', email)
             .single();
         return data; // Returns object if found, null if not
