@@ -301,7 +301,7 @@ const Store = {
         }
 
         // Filter for overhead type in data json
-        return data.filter(p => p.data && p.data.type === 'overhead')
+        return data.filter(p => p.data && (p.data.type === 'overhead' || p.data.type === 'business_overhead'))
             .map(p => ({ ...p.data, id: p.id, name: p.name }));
     },
 

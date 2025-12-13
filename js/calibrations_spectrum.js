@@ -38,6 +38,10 @@ async function openSpectrumModal() {
         const profile = await Store.getIndependentProfile(); // Ensure fresh profile for Billable Hours
         console.log("Profile fetched");
 
+        // Diagnostic Alert for User
+        const user = await Store.getCurrentUser();
+        alert(`Debug Info:\nUser: ${user ? user.email : 'Unknown'}\nFound ${overheadProjects.length} Business Profiles.`);
+
         // (Filter step removed as getOverheadProjects handles it)
 
         // Calculate Hourly Rate for each Project
