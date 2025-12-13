@@ -366,9 +366,10 @@
 
             <div style="margin-bottom: 20px;">
                 <div
-                    style="display:grid; grid-template-columns: 2fr 1fr 1fr 40px; gap:10px; margin-bottom:10px; font-size:0.8rem; font-weight:bold; color:var(--color-text-muted);">
+                    style="display:grid; grid-template-columns: 2fr 1fr 1fr 1fr 40px; gap:5px; margin-bottom:10px; font-size:0.8rem; font-weight:bold; color:var(--color-text-muted);">
                     <span>Expense Item</span>
-                    <span>Cost</span>
+                    <span>Cost/Value</span>
+                    <span>Type</span>
                     <span>Freq</span>
                     <span></span>
                 </div>
@@ -675,31 +676,65 @@
             const div = document.createElement('div');
             div.className = 'biz-expense-row';
             div.style.display = "grid";
-            div.style.gridTemplateColumns = "2fr 1fr 1fr 40px";
-            div.style.gap = "10px";
+            div.style.gridTemplateColumns = "2fr 1fr 1fr 1fr 40px";
+            div.style.gap = "5px";
             div.style.marginBottom = "5px";
+            div.style.alignItems = "center";
+
+            const type = data.type || 'Annual';
+            const freqVal = data.frequency || 1;
 
             div.innerHTML = `
                 <input type="text" class="bez-name" placeholder="Item Name" value="${data.label || ''}" style="width:100%;">
                 <input type="number" class="bez-cost" placeholder="0.00" value="${data.baseAmount || data.amount || ''}" oninput="updateBusinessExpenseTotal()" style="width:100%;">
-                <select class="bez-freq" onchange="updateBusinessExpenseTotal()" style="width:100%;">
-                    <option value="1" ${data.freq === 1 ? 'selected' : ''}>Annual</option>
-                    <option value="12" ${data.freq === 12 ? 'selected' : ''}>Monthly</option>
+                
+                <select class="bez-type" onchange="toggleBizFreq(this); updateBusinessExpenseTotal()" style="width:100%;">
+                    <option value="Annual" ${type === 'Annual' ? 'selected' : ''}>Annual</option>
+                    <option value="Monthly" ${type === 'Monthly' ? 'selected' : ''}>Monthly</option>
+                    <option value="Periodic" ${type === 'Periodic' ? 'selected' : ''}>Periodic</option>
+                    <option value="Percent" ${type === 'Percent' ? 'selected' : ''}>Percent %</option>
                 </select>
+
+                <input type="number" class="bez-freq" placeholder="x/Yr" value="${freqVal}" 
+                    style="width:100%; display:${type === 'Periodic' ? 'block' : 'none'};" 
+                    oninput="updateBusinessExpenseTotal()">
+
                 <button onclick="this.parentElement.remove(); updateBusinessExpenseTotal();" style="color:red; background:none; border:none; cursor:pointer;">&times;</button>
             `;
             list.appendChild(div);
         };
 
+        window.toggleBizFreq = (selectEl) => {
+            const row = selectEl.parentElement;
+            const freqInput = row.querySelector('.bez-freq');
+            if (selectEl.value === 'Periodic') {
+                freqInput.style.display = 'block';
+            } else {
+                freqInput.style.display = 'none';
+            }
+        };
+
         window.updateBusinessExpenseTotal = () => {
             const rows = document.querySelectorAll('.biz-expense-row');
-            let total = 0;
+            let totalFixed = 0;
+            let totalPercent = 0;
+
             rows.forEach(row => {
                 const cost = parseFloat(row.querySelector('.bez-cost').value) || 0;
+                const type = row.querySelector('.bez-type').value;
                 const freq = parseFloat(row.querySelector('.bez-freq').value) || 1;
-                total += (cost * freq);
+
+                if (type === 'Annual') totalFixed += cost;
+                if (type === 'Monthly') totalFixed += (cost * 12);
+                if (type === 'Periodic') totalFixed += (cost * freq);
+                if (type === 'Percent') totalPercent += cost;
             });
-            document.getElementById('modal-biz-total').innerText = Utils.formatCurrency(total);
+
+            let text = Utils.formatCurrency(totalFixed);
+            if (totalPercent > 0) {
+                text += ` + ${totalPercent}%`;
+            }
+            document.getElementById('modal-biz-total').innerText = text;
         };
 
         window.saveBusinessExpenses = async () => {
@@ -713,15 +748,22 @@
             rows.forEach(row => {
                 const name = row.querySelector('.bez-name').value.trim();
                 const cost = parseFloat(row.querySelector('.bez-cost').value) || 0;
+                const type = row.querySelector('.bez-type').value;
                 const freq = parseFloat(row.querySelector('.bez-freq').value) || 1;
+
+                let annualAmount = 0;
+                if (type === 'Annual') annualAmount = cost;
+                if (type === 'Monthly') annualAmount = cost * 12;
+                if (type === 'Periodic') annualAmount = cost * freq;
+                if (type === 'Percent') annualAmount = cost; // Stored as is
 
                 if (name && cost > 0) {
                     newExpenses.push({
                         label: name,
                         baseAmount: cost,
-                        freq: freq,
-                        amount: cost * freq, // Annualized
-                        type: "Overhead"
+                        type: type,
+                        frequency: freq,
+                        amount: annualAmount // For legacy compatibility
                     });
                 }
             });
@@ -732,7 +774,6 @@
                 await Store.saveOverheadProject(proj);
                 BusinessProfileManager.render();
                 calculateAndDisplay();
-                document.getElementById('modal-business-expenses').close();
             } catch (e) {
                 alert("Error saving: " + e.message);
             }
@@ -1077,8 +1118,17 @@
                 if (proj.expenses) {
                     proj.expenses.forEach(item => {
                         const amount = parseFloat(item.amount) || 0;
-                        if (item.type === 'Annual') {
-                            fixedSum += amount;
+                        // Handle varying types (legacy 'amount' was annual total)
+                        if (item.type === 'Monthly') {
+                            fixedSum += (item.baseAmount || amount) * 12;
+                        } else if (item.type === 'Periodic') {
+                            const freq = parseFloat(item.frequency) || 1;
+                            fixedSum += (item.baseAmount || amount) * freq;
+                        } else if (item.type === 'Percent') {
+                            percentSum += (item.baseAmount || amount);
+                        } else if (item.type === 'Annual' || !item.type) {
+                            // Default/Legacy
+                            fixedSum += (item.baseAmount || amount);
                         }
                     });
                 }
