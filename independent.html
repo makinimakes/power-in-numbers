@@ -425,17 +425,788 @@
     <script src="js/utils.js"></script>
     <script src="js/supabase_client.js"></script>
     <script src="js/store.js"></script>
-    <script src="js/independent_fixed.js"></script>
+    <script>
+        /**
+         * Independent Tool Logic - Final Refactor (Inlined for Debugging)
+         */
+
+        // Global Toggle Function
+        window.toggleSection = (id, btn) => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.classList.toggle('hidden');
+                btn.classList.toggle('collapsed');
+            }
+        };
+
+        const outputs = {
+            goalNet: document.getElementById('out-goal-net'),
+            goalGross: document.getElementById('out-goal-gross'),
+            dayRate: document.getElementById('out-day-rate'),
+
+            totalWorkHours: document.getElementById('out-total-work-hours'),
+            totalNonBillable: document.getElementById('out-total-non-billable-hours'),
+            totalBillable: document.getElementById('out-total-billable-hours')
+        };
+
+        // 2. State Management
+        let profile = {};
+        let overheadProjects = [];
+
+        const BASE_EXPENSE_CATEGORIES = [
+            { label: 'Housing (Rent/Mortgage)', type: 'Monthly' },
+            { label: 'Utilities & Internet', type: 'Monthly' },
+            { label: 'Groceries & Household', type: 'Monthly' },
+            { label: 'Healthcare / Insurance', type: 'Monthly' },
+            { label: 'Transportation', type: 'Monthly' },
+            { label: 'Savings / Investments', type: 'Percent' },
+            { label: 'Debt Repayment', type: 'Monthly' },
+            { label: 'Entertainment / Leisure', type: 'Monthly' },
+            { label: 'Other', type: 'Monthly' }
+        ];
+
+        const Normalizer = Utils.Normalizer;
+
+        // EXPENSE MANAGER
+        const ExpenseManager = {
+            container: document.getElementById('expenses-container'),
+
+            render: () => {
+                ExpenseManager.container.innerHTML = '';
+                profile.expenses.items.forEach((item, index) => {
+                    const row = document.createElement('div');
+                    row.className = 'ledger-row';
+                    row.style.display = 'grid';
+                    row.style.gridTemplateColumns = '2fr 1fr 1fr 1fr auto';
+                    row.style.gap = '10px';
+                    row.style.alignItems = 'center';
+
+                    const showFreq = item.type === 'Periodic';
+
+                    row.innerHTML = `
+                    <input type="text" value="${item.label}" placeholder="Category" onchange="updateExpense(${index}, 'label', this.value)">
+                    <input type="number" value="${item.amount}" placeholder="Amount" onchange="updateExpense(${index}, 'amount', this.value)">
+                    <select onchange="updateExpense(${index}, 'type', this.value)">
+                        <option value="Monthly" ${item.type === 'Monthly' ? 'selected' : ''}>Monthly</option>
+                        <option value="Periodic" ${item.type === 'Periodic' ? 'selected' : ''}>Periodic (x/Yr)</option>
+                        <option value="Percent" ${item.type === 'Percent' ? 'selected' : ''}>% of Total</option>
+                    </select>
+                     <input type="number" value="${item.frequency || 1}" placeholder="Freq" 
+                        style="visibility: ${showFreq ? 'visible' : 'hidden'}; width: 60px;"
+                        onchange="updateExpense(${index}, 'frequency', this.value)">
+                    <button onclick="removeExpense(${index})" style="color:red; background:none; border:none; cursor:pointer;">&times;</button>
+                `;
+                    ExpenseManager.container.appendChild(row);
+                });
+            },
+
+            addExpense: () => {
+                profile.expenses.items.push({
+                    id: crypto.randomUUID(),
+                    label: '',
+                    amount: 0,
+                    type: 'Monthly',
+                    frequency: 1
+                });
+                ExpenseManager.render();
+                calculateAndDisplay();
+                Store.saveIndependentProfile(profile);
+            },
+
+            removeExpense: (index) => {
+                if (confirm('Remove this expense?')) {
+                    profile.expenses.items.splice(index, 1);
+                    ExpenseManager.render();
+                    calculateAndDisplay();
+                    Store.saveIndependentProfile(profile);
+                }
+            },
+
+            updateExpense: (index, field, value) => {
+                const val = (field === 'amount' || field === 'frequency') ? parseFloat(value) : value;
+                profile.expenses.items[index][field] = val;
+                if (field === 'type') ExpenseManager.render();
+
+                calculateAndDisplay();
+                Store.saveIndependentProfile(profile);
+            }
+        };
+
+        // INCOME MANAGER
+        const IncomeManager = {
+            container: document.getElementById('unearned-income-container'),
+
+            render: () => {
+                IncomeManager.container.innerHTML = '';
+                profile.unearnedIncome.items.forEach((item, index) => {
+                    const row = document.createElement('div');
+                    row.className = 'ledger-row';
+                    row.style.display = 'grid';
+                    row.style.gridTemplateColumns = '2fr 1fr 1fr 1fr auto';
+                    row.style.gap = '10px';
+                    row.style.alignItems = 'center';
+
+                    const showFreq = item.type === 'Periodic';
+
+                    row.innerHTML = `
+                    <input type="text" value="${item.label}" placeholder="Source" onchange="updateIncome(${index}, 'label', this.value)">
+                    <input type="number" value="${item.amount}" placeholder="Amount" onchange="updateIncome(${index}, 'amount', this.value)">
+                    <select onchange="updateIncome(${index}, 'type', this.value)">
+                        <option value="Annual" ${item.type === 'Annual' ? 'selected' : ''}>Annual</option>
+                        <option value="Monthly" ${item.type === 'Monthly' ? 'selected' : ''}>Monthly</option>
+                        <option value="Periodic" ${item.type === 'Periodic' ? 'selected' : ''}>Periodic (x/Yr)</option>
+                    </select>
+                     <input type="number" value="${item.frequency || 1}" placeholder="Freq" 
+                        style="visibility: ${showFreq ? 'visible' : 'hidden'}; width: 60px;"
+                        onchange="updateIncome(${index}, 'frequency', this.value)">
+                    <button onclick="removeIncome(${index})" style="color:red; background:none; border:none; cursor:pointer;">&times;</button>
+                `;
+                    IncomeManager.container.appendChild(row);
+                });
+            },
+
+            addIncome: () => {
+                profile.unearnedIncome.items.push({
+                    id: crypto.randomUUID(),
+                    label: '',
+                    amount: 0,
+                    type: 'Annual',
+                    frequency: 1
+                });
+                IncomeManager.render();
+                calculateAndDisplay();
+                Store.saveIndependentProfile(profile);
+            },
+
+            removeIncome: (index) => {
+                if (confirm('Remove this income source?')) {
+                    profile.unearnedIncome.items.splice(index, 1);
+                    IncomeManager.render();
+                    calculateAndDisplay();
+                    Store.saveIndependentProfile(profile);
+                }
+            },
+
+            updateIncome: (index, field, value) => {
+                const val = (field === 'amount' || field === 'frequency') ? parseFloat(value) : value;
+                profile.unearnedIncome.items[index][field] = val;
+                if (field === 'type') IncomeManager.render();
+
+                calculateAndDisplay();
+                Store.saveIndependentProfile(profile);
+            }
+        };
+
+        // BUSINESS PROFILE MANAGER
+        const BusinessProfileManager = {
+            container: document.getElementById('overhead-profiles-container'),
+
+            render: () => {
+                if (!BusinessProfileManager.container) return;
+                BusinessProfileManager.container.innerHTML = '';
+
+                if (overheadProjects.length === 0) {
+                    BusinessProfileManager.container.innerHTML = '<div style="font-style:italic; color:#666; font-size:0.9rem;">No business profiles yet. Create one to account for overhead.</div>';
+                    return;
+                }
+
+                overheadProjects.forEach((proj, index) => {
+                    const row = document.createElement('div');
+                    row.className = 'ledger-row';
+                    row.style.display = 'flex';
+                    row.style.justifyContent = 'space-between';
+                    row.style.alignItems = 'center';
+                    row.style.marginBottom = '10px';
+                    row.style.background = '#fff';
+                    row.style.padding = '8px';
+                    row.style.border = '1px solid #eee';
+
+                    const totalExp = (proj.expenses || []).reduce((acc, item) => acc + (parseFloat(item.amount || 0)), 0);
+
+                    row.innerHTML = `
+                    <div style="flex-grow:1;">
+                        <input type="text" value="${proj.name}" 
+                            onchange="BusinessProfileManager.update(${index}, 'name', this.value)"
+                            style="font-weight:bold; width:100%; border:none; background:transparent;">
+                        <div style="font-size:0.8rem; color:#666;">
+                            Total Overhead: <strong>$${totalExp.toLocaleString()}</strong> 
+                            <button onclick="BusinessProfileManager.editExpenses('${proj.id}')" style="text-decoration:underline; border:none; background:none; cursor:pointer; color:var(--color-primary);">Edit Expenses</button>
+                        </div>
+                    </div>
+                    <button onclick="BusinessProfileManager.remove(${index})" style="color:red; background:none; border:none; cursor:pointer;">&times;</button>
+                `;
+                    BusinessProfileManager.container.appendChild(row);
+                });
+            },
+
+            create: async () => {
+                const name = prompt("Enter Business Name (e.g. Makini Makes):");
+                if (!name) return;
+                try {
+                    const newProj = await Store.createOverheadProject(name);
+                    if (newProj) {
+                        overheadProjects.push(newProj);
+                        BusinessProfileManager.render();
+                        renderLinesOfWork();
+                    }
+                } catch (e) { alert(e.message); }
+            },
+
+            update: async (index, field, value) => {
+                overheadProjects[index][field] = value;
+                try {
+                    await Store.saveOverheadProject(overheadProjects[index]);
+                } catch (e) { console.error(e); }
+            },
+
+            remove: async (index) => {
+                if (!confirm("Delete this business profile?")) return;
+                alert("Deletion not fully supported in this draft. (Contact support to remove DB row)");
+            },
+
+            editExpenses: (id) => {
+                const proj = overheadProjects.find(p => p.id === id);
+                if (!proj) return;
+
+                let currentAmount = 0;
+                if (proj.expenses && proj.expenses.length > 0) {
+                    currentAmount = proj.expenses[0].amount;
+                }
+
+                const newAmount = prompt(`Enter Total Annual Overhead for ${proj.name}:`, currentAmount);
+                if (newAmount !== null) {
+                    const val = parseFloat(newAmount) || 0;
+                    proj.expenses = [{ label: "Annual Overhead", amount: val, type: "Annual" }];
+                    Store.saveOverheadProject(proj);
+                    BusinessProfileManager.render();
+                    calculateAndDisplay();
+                }
+            }
+        };
+        window.BusinessProfileManager = BusinessProfileManager;
+
+        // LINE ITEMS (Work)
+        const LineManager = {
+            container: document.getElementById('lines-of-work-container'),
+
+            render: () => {
+                LineManager.container.innerHTML = '';
+                const globalWeeks = parseFloat(inputs.weeks.value) || 0;
+                const globalDays = parseFloat(inputs.days.value) || 0;
+                const globalHours = parseFloat(inputs.hours.value) || 0;
+
+                profile.linesOfWork.forEach((line, lineIndex) => {
+                    const card = document.createElement('div');
+                    card.className = 'grid-card';
+                    card.style.marginBottom = 'var(--spacing-md)';
+                    card.style.padding = 'var(--spacing-sm)';
+                    card.style.border = '1px solid var(--color-border)';
+
+                    const header = document.createElement('div');
+                    header.style.display = 'flex';
+                    header.style.justifyContent = 'space-between';
+                    header.style.marginBottom = 'var(--spacing-sm)';
+                    header.style.borderBottom = '1px dotted var(--color-border)';
+                    header.style.paddingBottom = 'var(--spacing-xs)';
+
+                    const overheadOptions = overheadProjects.map(proj =>
+                        `<option value="${proj.id}" ${line.overheadProjectId === proj.id ? 'selected' : ''}>${proj.name}</option>`
+                    ).join('');
+
+                    header.innerHTML = `
+                    <div style="display:flex; gap: var(--spacing-sm); width: 100%;">
+                        <div style="flex-grow:1;">
+                            <label style="font-size:0.6rem;">Role / Line of Work</label>
+                            <input type="text" value="${line.label}" onchange="updateLine(${lineIndex}, 'label', this.value)" style="width:100%;">
+                        </div>
+                        <div style="width: 80px;">
+                            <label style="font-size:0.6rem;">Duration</label>
+                            <input type="number" value="${line.duration.value}" onchange="updateLineDuration(${lineIndex}, 'value', this.value)" placeholder="0">
+                        </div>
+                        <div style="width: 90px;">
+                             <label style="font-size:0.6rem;">Unit</label>
+                             <select onchange="updateLineDuration(${lineIndex}, 'unit', this.value)">
+                                <option value="Weeks" ${line.duration.unit === 'Weeks' ? 'selected' : ''}>Weeks</option>
+                                <option value="Months" ${line.duration.unit === 'Months' ? 'selected' : ''}>Months</option>
+                                <option value="% of Year" ${line.duration.unit === '% of Year' ? 'selected' : ''}>% of Year</option>
+                             </select>
+                        </div>
+                    </div>
+                    <button onclick="removeLine(${lineIndex})" style="color:red; background:none; border:none; cursor:pointer; font-size:1.2rem; line-height:1;">&times;</button>
+                `;
+                    card.appendChild(header);
+
+                    const overheadSelectorDiv = document.createElement('div');
+                    overheadSelectorDiv.style.marginBottom = 'var(--spacing-sm)';
+
+                    let rateDisplay = '';
+                    let computedOverheadRate = 0;
+
+                    if (line.overheadProjectId) {
+                        const linkedProj = overheadProjects.find(p => p.id === line.overheadProjectId);
+                        if (linkedProj) {
+                            const totalOverhead = (linkedProj.expenses || []).reduce((acc, i) => acc + (parseFloat(i.amount) || 0), 0);
+                            let lineWeeks = parseFloat(line.duration.value) || 0;
+                            if (line.duration.unit === 'Months') lineWeeks *= 4.33;
+                            if (line.duration.unit === 'Years') lineWeeks *= 52;
+
+                            const weeklyHours = (line.activities || []).reduce((sum, act) => sum + (parseFloat(act.amount) || 0), 0);
+                            const totalLineHours = lineWeeks * weeklyHours;
+
+                            if (window.BudgetEngine) {
+                                computedOverheadRate = BudgetEngine.calculateOverheadRate(totalOverhead, totalLineHours);
+                            } else {
+                                // Fallback relative calculation if engine missing
+                                computedOverheadRate = totalLineHours > 0 ? (totalOverhead / totalLineHours) : 0;
+                            }
+
+                            line.derivedOverheadRate = computedOverheadRate;
+
+                            if (totalLineHours > 0) {
+                                rateDisplay = `<div style="margin-top:5px; font-size:0.8rem; color:var(--color-primary); font-weight:bold; background:var(--color-bg-subtle); padding:5px; border-radius:4px;">
+                                Linked Overhead Rate: $${computedOverheadRate.toFixed(2)}/hr
+                                <span style="font-weight:normal; color:#666;">(${linkedProj.name}: $${totalOverhead.toLocaleString()} / ${Math.round(totalLineHours)} hrs)</span>
+                            </div>`;
+                            } else {
+                                rateDisplay = `<div style="margin-top:5px; font-size:0.8rem; color:red;">Add activities to calculate rate.</div>`;
+                            }
+                        }
+                    } else {
+                        line.derivedOverheadRate = 0;
+                    }
+
+                    overheadSelectorDiv.innerHTML = `
+                    <label style="font-size:0.6rem;">Associated Business Profile (Overhead)</label>
+                    <select onchange="updateLine(${lineIndex}, 'overheadProjectId', this.value)" style="width:100%; margin-bottom:5px;">
+                        <option value="">None</option>
+                        ${overheadOptions}
+                    </select>
+                    ${rateDisplay}
+                `;
+                    card.appendChild(overheadSelectorDiv);
+
+                    const actsContainer = document.createElement('div');
+                    const subHeader = document.createElement('div');
+                    subHeader.style.display = 'flex';
+                    subHeader.style.justifyContent = 'space-between';
+                    subHeader.style.marginBottom = 'var(--spacing-xs)';
+                    subHeader.innerHTML = `
+                     <div style="font-size:0.7rem; font-weight:bold;">NON-BILLABLE ACTIVITIES</div>
+                     <button onclick="addActivity(${lineIndex})" style="font-size:0.7rem; cursor:pointer;">+ Service</button>
+                `;
+                    card.appendChild(subHeader);
+
+                    line.activities.forEach((act, actIndex) => {
+                        const lineWeeks = Normalizer.getLineWeeks(line.duration.value, line.duration.unit, globalWeeks);
+                        const annualHours = Normalizer.getActivityAnnualHours(act, lineWeeks, globalDays, globalHours);
+                        const isInvalid = annualHours === -1;
+
+                        const displayValue = isInvalid ?
+                            `<span style="color:var(--color-accent-surviving); font-weight:bold; font-size:0.6rem;">please revise your selections</span>` :
+                            `≈ ${Math.round(annualHours)} hrs`;
+
+                        const actRow = document.createElement('div');
+                        actRow.style.display = 'grid';
+                        actRow.style.gridTemplateColumns = '2fr 1fr 1fr 1fr auto auto';
+                        actRow.style.gap = '5px';
+                        actRow.style.marginBottom = '5px';
+                        actRow.style.alignItems = 'center';
+
+                        actRow.innerHTML = `
+                        <div>
+                            <input type="text" placeholder="Activity Name" value="${act.label}" onchange="updateAct(${lineIndex}, ${actIndex}, 'label', this.value)">
+                        </div>
+                        <div>
+                            <input type="number" placeholder="#" value="${act.amount}" onchange="updateAct(${lineIndex}, ${actIndex}, 'amount', this.value)">
+                        </div>
+                        <div>
+                             <select onchange="updateAct(${lineIndex}, ${actIndex}, 'unit', this.value)" style="font-size:0.7rem;">
+                                <option value="Hours" ${act.unit === 'Hours' ? 'selected' : ''}>Hours</option>
+                                <option value="Days" ${act.unit === 'Days' ? 'selected' : ''}>Work Days</option>
+                                <option value="Weeks" ${act.unit === 'Weeks' ? 'selected' : ''}>Work Weeks</option>
+                                <option value="Months" ${act.unit === 'Months' ? 'selected' : ''}>Work Months</option>
+                            </select>
+                        </div>
+                        <div>
+                             <select onchange="updateAct(${lineIndex}, ${actIndex}, 'frequency', this.value)" style="font-size:0.7rem;">
+                                <option value="Per Day" ${act.frequency === 'Per Day' ? 'selected' : ''}>Per Work Day</option>
+                                <option value="Per Week" ${act.frequency === 'Per Week' ? 'selected' : ''}>Per Work Week</option>
+                                <option value="Per Month" ${act.frequency === 'Per Month' ? 'selected' : ''}>Per Work Month</option>
+                                <option value="Per Year" ${act.frequency === 'Per Year' ? 'selected' : ''}>Per Work Year</option>
+                            </select>
+                        </div>
+                        <div style="font-size: 0.7rem; color: var(--color-text-muted); white-space: nowrap;">
+                            ${displayValue}
+                        </div>
+                        <button onclick="removeActivity(${lineIndex}, ${actIndex})" style="border:none; bg:none; cursor:pointer;">&times;</button>
+                    `;
+                        actsContainer.appendChild(actRow);
+                    });
+
+                    card.appendChild(actsContainer);
+                    LineManager.container.appendChild(card);
+                });
+
+                if (profile.linesOfWork.length > 0) {
+                    const bottomBtn = document.createElement('button');
+                    bottomBtn.innerText = "+ New Line";
+                    bottomBtn.style.fontSize = "0.8rem";
+                    bottomBtn.style.padding = "5px 10px";
+                    bottomBtn.style.marginTop = "10px";
+                    bottomBtn.style.cursor = "pointer";
+                    bottomBtn.style.width = "100%";
+                    bottomBtn.style.border = "1px dashed #ccc";
+                    bottomBtn.style.background = "#fafafa";
+                    bottomBtn.onclick = () => LineManager.addLine();
+                    LineManager.container.appendChild(bottomBtn);
+                }
+            },
+
+            addLine: () => {
+                profile.linesOfWork.push({
+                    id: crypto.randomUUID(),
+                    label: 'New Line of Work',
+                    duration: { value: 52, unit: 'Weeks' },
+                    activities: [],
+                    overheadProjectId: ''
+                });
+                renderLinesOfWork();
+                calculateAndDisplay();
+                Store.saveIndependentProfile(profile);
+            },
+
+            removeLine: (index) => {
+                if (confirm('Delete this line of work?')) {
+                    profile.linesOfWork.splice(index, 1);
+                    renderLinesOfWork();
+                    calculateAndDisplay();
+                    Store.saveIndependentProfile(profile);
+                }
+            },
+
+            updateLine: (index, field, value) => {
+                profile.linesOfWork[index][field] = value;
+                calculateAndDisplay();
+                Store.saveIndependentProfile(profile);
+            },
+
+            pendingOverride: null,
+
+            updateLineDuration: (index, subField, value) => {
+                const newVal = subField === 'value' ? parseFloat(value) : value;
+                const currentObj = profile.linesOfWork[index].duration;
+                const proposedValue = subField === 'value' ? newVal : currentObj.value;
+                const proposedUnit = subField === 'unit' ? newVal : currentObj.unit;
+                const globalWeeks = parseFloat(inputs.weeks.value) || 0;
+                const proposedWeeks = Normalizer.getLineWeeks(proposedValue, proposedUnit, globalWeeks);
+
+                if (proposedWeeks > globalWeeks) {
+                    LineManager.pendingOverride = { index, subField, value: newVal };
+                    const msg = `This duration (<strong>${Math.round(proposedWeeks)} weeks</strong>) exceeds your declared Time Reclaimed Schedule (<strong>${globalWeeks} weeks</strong>).<br><br>Do you want to override and keep this duration?`;
+                    document.getElementById('modal-override-msg').innerHTML = msg;
+                    document.getElementById('modal-override').showModal();
+                    return;
+                }
+
+                profile.linesOfWork[index].duration[subField] = newVal;
+                calculateAndDisplay();
+                Store.saveIndependentProfile(profile);
+                if (subField === 'unit') renderLinesOfWork();
+            },
+
+            confirmOverride: () => {
+                if (LineManager.pendingOverride) {
+                    const { index, subField, value } = LineManager.pendingOverride;
+                    profile.linesOfWork[index].duration[subField] = value;
+                    calculateAndDisplay();
+                    Store.saveIndependentProfile(profile);
+                    if (subField === 'unit') renderLinesOfWork();
+                    LineManager.pendingOverride = null;
+                }
+                document.getElementById('modal-override').close();
+            },
+
+            cancelOverride: () => {
+                LineManager.pendingOverride = null;
+                document.getElementById('modal-override').close();
+                renderLinesOfWork();
+            },
+
+            addActivity: (lineIndex) => {
+                profile.linesOfWork[lineIndex].activities.push({
+                    label: '',
+                    amount: 0,
+                    unit: 'Hours',
+                    frequency: 'Per Week'
+                });
+                renderLinesOfWork();
+                Store.saveIndependentProfile(profile);
+            },
+
+            removeActivity: (lineIndex, actIndex) => {
+                profile.linesOfWork[lineIndex].activities.splice(actIndex, 1);
+                renderLinesOfWork();
+                calculateAndDisplay();
+                Store.saveIndependentProfile(profile);
+            },
+
+            updateActivity: (lineIndex, actIndex, field, value) => {
+                const val = (field === 'amount') ? parseFloat(value) : value;
+                profile.linesOfWork[lineIndex].activities[actIndex][field] = val;
+                calculateAndDisplay();
+                Store.saveIndependentProfile(profile);
+            }
+        };
+
+        const renderLinesOfWork = LineManager.render;
+        window.updateLine = LineManager.updateLine;
+        window.updateLineDuration = LineManager.updateLineDuration;
+        window.removeLine = LineManager.removeLine;
+        window.addActivity = LineManager.addActivity;
+        window.removeActivity = LineManager.removeActivity;
+        window.updateAct = LineManager.updateActivity;
+        window.confirmOverride = LineManager.confirmOverride;
+        window.cancelOverride = LineManager.cancelOverride;
+        window.updateExpense = ExpenseManager.updateExpense;
+        window.removeExpense = ExpenseManager.removeExpense;
+        window.updateIncome = IncomeManager.updateIncome;
+        window.removeIncome = IncomeManager.removeIncome;
+
+        document.getElementById('btn-add-line-of-work').onclick = LineManager.addLine;
+        document.getElementById('btn-add-expense').onclick = ExpenseManager.addExpense;
+        document.getElementById('btn-add-income').onclick = IncomeManager.addIncome;
+        document.getElementById('btn-add-overhead-profile').onclick = BusinessProfileManager.create;
+
+        function calculateAndDisplay() {
+            const weeks = parseFloat(inputs.weeks.value) || 0;
+            const days = parseFloat(inputs.days.value) || 0;
+            const hours = parseFloat(inputs.hours.value) || 0;
+            const taxRate = parseFloat(inputs.taxRate.value) || 0;
+
+            if (!profile.schedule) profile.schedule = {};
+            profile.schedule.weeks = weeks;
+            profile.schedule.days = days;
+            profile.schedule.hours = hours;
+            if (!profile.expenses) profile.expenses = {};
+            profile.expenses.taxRate = taxRate;
+
+            const capacity = Utils.calculateBillableCapacity(profile);
+            const totalWorkHours = capacity.totalWorkHours;
+            const totalNonBillableHours = capacity.totalNonBillableHours;
+            const totalBillableHours = capacity.totalBillableHours;
+
+            const nbPercent = totalWorkHours > 0 ? (totalNonBillableHours / totalWorkHours) * 100 : 0;
+            const bPercent = totalWorkHours > 0 ? (totalBillableHours / totalWorkHours) * 100 : 0;
+
+            profile.billableRatio = capacity.billableRatio;
+            Store.saveIndependentProfile(profile);
+
+            outputs.totalWorkHours.textContent = Math.round(totalWorkHours).toLocaleString();
+            outputs.totalNonBillable.innerHTML = `${Math.round(totalNonBillableHours).toLocaleString()} <span style="font-size:0.7em; opacity:0.7;">(${Math.round(nbPercent)}%)</span>`;
+            outputs.totalBillable.innerHTML = `${Math.round(totalBillableHours).toLocaleString()} <span style="font-size:0.7em; opacity:0.7;">(${Math.round(bPercent)}%)</span>`;
+
+            let fixedSum = 0;
+            let percentSum = 0;
+
+            profile.expenses.items.forEach(item => {
+                const amount = parseFloat(item.amount) || 0;
+                if (item.type === 'Monthly') {
+                    fixedSum += amount * 12;
+                } else if (item.type === 'Periodic') {
+                    const freq = parseFloat(item.frequency) || 1;
+                    fixedSum += amount * freq;
+                } else if (item.type === 'Percent') {
+                    percentSum += amount;
+                }
+            });
+
+            overheadProjects.forEach(proj => {
+                if (proj.expenses) {
+                    proj.expenses.forEach(item => {
+                        const amount = parseFloat(item.amount) || 0;
+                        if (item.type === 'Annual') {
+                            fixedSum += amount;
+                        }
+                    });
+                }
+            });
+
+            let unearnedSum = 0;
+            profile.unearnedIncome.items.forEach(item => {
+                const amount = parseFloat(item.amount) || 0;
+                if (item.type === 'Monthly') {
+                    unearnedSum += amount * 12;
+                } else if (item.type === 'Periodic') {
+                    const freq = parseFloat(item.frequency) || 1;
+                    unearnedSum += amount * freq;
+                } else {
+                    unearnedSum += amount;
+                }
+            });
+
+            const unearnedTotalEl = document.getElementById('out-total-unearned-income');
+            if (unearnedTotalEl) {
+                unearnedTotalEl.textContent = Utils.formatCurrency(unearnedSum);
+            }
+
+            let goalNetTotal = 0;
+            if (percentSum < 100) {
+                goalNetTotal = fixedSum / (1 - (percentSum / 100));
+            } else {
+                goalNetTotal = Infinity;
+            }
+
+            let goalNetWork = goalNetTotal;
+            let goalGross = 0;
+            if (goalNetWork !== Infinity) {
+                goalGross = goalNetWork * (1 + (taxRate / 100));
+            } else {
+                goalGross = Infinity;
+            }
+
+            const currentNet = profile.currentNetIncome || 0;
+            const currentGross = currentNet * (1 + (taxRate / 100));
+
+            outputs.goalNet.textContent = Utils.formatCurrency(goalNetWork);
+            outputs.goalGross.textContent = Utils.formatCurrency(goalGross);
+
+            const outCurrentGross = document.getElementById('out-current-gross');
+            if (outCurrentGross) {
+                outCurrentGross.textContent = Utils.formatCurrency(currentGross);
+            }
+
+            profile.goals = {
+                net: goalNetWork,
+                gross: goalGross,
+                current: currentGross
+            };
+            Store.saveIndependentProfile(profile);
+
+            const setVal = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = Utils.formatCurrency(val);
+            };
+
+            const hasBillableHours = totalBillableHours > 0;
+            const pBillable = totalWorkHours > 0 ? (totalBillableHours / totalWorkHours) : 0;
+            const weeksPerYear = weeks || 0;
+            const calculateFees = (grossAmount, isGoal = false) => {
+                if (weeksPerYear <= 0 || pBillable <= 0) {
+                    return { hourly: 0, daily: 0, weekly: 0, monthly: 0 };
+                }
+                const adjustedGross = Math.max(0, grossAmount - unearnedSum);
+                const weekly = adjustedGross / weeksPerYear / pBillable;
+                const monthly = weekly * weeksPerYear / 12;
+                const daily = days > 0 ? (weekly / days) : 0;
+                const hourly = hours > 0 ? (daily / hours) : 0;
+                return { hourly, daily, weekly, monthly };
+            };
+
+            const goalFees = calculateFees(goalGross, true);
+            setVal('out-goal-hourly', goalFees.hourly);
+            setVal('out-goal-daily', goalFees.daily);
+            setVal('out-goal-weekly', goalFees.weekly);
+            setVal('out-goal-monthly', goalFees.monthly);
+
+            const nowFees = calculateFees(currentGross, false);
+            setVal('out-now-hourly', nowFees.hourly);
+            setVal('out-now-daily', nowFees.daily);
+            setVal('out-now-weekly', nowFees.weekly);
+            setVal('out-now-monthly', nowFees.monthly);
+        }
+
+        // 3. Initialization
+        async function init() {
+            logToScreen("Init() started.");
+            try {
+                logToScreen("Fetching Profile...");
+                try {
+                    profile = await Store.getIndependentProfile();
+                    logToScreen("Profile loaded: " + (profile ? "Found" : "Null"));
+                } catch (e) {
+                    logToScreen("Profile Fetch Error: " + e.message);
+                }
+
+                try {
+                    overheadProjects = await Store.getOverheadProjects();
+                    if (!Array.isArray(overheadProjects)) overheadProjects = [];
+                } catch (e) {
+                    console.error("Overhead Load Error:", e);
+                    overheadProjects = [];
+                }
+
+                if (!profile) profile = {};
+                if (!profile.linesOfWork) profile.linesOfWork = [];
+                if (!profile.expenses) profile.expenses = {};
+
+                if (!profile.expenses.items || profile.expenses.items.length === 0) {
+                    logToScreen("Expenses empty/missing. Restoring Defaults...");
+                    profile.expenses.items = BASE_EXPENSE_CATEGORIES.map(item => ({
+                        id: crypto.randomUUID(),
+                        ...item,
+                        amount: 0
+                    }));
+                    if (profile.expenses.taxRate === undefined) profile.expenses.taxRate = 30;
+                }
+
+                if (!profile.unearnedIncome || !profile.unearnedIncome.items) {
+                    profile.unearnedIncome = { items: [] };
+                }
+
+                if (profile.schedule) {
+                    inputs.weeks.value = profile.schedule.weeks;
+                    inputs.days.value = profile.schedule.days;
+                    inputs.hours.value = profile.schedule.hours;
+                }
+
+                if (profile.expenses.taxRate !== undefined) {
+                    inputs.taxRate.value = profile.expenses.taxRate;
+                }
+
+                const currentNetInput = document.getElementById('in-current-net-income');
+                if (currentNetInput) {
+                    currentNetInput.value = profile.currentNetIncome || 0;
+                    currentNetInput.addEventListener('input', (e) => {
+                        profile.currentNetIncome = parseFloat(e.target.value) || 0;
+                        Store.saveIndependentProfile(profile);
+                    });
+                }
+
+                LineManager.render();
+                ExpenseManager.render();
+                logToScreen("Expenses Rendered. Count: " + (profile.expenses.items ? profile.expenses.items.length : 0));
+                IncomeManager.render();
+                BusinessProfileManager.render();
+                calculateAndDisplay();
+                logToScreen("Init Complete. UI should be ready.");
+
+                ['weeks', 'days', 'hours'].forEach(key => {
+                    inputs[key].addEventListener('input', (e) => {
+                        profile.schedule[key] = parseFloat(e.target.value);
+                        Store.saveIndependentProfile(profile);
+                        calculateAndDisplay();
+                    });
+                });
+
+                inputs.taxRate.addEventListener('input', (e) => {
+                    profile.expenses.taxRate = parseFloat(e.target.value);
+                    Store.saveIndependentProfile(profile);
+                    calculateAndDisplay();
+                });
+            } catch (e) {
+                console.error("Critical Init Error:", e);
+                logToScreen("CRITICAL ERROR: " + e.message);
+            }
+        }
+
+        // Start
+        init();
+    </script>
     <script>
         // Authentication Check
         (async () => {
             const user = await Store.checkSession();
-            if (!user) return; // Store handles redirect
-
-            // Check for Local Legacy Data
-            // (Migration Tool Removed - Data Cleared)
-
-            // init(); // Handled by independent.js DOMContentLoaded
+            if (!user) return;
         })();
     </script>
 </body>
