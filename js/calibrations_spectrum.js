@@ -104,6 +104,7 @@ function renderOverheadToggles() {
         checkbox.dataset.rate = p.hourlyRate;
 
         checkbox.onchange = () => {
+            console.log(`Checkbox changed. Rate: ${p.hourlyRate}`);
             recalculateSelectedOverhead();
             renderPairedSpectrum();
         };
@@ -119,8 +120,13 @@ function recalculateSelectedOverhead() {
     selectedOverheadRate = 0;
     const checks = overheadList.querySelectorAll('input[type="checkbox"]');
     checks.forEach(c => {
-        if (c.checked) selectedOverheadRate += parseFloat(c.dataset.rate);
+        if (c.checked) {
+            const r = parseFloat(c.dataset.rate);
+            console.log("Adding rate:", r);
+            selectedOverheadRate += r;
+        }
     });
+    console.log("Total Selected Overhead:", selectedOverheadRate);
 }
 
 function closeSpectrumModal() {
@@ -139,9 +145,14 @@ function renderPairedSpectrum() {
     const rateNowBase = parseRate('out-required-rate-now');
     const rateGoalBase = parseRate('out-required-rate-goal');
 
+    console.log(`Base Rates - Now: ${rateNowBase}, Goal: ${rateGoalBase}`);
+    console.log(`Adding Overhead: ${selectedOverheadRate}`);
+
     // Apply Overhead
     const rateNow = rateNowBase + selectedOverheadRate;
     const rateGoal = rateGoalBase + selectedOverheadRate;
+
+    console.log(`Final Rates - Now: ${rateNow}, Goal: ${rateGoal}`);
 
     // 2. Schedule
     const hoursPerDay = (profile.schedule && profile.schedule.hours) ? profile.schedule.hours : 6;
