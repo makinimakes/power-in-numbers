@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spectrum Debug</title>
+    <script src="js/supabase_client.js?v=debug1"></script>
+    <script src="js/store.js?v=debug1"></script>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+        }
+
+        .success {
+            color: green;
+            font-weight: bold;
+        }
+
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Spectrum Debug Tool</h1>
+    <div id="status">Initializing...</div>
+    <hr>
+    <h3>Logged In User:</h3>
+    <div id="user-info">...</div>
+
+    <h3>Overhead Profiles (Raw):</h3>
+    <pre id="profiles-log">Fetching...</pre>
+
+    <script>
+        const status = document.getElementById('status');
+        const userInfo = document.getElementById('user-info');
+        const log = document.getElementById('profiles-log');
+
+        (async () => {
+            try {
+                status.textContent = "Connecting to Store...";
+                if (!window.supabaseClient) await Store.init();
+                status.textContent = "Checking Session...";
+
+                const user = await Store.getCurrentUser();
+                if (!user) {
+                    userInfo.className = "error";
+                    userInfo.textContent = "NO USER FOUND (Not Logged In)";
+                    return;
+                }
+                userInfo.className = "success";
+                userInfo.textContent = user.email + " (ID: " + user.id + ")";
+
+                status.textContent = "Fetching Overhead Projects...";
+                const projects = await Store.getOverheadProjects();
+
+                log.textContent = JSON.stringify(projects, null, 2);
+
+                if (projects.length === 0) {
+                    status.textContent = "DONE: 0 Profiles Found.";
+                    status.className = "error";
+                } else {
+                    status.textContent = "DONE: Profiles Found!";
+                    status.className = "success";
+                }
+
+            } catch (err) {
+                status.textContent = "FATAL ERROR: " + err.message;
+                status.className = "error";
+                console.error(err);
+            }
+        })();
+    </script>
+</body>
+
+</html>
