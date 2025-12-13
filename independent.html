@@ -1252,15 +1252,20 @@
                 outputs.totalBillable.innerHTML = `${Math.round(totalBillableHours).toLocaleString()} <span style="font-size:0.7em; opacity:0.7;">(${Math.round(bPercent)}%)</span>`;
 
                 let fixedSum = 0;
-                let percentSum = 0;
+                // Log Captures
+                let monthlySumEx = 0;
+                let periodicSumEx = 0;
 
                 profile.expenses.items.forEach(item => {
                     const amount = parseFloat(item.amount) || 0;
                     if (item.type === 'Monthly') {
                         fixedSum += amount * 12;
+                        monthlySumEx += amount;
                     } else if (item.type === 'Periodic') {
                         const freq = parseFloat(item.frequency) || 1;
-                        fixedSum += amount * freq;
+                        const val = amount * freq;
+                        fixedSum += val;
+                        periodicSumEx += val;
                     } else if (item.type === 'Percent') {
                         percentSum += amount;
                     }
@@ -1329,26 +1334,151 @@
                 Store.saveIndependentProfile(profile);
 
                 // Populate GOAL Rates
-                setVal('out-goal-hourly', totalBillableHours > 0 ? goalGross / totalBillableHours : 0);
-                setVal('out-goal-daily', (totalBillableHours > 0 ? goalGross / totalBillableHours : 0) * (hours * (totalBillableHours / totalWorkHours * 100 / 100))); // Rough Approx?
-                // Actually, stick to standard: Annual / Weeks / Days?
-                // Better: Hourly * Hours/Day (Billable Only?)
-                // Let's use simple math:
-                const goalHourly = totalBillableHours > 0 ? goalGross / totalBillableHours : 0;
-                setVal('out-goal-daily', goalHourly * hours); // Assuming full day billing? Or adjusted?
-                // Let's stick to: Rates are usually based on "Billable Hour".
-                setVal('out-goal-weekly', goalGross / (weeks || 1));
-                setVal('out-goal-monthly', goalGross / 12);
+                const goalFees = {
+                    hourly: totalBillableHours > 0 ? goalGross / totalBillableHours : 0,
+                    daily: 0,
+                    weekly: goalGross / (weeks || 1),
+                    monthly: goalGross / 12
+                };
+                goalFees.daily = goalFees.hourly * hours;
+
+                setVal('out-goal-hourly', goalFees.hourly);
+                setVal('out-goal-daily', goalFees.daily);
+                setVal('out-goal-weekly', goalFees.weekly);
+                setVal('out-goal-monthly', goalFees.monthly);
 
                 // Populate NOW Rates
-                const currentHourly = totalBillableHours > 0 ? currentGross / totalBillableHours : 0;
-                setVal('out-now-hourly', currentHourly);
-                setVal('out-now-daily', currentHourly * hours);
-                setVal('out-now-weekly', currentGross / (weeks || 1));
-                setVal('out-now-monthly', currentGross / 12);
+                const nowFees = {
+                    hourly: totalBillableHours > 0 ? currentGross / totalBillableHours : 0,
+                    daily: 0,
+                    weekly: currentGross / (weeks || 1),
+                    monthly: currentGross / 12
+                };
+                nowFees.daily = nowFees.hourly * hours;
+
+                setVal('out-now-hourly', nowFees.hourly);
+                setVal('out-now-daily', nowFees.daily);
+                setVal('out-now-weekly', nowFees.weekly);
+                setVal('out-now-monthly', nowFees.monthly);
+
+
+                // --- MATH LOG GENERATION ---
+                try {
+                    const formatNumber = Utils.formatNumber;
+                    const formatCurrency = Utils.formatCurrency;
+
+                    // Build Goal Net Log dynamically
+                    const goalNetLog = [
+                        { formula: "Sum of Expenses (Monthly Items)", value: monthlySumEx * 12 },
+                        { formula: "Sum of Expenses (Periodic Items)", value: periodicSumEx },
+                        { formula: "Total Fixed Expenses", value: fixedSum }
+                    ];
+
+                    if (percentSum > 0) {
+                        goalNetLog.push({ formula: `Plus Percent Adjustments (Savings/Profit)`, value: `${percentSum}%`, formatter: 'none' });
+                        goalNetLog.push({ formula: `Formula: Fixed Expenses / (1 - ${percentSum}%)`, value: `1 / ${formatNumber(1 - (percentSum / 100))}`, formatter: 'none' });
+                    }
+
+                    goalNetLog.push({ formula: "Goal Net Income", value: goalNetWork });
+
+                    window._mathLogs = {
+                        goalNet: goalNetLog,
+                        currentGross: [
+                            { formula: "Current Net Income (Input)", value: currentNet },
+                            { formula: `Gross Up Factor: 1 / (1 - ${formatNumber(taxRate)}%)`, value: 1 / ((100 - taxRate) / 100) },
+                            { formula: `Current Gross = ${formatCurrency(currentNet)} / ${formatNumber((100 - taxRate) / 100)}`, value: currentGross }
+                        ],
+                        goalGross: [
+                            { formula: "Goal Net Income (After Tax)", value: goalNetWork },
+                            { formula: `Gross Up Factor: 1 / (1 - ${formatNumber(taxRate)}%)`, value: 1 / ((100 - taxRate) / 100) },
+                            { formula: `Goal Gross = ${formatCurrency(goalNetWork)} / ${formatNumber((100 - taxRate) / 100)}`, value: goalGross }
+                        ],
+                        // NOW Fees
+                        nowHourly: [
+                            { formula: "Current Gross Income", value: currentGross },
+                            { formula: `Total Billable Hours (Total Capacity - Non-Billable)`, value: totalBillableHours, formatter: 'number' },
+                            { formula: "Hourly Rate = Gross / Total Billable Hours", value: nowFees.hourly }
+                        ],
+                        nowDaily: [
+                            { formula: "Hourly Rate", value: nowFees.hourly },
+                            { formula: `Hours per Day`, value: hours, formatter: 'number' },
+                            { formula: "Daily Rate = Hourly * Hours/Day", value: nowFees.daily }
+                        ],
+                        nowWeekly: [
+                            { formula: "Daily Rate", value: nowFees.daily },
+                            { formula: `Work Days per Week`, value: days, formatter: 'number' },
+                            { formula: "Weekly Rate = Daily * Days/Week", value: nowFees.weekly }
+                        ],
+                        nowMonthly: [
+                            { formula: "Weekly Rate", value: nowFees.weekly },
+                            { formula: "Weeks per Year", value: weeks, formatter: 'number' },
+                            { formula: "Monthly Rate = (Weekly * Weeks) / 12", value: nowFees.monthly }
+                        ],
+                        // GOAL Fees
+                        goalHourly: [
+                            { formula: "Goal Gross Income", value: goalGross },
+                            { formula: `Total Billable Hours (Total Capacity - Non-Billable)`, value: totalBillableHours, formatter: 'number' },
+                            { formula: "Hourly Rate = Gross / Total Billable Hours", value: goalFees.hourly }
+                        ],
+                        goalDaily: [
+                            { formula: "Hourly Rate", value: goalFees.hourly },
+                            { formula: `Hours per Day`, value: hours, formatter: 'number' },
+                            { formula: "Daily Rate = Hourly * Hours/Day", value: goalFees.daily }
+                        ],
+                        goalWeekly: [
+                            { formula: "Daily Rate", value: goalFees.daily },
+                            { formula: `Work Days per Week`, value: days, formatter: 'number' },
+                            { formula: "Weekly Rate = Daily * Days/Week", value: goalFees.weekly }
+                        ],
+                        goalMonthly: [
+                            { formula: "Weekly Rate", value: goalFees.weekly },
+                            { formula: "Weeks per Year", value: weeks, formatter: 'number' },
+                            { formula: "Monthly Rate = (Weekly * Weeks) / 12", value: goalFees.monthly }
+                        ]
+                    };
+                } catch (e) { console.error("Math Log Error", e); }
 
 
             }
+
+            // New Helper: View Math Log
+            window.viewIndependentLog = (key) => {
+                const modal = document.getElementById('modal-math-log');
+                const content = document.getElementById('math-log-content');
+
+                if (!modal || !content) return;
+
+                const logs = window._mathLogs ? window._mathLogs[key] : [];
+                content.innerHTML = '';
+
+                if (!logs || logs.length === 0) {
+                    let msg = '<p>No calculation details available.</p>';
+                    content.innerHTML = msg;
+                } else {
+                    logs.forEach(log => {
+                        const div = document.createElement('div');
+                        div.style.marginBottom = '10px';
+                        div.style.borderBottom = '1px solid #eee';
+                        div.style.paddingBottom = '5px';
+
+                        let displayValue;
+                        if (log.formatter === 'number') {
+                            displayValue = Utils.formatNumber(log.value);
+                        } else if (log.formatter === 'none') {
+                            displayValue = log.value;
+                        } else {
+                            displayValue = Utils.formatCurrency(log.value);
+                        }
+
+                        div.innerHTML = `
+                                <div style="color:#555; font-size:0.85rem;">${log.formula}</div>
+                                <div style="font-weight:bold; text-align:right;">${displayValue}</div>
+                            `;
+                        content.appendChild(div);
+                    });
+                }
+                modal.style.display = 'flex';
+            };
 
             // --- SCENARIO ANALYSIS LOGIC (Decoupled & Global) ---
             window.calculateOverheadScenarios = () => {
