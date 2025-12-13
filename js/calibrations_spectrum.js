@@ -14,11 +14,10 @@ let cachedPersonalRateNow = 0;
 let cachedPersonalRateGoal = 0;
 
 // Spectrum Deltas: 10% to 90%
-
-// Spectrum Deltas: 10% to 90%
 const DELTAS = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9];
 
 async function openSpectrumModal() {
+    console.log("openSpectrumModal called");
     // 1. Fetch Overheads (if not loaded)
     // We need to fetch projects where type = 'overhead' (or check expenses)
     // Actually, Store.getProjects() checks `projects` table.
@@ -30,39 +29,54 @@ async function openSpectrumModal() {
     // Let's reset for simplicity or persist if global "overheadProjects" array is kept.
     // We'll reload to be safe.
 
-    const allProjects = await Store.getProjects();
-    const profile = await Store.getIndependentProfile(); // Ensure fresh profile for Billable Hours
+    try {
+        console.log("Fetching projects...");
+        const allProjects = await Store.getProjects();
+        console.log("Projects fetched:", allProjects.length);
 
-    // Filter for Overhead Projects (Logic copied from independent.js/BusinessProfileManager)
-    overheadProjects = allProjects.filter(p => p.type === 'infrastructure' || (p.data && p.data.type === 'business_overhead'));
+        console.log("Fetching profile...");
+        const profile = await Store.getIndependentProfile(); // Ensure fresh profile for Billable Hours
+        console.log("Profile fetched");
 
-    // Calculate Hourly Rate for each Project
-    const capacity = Utils.calculateBillableCapacity(profile);
-    const billableHours = capacity.totalBillableHours || 1; // Avoid div/0
+        // Filter for Overhead Projects (Logic copied from independent.js/BusinessProfileManager)
+        overheadProjects = allProjects.filter(p => p.type === 'infrastructure' || (p.data && p.data.type === 'business_overhead'));
+        console.log("Overhead projects:", overheadProjects.length);
 
-    overheadProjects.forEach(p => {
-        // Calculate Cost
-        let fixed = 0;
-        let percent = 0;
-        if (p.data && p.data.expenses) {
-            p.data.expenses.forEach(e => {
-                const val = parseFloat(e.amount) || 0;
-                if (e.type === 'Percent') percent += (e.baseAmount || val); // Access raw if needed
-                else fixed += val;
-            });
+        // Calculate Hourly Rate for each Project
+        const capacity = Utils.calculateBillableCapacity(profile);
+        const billableHours = capacity.totalBillableHours || 1; // Avoid div/0
+
+        overheadProjects.forEach(p => {
+            // Calculate Cost
+            let fixed = 0;
+            let percent = 0;
+            if (p.data && p.data.expenses) {
+                p.data.expenses.forEach(e => {
+                    const val = parseFloat(e.amount) || 0;
+                    if (e.type === 'Percent') percent += (e.baseAmount || val); // Access raw if needed
+                    else fixed += val;
+                });
+            }
+
+            // Additive Logic (Isolated Cost)
+            let cost = 0;
+            if (percent < 100) {
+                cost = fixed / (1 - (percent / 100));
+            }
+            p.hourlyRate = cost / billableHours;
+        });
+
+        renderOverheadToggles();
+        renderPairedSpectrum();
+        if (modalSpectrum) {
+            console.log("Showing modal...");
+            modalSpectrum.showModal();
+        } else {
+            console.error("modalSpectrum element not found!");
         }
-
-        // Additive Logic (Isolated Cost)
-        let cost = 0;
-        if (percent < 100) {
-            cost = fixed / (1 - (percent / 100));
-        }
-        p.hourlyRate = cost / billableHours;
-    });
-
-    renderOverheadToggles();
-    renderPairedSpectrum();
-    if (modalSpectrum) modalSpectrum.showModal();
+    } catch (err) {
+        console.error("Error in openSpectrumModal:", err);
+    }
 }
 
 function renderOverheadToggles() {
