@@ -916,26 +916,35 @@
                         const linkedProj = overheadProjects.find(p => p.id === line.overheadProjectId);
                         if (linkedProj) {
                             const totalOverhead = (linkedProj.expenses || []).reduce((acc, i) => acc + (parseFloat(i.amount) || 0), 0);
+
                             let lineWeeks = parseFloat(line.duration.value) || 0;
                             if (line.duration.unit === 'Months') lineWeeks *= 4.33;
                             if (line.duration.unit === 'Years') lineWeeks *= 52;
+                            if (line.duration.unit === '% of Year') lineWeeks = (parseFloat(line.duration.value) / 100) * globalWeeks;
 
-                            const weeklyHours = (line.activities || []).reduce((sum, act) => sum + (parseFloat(act.amount) || 0), 0);
-                            const totalLineHours = lineWeeks * weeklyHours;
+                            // Calculate Billable Capacity for this Line
+                            const globalHoursPerWeek = globalDays * globalHours;
+                            const lineTotalCapacity = lineWeeks * globalHoursPerWeek;
+
+                            // Non-Billable for this line
+                            const weeklyNonBillable = (line.activities || []).reduce((sum, act) => sum + (parseFloat(act.amount) || 0), 0);
+                            const lineTotalNonBillable = lineWeeks * weeklyNonBillable;
+
+                            // Derived Billable Hours
+                            const lineBillableHours = Math.max(0, lineTotalCapacity - lineTotalNonBillable);
 
                             if (window.BudgetEngine) {
-                                computedOverheadRate = BudgetEngine.calculateOverheadRate(totalOverhead, totalLineHours);
+                                computedOverheadRate = BudgetEngine.calculateOverheadRate(totalOverhead, lineBillableHours);
                             } else {
-                                // Fallback relative calculation if engine missing
-                                computedOverheadRate = totalLineHours > 0 ? (totalOverhead / totalLineHours) : 0;
+                                computedOverheadRate = lineBillableHours > 0 ? (totalOverhead / lineBillableHours) : 0;
                             }
 
                             line.derivedOverheadRate = computedOverheadRate;
 
-                            if (totalLineHours > 0) {
+                            if (lineBillableHours > 0) {
                                 rateDisplay = `<div style="margin-top:5px; font-size:0.8rem; color:var(--color-primary); font-weight:bold; background:var(--color-bg-subtle); padding:5px; border-radius:4px;">
                                 Linked Overhead Rate: $${computedOverheadRate.toFixed(2)}/hr
-                                <span style="font-weight:normal; color:#666;">(${linkedProj.name}: $${totalOverhead.toLocaleString()} / ${Math.round(totalLineHours)} hrs)</span>
+                                <span style="font-weight:normal; color:#666;">(${linkedProj.name}: $${Math.round(totalOverhead).toLocaleString()} / ${Math.round(lineBillableHours)} billable hrs)</span>
                             </div>`;
                             } else {
                                 rateDisplay = `<div style="margin-top:5px; font-size:0.8rem; color:red;">Add activities to calculate rate.</div>`;
