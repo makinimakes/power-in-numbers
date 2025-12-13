@@ -358,6 +358,7 @@
         // Auth Check
         // Auth Check
         (async () => {
+            await Store.init();
             const currentUser = await Store.checkSession();
             if (currentUser) {
                 document.getElementById('user-display').textContent = 'User: ' + currentUser;

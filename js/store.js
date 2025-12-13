@@ -12,6 +12,7 @@ const Store = {
      * Supabase handles session auto-refresh.
      */
     checkSession: async () => {
+        if (!window.supabaseClient) await Store.init();
         const { data: { session } } = await window.supabaseClient.auth.getSession();
         if (!session) {
             // Redirect if not on public pages
