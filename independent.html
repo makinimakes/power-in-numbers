@@ -1530,7 +1530,6 @@
                     <tr style="border-bottom: 2px solid #ddd; font-weight: bold; color: #555;">
                         <th style="padding: 8px;">Scenario</th>
                         <th style="padding: 8px;">Fixed Need</th>
-                        <th style="padding: 8px;">% Overhead</th>
                         <th style="padding: 8px; color: var(--primary-color);">Hourly Rate</th>
                         <th style="padding: 8px;">Weekly</th>
                         <th style="padding: 8px;">Monthly</th>
@@ -1548,7 +1547,6 @@
                 <tr style="${rowStyle}">
                     <td style="padding: 8px;">${sc.name}</td>
                     <td style="padding: 8px;">${Utils.formatCurrency(data.fixed)}</td>
-                    <td style="padding: 8px;">${data.percent.toFixed(1)}%</td>
                     <td style="padding: 8px; color: var(--primary-color); font-weight: bold;">${Utils.formatCurrency(data.hourly)}</td>
                     <td style="padding: 8px;">${Utils.formatCurrency(data.weekly)}</td>
                     <td style="padding: 8px;">${Utils.formatCurrency(data.monthly)}</td>
