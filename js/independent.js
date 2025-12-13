@@ -33,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 2. State Management
     let profile = {}; // Init empty, load in async init()
+    let overheadProjects = []; // Business Personalities
 
     // -------------------------------------------------------------------------
     // HELPERS & NORMALIZATION
@@ -178,9 +179,114 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // -------------------------------------------------------------------------
+    // BUSINESS PROFILE MANAGER (Overhead)
+    // -------------------------------------------------------------------------
+    const BusinessProfileManager = {
+        container: document.getElementById('overhead-profiles-container'),
+
+        render: () => {
+            if (!BusinessProfileManager.container) return;
+            BusinessProfileManager.container.innerHTML = '';
+
+            if (overheadProjects.length === 0) {
+                BusinessProfileManager.container.innerHTML = '<div style="font-style:italic; color:#666; font-size:0.9rem;">No business profiles yet. Create one to account for overhead.</div>';
+                return;
+            }
+
+            overheadProjects.forEach((proj, index) => {
+                const row = document.createElement('div');
+                row.className = 'ledger-row';
+                row.style.display = 'flex';
+                row.style.justifyContent = 'space-between';
+                row.style.alignItems = 'center';
+                row.style.marginBottom = '10px';
+                row.style.background = '#fff';
+                row.style.padding = '8px';
+                row.style.border = '1px solid #eee';
+
+                const totalExp = (proj.expenses || []).reduce((acc, item) => acc + (parseFloat(item.amount || 0)), 0);
+
+                row.innerHTML = `
+                    <div style="flex-grow:1;">
+                        <input type="text" value="${proj.name}" 
+                            onchange="BusinessProfileManager.update(${index}, 'name', this.value)"
+                            style="font-weight:bold; width:100%; border:none; background:transparent;">
+                        <div style="font-size:0.8rem; color:#666;">
+                            Total Overhead: <strong>$${totalExp.toLocaleString()}</strong> 
+                            <button onclick="BusinessProfileManager.editExpenses('${proj.id}')" style="text-decoration:underline; border:none; background:none; cursor:pointer; color:var(--color-primary);">Edit Expenses</button>
+                        </div>
+                    </div>
+                    <button onclick="BusinessProfileManager.remove(${index})" style="color:red; background:none; border:none; cursor:pointer;">&times;</button>
+                `;
+                BusinessProfileManager.container.appendChild(row);
+            });
+        },
+
+        create: async () => {
+            const name = prompt("Enter Business Name (e.g. Makini Makes):");
+            if (!name) return;
+            try {
+                const newProj = await Store.createOverheadProject(name);
+                if (newProj) {
+                    overheadProjects.push(newProj);
+                    BusinessProfileManager.render();
+                    renderLinesOfWork(); // Update dropdowns
+                }
+            } catch (e) { alert(e.message); }
+        },
+
+        update: async (index, field, value) => {
+            overheadProjects[index][field] = value;
+            try {
+                await Store.saveOverheadProject(overheadProjects[index]);
+            } catch (e) { console.error(e); }
+        },
+
+        remove: async (index) => {
+            if (!confirm("Delete this business profile?")) return;
+            // TODO: Delete from DB? Store relies on user owner_id.
+            // For now, no delete method in Store for Projects exposed yet.
+            // We can add a 'deleted' flag or actually delete.
+            // Assuming we just strip it from view for MVP or impl deleteProject in Store.
+            // "saveOverheadProject" updates data, doesn't delete row.
+            // Let's implement deleteProject later if needed, or assume Store.saveProject handles state?
+            // "saveOverheadProject" updates data, doesn't delete row.
+            alert("Deletion not fully supported in this draft. (Contact support to remove DB row)");
+        },
+
+        editExpenses: (id) => {
+            // Primitive Edit: Prompt for Total Overhead Override?
+            // User requested "en masse" list.
+            // We need a modal or section to edit the expenses of THIS project.
+            // We can temporarily swap the ExpenseManager to edit THIS project? No, confusing.
+            // Let's fallback to a prompt for TOTAL Amount for this MVP iteration?
+            // "These overhead personalities will not need to account for... separate phases... just non-wage expenses."
+
+            // Allow setting a single "Total Overhead" amount for simplicity first?
+            const proj = overheadProjects.find(p => p.id === id);
+            if (!proj) return;
+
+            // Simple approach: One Expense Item named "Annual Overhead"
+            let currentAmount = 0;
+            if (proj.expenses && proj.expenses.length > 0) {
+                currentAmount = proj.expenses[0].amount;
+            }
+
+            const newAmount = prompt(`Enter Total Annual Overhead for ${proj.name}:`, currentAmount);
+            if (newAmount !== null) {
+                const val = parseFloat(newAmount) || 0;
+                proj.expenses = [{ label: "Annual Overhead", amount: val, type: "Annual" }]; // Overwrite with single item
+                Store.saveOverheadProject(proj);
+                BusinessProfileManager.render();
+                calculateAndDisplay();
+            }
+        }
+    };
+    window.BusinessProfileManager = BusinessProfileManager;
 
     // -------------------------------------------------------------------------
-    // LINE OF WORK MANAGER
+    // LINE ITEMS (Work)
     // -------------------------------------------------------------------------
     const LineManager = {
         container: document.getElementById('lines-of-work-container'),
@@ -208,6 +314,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 header.style.borderBottom = '1px dotted var(--color-border)';
                 header.style.paddingBottom = 'var(--spacing-xs)';
 
+                // Build options for overhead projects dropdown
+                const overheadOptions = overheadProjects.map(proj =>
+                    `<option value="${proj.id}" ${line.overheadProjectId === proj.id ? 'selected' : ''}>${proj.name}</option>`
+                ).join('');
+
                 header.innerHTML = `
                     <div style="display:flex; gap: var(--spacing-sm); width: 100%;">
                         <div style="flex-grow:1;">
@@ -230,6 +341,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     <button onclick="removeLine(${lineIndex})" style="color:red; background:none; border:none; cursor:pointer; font-size:1.2rem; line-height:1;">&times;</button>
                 `;
                 card.appendChild(header);
+
+                // Overhead Project Selector
+                const overheadSelectorDiv = document.createElement('div');
+                overheadSelectorDiv.style.marginBottom = 'var(--spacing-sm)';
+                overheadSelectorDiv.innerHTML = `
+                    <label style="font-size:0.6rem;">Associated Business Profile (Overhead)</label>
+                    <select onchange="updateLine(${lineIndex}, 'overheadProjectId', this.value)">
+                        <option value="">None</option>
+                        ${overheadOptions}
+                    </select>
+                `;
+                card.appendChild(overheadSelectorDiv);
 
                 // Activities Container
                 const actsContainer = document.createElement('div');
@@ -321,9 +444,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 id: crypto.randomUUID(),
                 label: 'New Line of Work',
                 duration: { value: 52, unit: 'Weeks' },
-                activities: []
+                activities: [],
+                overheadProjectId: '' // New field
             });
-            LineManager.render();
+            renderLinesOfWork();
             calculateAndDisplay();
             Store.saveIndependentProfile(profile);
         },
@@ -331,7 +455,7 @@ document.addEventListener('DOMContentLoaded', () => {
         removeLine: (index) => {
             if (confirm('Delete this line of work?')) {
                 profile.linesOfWork.splice(index, 1);
-                LineManager.render();
+                renderLinesOfWork();
                 calculateAndDisplay();
                 Store.saveIndependentProfile(profile);
             }
@@ -372,7 +496,7 @@ document.addEventListener('DOMContentLoaded', () => {
             profile.linesOfWork[index].duration[subField] = newVal;
             calculateAndDisplay();
             Store.saveIndependentProfile(profile);
-            if (subField === 'unit') LineManager.render();
+            if (subField === 'unit') renderLinesOfWork();
         },
 
         confirmOverride: () => {
@@ -381,7 +505,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 profile.linesOfWork[index].duration[subField] = value;
                 calculateAndDisplay();
                 Store.saveIndependentProfile(profile);
-                if (subField === 'unit') LineManager.render();
+                if (subField === 'unit') renderLinesOfWork();
                 LineManager.pendingOverride = null;
             }
             document.getElementById('modal-override').close();
@@ -391,7 +515,7 @@ document.addEventListener('DOMContentLoaded', () => {
             LineManager.pendingOverride = null;
             document.getElementById('modal-override').close();
             // Revert UI to previous state by re-rendering
-            LineManager.render();
+            renderLinesOfWork();
         },
 
         // Activity Methods
@@ -402,14 +526,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 unit: 'Hours',
                 frequency: 'Per Week'
             });
-            LineManager.render();
+            renderLinesOfWork();
             // Dont save yet, wait for edits
             Store.saveIndependentProfile(profile);
         },
 
         removeActivity: (lineIndex, actIndex) => {
             profile.linesOfWork[lineIndex].activities.splice(actIndex, 1);
-            LineManager.render();
+            renderLinesOfWork();
             calculateAndDisplay();
             Store.saveIndependentProfile(profile);
         },
@@ -421,6 +545,9 @@ document.addEventListener('DOMContentLoaded', () => {
             Store.saveIndependentProfile(profile);
         }
     };
+
+    // Rename LineManager.render to renderLinesOfWork
+    const renderLinesOfWork = LineManager.render;
 
     // GLOBAL EXPORTS for Inline Events
     window.updateLine = LineManager.updateLine;
@@ -445,6 +572,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-add-line-of-work').onclick = LineManager.addLine;
     document.getElementById('btn-add-expense').onclick = ExpenseManager.addExpense;
     document.getElementById('btn-add-income').onclick = IncomeManager.addIncome;
+    document.getElementById('btn-add-overhead-profile').onclick = BusinessProfileManager.create;
+
 
     // -------------------------------------------------------------------------
     // CALCULATIONS & UI UPDATES
@@ -502,6 +631,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 fixedSum += amount * freq;
             } else if (item.type === 'Percent') {
                 percentSum += amount;
+            }
+        });
+
+        // Add Overhead Project Expenses
+        overheadProjects.forEach(proj => {
+            if (proj.expenses) {
+                proj.expenses.forEach(item => {
+                    const amount = parseFloat(item.amount) || 0;
+                    if (item.type === 'Annual') { // Assuming overhead project expenses are annual
+                        fixedSum += amount;
+                    }
+                });
             }
         });
 
@@ -763,52 +904,28 @@ document.addEventListener('DOMContentLoaded', () => {
         modal.style.display = 'flex';
     };
 
+    // Helper to render global inputs and attach listeners
+    function renderInputs() {
+        // Schedule Inputs
+        if (!profile.schedule) profile.schedule = {};
+        inputs.weeks.value = profile.schedule.weeks || 0;
+        inputs.days.value = profile.schedule.days || 0;
+        inputs.hours.value = profile.schedule.hours || 0;
 
-    // 3. Initialization
-    async function init() {
-        profile = await Store.getIndependentProfile(); // Reload with latest
+        // Tax Rate Input
+        if (!profile.expenses) profile.expenses = {};
+        inputs.taxRate.value = profile.expenses.taxRate !== undefined ? profile.expenses.taxRate : 30; // Default tax rate
 
-        // 2. State Management (Re-check defaults after async load)
-        if (!profile.linesOfWork) profile.linesOfWork = [];
-        if (!profile.expenses.items) {
-            profile.expenses = {
-                taxRate: 30,
-                items: BASE_EXPENSE_CATEGORIES.map(item => ({
-                    ...item,
-                    id: crypto.randomUUID(),
-                    amount: 0
-                }))
-            };
-        }
-
-        if (!profile.unearnedIncome || !profile.unearnedIncome.items) {
-            profile.unearnedIncome = { items: [] }; // Minimal default, full default is large block above
-            // Actually, merge defaults logic handles this in Store, but let's keep robust
-        }
-
-        if (profile.schedule) {
-            inputs.weeks.value = profile.schedule.weeks;
-            inputs.days.value = profile.schedule.days;
-            inputs.hours.value = profile.schedule.hours;
-        }
-
-        if (profile.expenses.taxRate !== undefined) {
-            inputs.taxRate.value = profile.expenses.taxRate;
-        }
-
+        // Current Net Income Input
         const currentNetInput = document.getElementById('in-current-net-income');
         if (currentNetInput) {
             currentNetInput.value = profile.currentNetIncome || 0;
             currentNetInput.addEventListener('input', (e) => {
                 profile.currentNetIncome = parseFloat(e.target.value) || 0;
                 Store.saveIndependentProfile(profile);
+                calculateAndDisplay();
             });
         }
-
-        LineManager.render();
-        ExpenseManager.render();
-        IncomeManager.render();
-        calculateAndDisplay();
 
         // Listeners for Global Inputs
         ['weeks', 'days', 'hours'].forEach(key => {
@@ -816,6 +933,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 profile.schedule[key] = parseFloat(e.target.value);
                 Store.saveIndependentProfile(profile);
                 calculateAndDisplay();
+                renderLinesOfWork(); // Re-render lines of work to update activity hours
             });
         });
 
@@ -826,5 +944,70 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    init();
-});
+    // 3. Initialization
+    async function init() {
+        // 1. Load Profile
+        profile = await Store.getIndependentProfile();
+
+        // 2. Load Overhead Projects
+        overheadProjects = await Store.getOverheadProjects();
+
+        // 3. Defaults
+        if (!profile.linesOfWork) profile.linesOfWork = [];
+        if (!profile.expenses) {
+            profile.expenses = {
+                taxRate: 30,
+                items: BASE_EXPENSE_CATEGORIES.map(item => ({
+                    ...item,
+                    id: crypto.randomUUID(),
+                    amount: 0
+                }))
+            };
+
+            if (!profile.unearnedIncome || !profile.unearnedIncome.items) {
+                profile.unearnedIncome = { items: [] }; // Minimal default, full default is large block above
+                // Actually, merge defaults logic handles this in Store, but let's keep robust
+            }
+
+            if (profile.schedule) {
+                inputs.weeks.value = profile.schedule.weeks;
+                inputs.days.value = profile.schedule.days;
+                inputs.hours.value = profile.schedule.hours;
+            }
+
+            if (profile.expenses.taxRate !== undefined) {
+                inputs.taxRate.value = profile.expenses.taxRate;
+            }
+
+            const currentNetInput = document.getElementById('in-current-net-income');
+            if (currentNetInput) {
+                currentNetInput.value = profile.currentNetIncome || 0;
+                currentNetInput.addEventListener('input', (e) => {
+                    profile.currentNetIncome = parseFloat(e.target.value) || 0;
+                    Store.saveIndependentProfile(profile);
+                });
+            }
+
+            LineManager.render();
+            ExpenseManager.render();
+            IncomeManager.render();
+            calculateAndDisplay();
+
+            // Listeners for Global Inputs
+            ['weeks', 'days', 'hours'].forEach(key => {
+                inputs[key].addEventListener('input', (e) => {
+                    profile.schedule[key] = parseFloat(e.target.value);
+                    Store.saveIndependentProfile(profile);
+                    calculateAndDisplay();
+                });
+            });
+
+            inputs.taxRate.addEventListener('input', (e) => {
+                profile.expenses.taxRate = parseFloat(e.target.value);
+                Store.saveIndependentProfile(profile);
+                calculateAndDisplay();
+            });
+        }
+
+        init();
+    });

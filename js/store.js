@@ -280,6 +280,68 @@ const Store = {
         return { ...data.data, id: data.id, name: data.name, owner_id: data.owner_id };
     },
 
+    /**
+     * Overhead Profiles Management
+     * Stored in 'projects' table with type='overhead'
+     */
+    getOverheadProjects: async () => {
+        const user = await Store.getCurrentUser();
+        if (!user) return [];
+
+        const { data, error } = await window.supabaseClient
+            .from('projects')
+            .select('*')
+            .eq('owner_id', user.id);
+
+        if (error) {
+            console.error("Error fetching overhead profiles:", error);
+            return [];
+        }
+
+        // Filter for overhead type in data json
+        return data.filter(p => p.data && p.data.type === 'overhead')
+            .map(p => ({ ...p.data, id: p.id, name: p.name }));
+    },
+
+    createOverheadProject: async (name) => {
+        const user = await Store.getCurrentUser();
+        if (!user) return null;
+
+        const { data, error } = await window.supabaseClient
+            .from('projects')
+            .insert([{
+                owner_id: user.id,
+                name: name,
+                data: {
+                    type: 'overhead',
+                    expenses: []
+                }
+            }])
+            .select()
+            .single();
+
+        if (error) throw error;
+        return { ...data.data, id: data.id, name: data.name };
+    },
+
+    saveOverheadProject: async (project) => {
+        // Strip out ID/name from data blob if passing full object, preserve type
+        const payload = {
+            type: 'overhead',
+            expenses: project.expenses || []
+        };
+
+        const { error } = await window.supabaseClient
+            .from('projects')
+            .update({
+                name: project.name,
+                data: payload
+            })
+            .eq('id', project.id);
+
+        if (error) throw error;
+    },
+
     saveProject: async (project) => {
         const user = await Store.getCurrentUser();
         if (!user) return;
