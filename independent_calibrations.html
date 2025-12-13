@@ -477,8 +477,11 @@
             // OR re-calculate. The independent page calculates them and puts them in Store.profile?
             // Let's grab from the DOM outputs since they are right there.
 
-            const nowRateText = document.getElementById('out-now-hourly').textContent.replace(/[^0-9.]/g, '');
-            const goalRateText = document.getElementById('out-goal-hourly').textContent.replace(/[^0-9.]/g, '');
+            const elNow = document.getElementById('out-required-rate-now');
+            const elGoal = document.getElementById('out-required-rate-goal');
+
+            const nowRateText = elNow ? elNow.textContent.replace(/[^0-9.]/g, '') : '0';
+            const goalRateText = elGoal ? elGoal.textContent.replace(/[^0-9.]/g, '') : '0';
 
             cachedPersonalRateNow = parseFloat(nowRateText) || 0;
             cachedPersonalRateGoal = parseFloat(goalRateText) || 0;
