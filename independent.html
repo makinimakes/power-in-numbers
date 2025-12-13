@@ -54,155 +54,156 @@
             // For now, let's just add the UI elements and rely on the bottom script check.
         </script>
 
-        <div class="grid-2">
+        <div class="grid-layout-balanced">
             <!-- Left Column: The Ledger Inputs -->
-            <div style="border-right: var(--border-std);">
+            <div class="ledger-sheet">
 
                 <!-- Section 1: Time Reclaimed (Schedule) -->
-                <div class="grid-header">
-                    <div style="display:flex; justify-content:space-between; width:100%; align-items:baseline;">
-                        <span style="font-weight:700; font-size:1rem;">1. Time Reclaimed</span>
+                <div class="ledger-section">
+                    <div class="ledger-section-header">
+                        <span class="ledger-section-title">1. Time Reclaimed</span>
                     </div>
-                </div>
 
-                <!-- Schedule Inputs -->
-                <div
-                    style="display: flex; gap: 10px; margin-bottom: 20px; padding: var(--spacing-sm); background: var(--color-bg-subtle);">
-                    <div style="flex: 1;">
-                        <label style="font-size: 0.7rem; color: var(--color-text-muted);">Weeks/Year</label>
-                        <input type="number" id="in-weeks-per-year" placeholder="50" style="width: 100%;">
+                    <!-- Schedule Inputs -->
+                    <div class="card-panel flex-gap">
+                        <div>
+                            <label class="input-label-sm">Weeks/Year</label>
+                            <input type="number" id="in-weeks-per-year" placeholder="50">
+                        </div>
+                        <div>
+                            <label class="input-label-sm">Days/Week</label>
+                            <input type="number" id="in-days-per-week" placeholder="5">
+                        </div>
+                        <div>
+                            <label class="input-label-sm">Hours/Day</label>
+                            <input type="number" id="in-hours-per-day" placeholder="8">
+                        </div>
                     </div>
-                    <div style="flex: 1;">
-                        <label style="font-size: 0.7rem; color: var(--color-text-muted);">Days/Week</label>
-                        <input type="number" id="in-days-per-week" placeholder="5" style="width: 100%;">
-                    </div>
-                    <div style="flex: 1;">
-                        <label style="font-size: 0.7rem; color: var(--color-text-muted);">Hours/Day</label>
-                        <input type="number" id="in-hours-per-day" placeholder="8" style="width: 100%;">
-                    </div>
-                </div>
 
-                <!-- Lines of Work Calculator -->
-                <div
-                    style="margin-top: var(--spacing-sm); border-top: 1px dotted var(--color-border); padding-top: var(--spacing-sm);">
+                    <!-- Lines of Work Calculator -->
                     <div
-                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-xs);">
-                        <button class="toggle-btn" onclick="toggleSection('lines-of-work-container', this)">
-                            <span class="toggle-icon">▼</span>
-                            <label
-                                style="margin:0; font-size: 0.7rem; text-transform:uppercase; letter-spacing:1px; cursor:pointer;">Lines
-                                of Work</label>
-                        </button>
-                        <button id="btn-add-line-of-work"
-                            style="font-size: 0.7rem; padding: 2px 6px; cursor: pointer;">+
-                            New Line</button>
+                        style="margin-top: var(--spacing-sm); border-top: 1px dotted var(--color-border); padding-top: var(--spacing-sm);">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-xs);">
+                            <button class="toggle-btn" onclick="toggleSection('lines-of-work-container', this)">
+                                <span class="toggle-icon">▼</span>
+                                <span
+                                    style="font-size: 0.8rem; font-weight:700; text-transform:uppercase; letter-spacing:1px;">Lines
+                                    of Work</span>
+                            </button>
+                            <button id="btn-add-line-of-work" class="btn" style="padding: 2px 8px; font-size: 0.7rem;">+
+                                New Line</button>
+                        </div>
+                        <div id="lines-of-work-container">
+                            <!-- JS injected Lines of Work cards -->
+                        </div>
                     </div>
-                    <div id="lines-of-work-container">
-                        <!-- JS injected Lines of Work cards -->
-                    </div>
-                </div>
 
-                <!-- Hours Summary moved to Right Panel -->
+                    <!-- Hours Summary moved to Right Panel -->
 
-                <!-- Tax Rate Input (Retained) -->
+                    <!-- Tax Rate Input (Retained) -->
 
-                <div style="padding: var(--spacing-sm); border-bottom: var(--border-std);">
-                    <div class="ledger-row" style="flex-wrap: wrap;">
-                        <label>Estimated Tax Rate (%)</label>
-                        <div style="width: 80px;">
-                            <input type="number" id="in-tax-rate" min="0" max="100" placeholder="30">
+                    <!-- Tax Rate Input -->
+                    <div class="card-panel">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <label class="input-label-sm">Estimated Tax Rate (%)</label>
+                            <div style="width: 80px;">
+                                <input type="number" id="in-tax-rate" min="0" max="100" placeholder="30"
+                                    class="text-right">
+                            </div>
                         </div>
                         <div
-                            style="width: 100%; font-size: 0.7rem; color: var(--color-text-muted); margin-top: 5px; font-style: italic;">
+                            style="font-size: 0.7rem; color: var(--color-text-muted); margin-top: 5px; font-style: italic;">
                             We suggest keeping this at 30% for self-employed folks
                         </div>
                     </div>
                 </div>
 
 
-
                 <!-- Section 2: Personal Expenses -->
-                <div class="section-header"
-                    style="margin-top: var(--spacing-md); display:flex; justify-content:space-between; align-items:center;">
-                    <button class="toggle-btn" onclick="toggleSection('expenses-container', this)">
-                        <span class="toggle-icon">▼</span>
-                        <span style="font-size: 0.9rem; font-weight:700;">2. Personal Survival Expenses</span>
-                    </button>
-                    <button id="btn-add-expense" style="font-size: 0.7rem; padding: 2px 6px; cursor: pointer;">+ Add
-                        Expense</button>
-                </div>
-                <div id="expenses-container" style="padding: var(--spacing-sm);">
-                    <!-- JS injected Expense Rows -->
+                <div class="ledger-section">
+                    <div class="ledger-section-header">
+                        <button class="toggle-btn" onclick="toggleSection('expenses-container', this)">
+                            <span class="toggle-icon">▼</span>
+                            <span style="font-weight:700;">2. Personal Survival Expenses</span>
+                        </button>
+                        <button id="btn-add-expense" class="btn" style="padding: 2px 8px; font-size: 0.7rem;">+ Add
+                            Expense</button>
+                    </div>
+                    <div id="expenses-container" style="padding-left: 10px;">
+                        <!-- JS injected Expense Rows -->
+                    </div>
                 </div>
 
                 <!-- Business Overhead Profiles -->
-                <div class="section-header"
-                    style="margin-top: var(--spacing-md); display:flex; justify-content:space-between; align-items:center;">
-                    <button class="toggle-btn" onclick="toggleSection('overhead-profiles-container', this)">
-                        <span class="toggle-icon">▼</span>
-                        <span style="font-size: 0.9rem; font-weight:700;">Business Infrastructures</span>
-                    </button>
-                    <button class="btn" id="btn-add-overhead-profile" style="padding: 2px 8px; font-size: 0.7rem;">+
-                        Create
-                        Profile</button>
+                <div class="ledger-section">
+                    <div class="ledger-section-header">
+                        <button class="toggle-btn" onclick="toggleSection('overhead-profiles-container', this)">
+                            <span class="toggle-icon">▼</span>
+                            <span style="font-weight:700;">Business Infrastructures</span>
+                        </button>
+                        <button class="btn" id="btn-add-overhead-profile" style="padding: 2px 8px; font-size: 0.7rem;">+
+                            Create Profile</button>
+                    </div>
+                    <div id="overhead-profiles-container" style="padding-left: 10px;">
+                        <!-- JS Injected Overhead Profiles -->
+                        <div style="font-style:italic; color:#666; font-size:0.9rem;">No business profiles yet. Create
+                            one
+                            to
+                            account for overhead.</div>
+                    </div>
                 </div>
-                <div id="overhead-profiles-container" style="padding: var(--spacing-sm);">
-                    <!-- JS Injected Overhead Profiles -->
-                    <div style="font-style:italic; color:#666; font-size:0.9rem;">No business profiles yet. Create one
-                        to
-                        account for overhead.</div>
-                </div>
-
-
 
                 <!-- Section 3: Unearned Income -->
-                <div class="section-header"
-                    style="margin-top: var(--spacing-md); display:flex; justify-content:space-between; align-items:center;">
-                    <button class="toggle-btn" onclick="toggleSection('unearned-income-container', this)">
-                        <span class="toggle-icon">▼</span>
-                        <span style="font-size: 0.9rem; font-weight:700;">3. Current Unearned Income Sources</span>
-                    </button>
-                    <button id="btn-add-income" style="font-size: 0.7rem; padding: 2px 6px; cursor: pointer;">+ Add
-                        Income Source</button>
-                </div>
+                <div class="ledger-section">
+                    <div class="ledger-section-header">
+                        <button class="toggle-btn" onclick="toggleSection('unearned-income-container', this)">
+                            <span class="toggle-icon">▼</span>
+                            <span style="font-weight:700;">3. Current Unearned Income Sources</span>
+                        </button>
+                        <button id="btn-add-income" class="btn" style="padding: 2px 8px; font-size: 0.7rem;">+ Add
+                            Source</button>
+                    </div>
 
-                <div id="unearned-income-container" style="padding: var(--spacing-sm);">
-                    <!-- JS Injected Income Rows -->
-                </div>
-                <!-- Total Unearned Footer -->
-                <div
-                    style="padding: var(--spacing-sm); background: var(--color-bg-subtle); border-top: var(--border-std); display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-weight:bold; font-size:0.8rem; text-transform:uppercase;">Total Annual Unearned
-                        Income</span>
-                    <span id="out-total-unearned-income" style="font-weight:bold; font-family:monospace;">$0</span>
+                    <div id="unearned-income-container" style="padding-left: 10px;">
+                        <!-- JS Injected Income Rows -->
+                    </div>
+                    <!-- Total Unearned Footer -->
+                    <div
+                        style="padding: 10px; background: var(--color-bg-subtle); display:flex; justify-content:space-between; align-items:center; margin-top:10px; border-radius:4px;">
+                        <span class="input-label-sm">Total Unearned Income</span>
+                        <span id="out-total-unearned-income" style="font-weight:bold; font-family:monospace;">$0</span>
+                    </div>
                 </div>
 
                 <!-- Section 4: Current Annual Income (Net) -->
-                <div class="section-header"
-                    style="margin-top: var(--spacing-md); display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-size: 0.9rem;">4. Current Annual Income (Net)</span>
-                </div>
-
-                <div style="padding: var(--spacing-sm); border-bottom: var(--border-std);">
-                    <div class="ledger-row">
-                        <label>Current Net Income</label>
-                        <div style="width: 120px;">
-                            <input type="number" id="in-current-net-income" placeholder="0">
-                        </div>
+                <div class="ledger-section">
+                    <div class="ledger-section-header">
+                        <span class="ledger-section-title">4. Current Annual Income (Net)</span>
                     </div>
-                    <div class="ledger-row" style="margin-top:5px; border-bottom:none;">
-                        <span class="text-muted" style="font-size:0.8rem; font-weight:bold;">Current Gross Income</span>
-                        <span>
-                            <strong id="out-current-gross">$0</strong>
-                            <button onclick="window.viewIndependentLog('currentGross')"
-                                style="background:none; border:none; cursor:pointer; opacity:0.6; font-size:0.8rem;">ℹ️</button>
-                        </span>
+
+                    <div class="card-panel">
+                        <div
+                            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                            <label class="input-label-sm">Current Net Income</label>
+                            <div style="width: 140px;">
+                                <input type="number" id="in-current-net-income" placeholder="0" class="text-right">
+                            </div>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span class="text-muted input-label-sm">Implied Gross Income</span>
+                            <span>
+                                <strong id="out-current-gross">$0</strong>
+                                <button onclick="window.viewIndependentLog('currentGross')"
+                                    style="background:none; border:none; cursor:pointer; opacity:0.6; font-size:0.8rem;">ℹ️</button>
+                            </span>
+                        </div>
                     </div>
                 </div>
             </div> <!-- End Left Column -->
 
             <!-- Right Column: Results & Navigation -->
-            <div style="padding-left: var(--spacing-md);">
+            <div class="ledger-results" style="padding-left: var(--spacing-md); border-left: 1px solid #eee;">
 
                 <!-- Results Dock -->
                 <aside class="result-dock">
@@ -219,24 +220,32 @@
                                 <td
                                     style="text-align:right; font-weight:bold; color: var(--color-text-main); font-size: 1.1rem;">
                                     <span id="out-now-hourly">$0</span>
+                                    <button onclick="window.viewIndependentLog('nowHourly')"
+                                        style="background:none; border:none; cursor:pointer; opacity:0.6; font-size:0.8rem;">ℹ️</button>
                                 </td>
                             </tr>
                             <tr style="border-bottom: 1px dashed #eee;">
                                 <td style="padding: 8px 0; color: var(--color-text-muted);">Daily</td>
                                 <td style="text-align:right; font-weight:bold;">
                                     <span id="out-now-daily">$0</span>
+                                    <button onclick="window.viewIndependentLog('nowDaily')"
+                                        style="background:none; border:none; cursor:pointer; opacity:0.6; font-size:0.8rem;">ℹ️</button>
                                 </td>
                             </tr>
                             <tr style="border-bottom: 1px dashed #eee;">
                                 <td style="padding: 8px 0; color: var(--color-text-muted);">Weekly</td>
                                 <td style="text-align:right; font-weight:bold;">
                                     <span id="out-now-weekly">$0</span>
+                                    <button onclick="window.viewIndependentLog('nowWeekly')"
+                                        style="background:none; border:none; cursor:pointer; opacity:0.6; font-size:0.8rem;">ℹ️</button>
                                 </td>
                             </tr>
                             <tr>
                                 <td style="padding: 8px 0; color: var(--color-text-muted);">Monthly</td>
                                 <td style="text-align:right; font-weight:bold;">
                                     <span id="out-now-monthly">$0</span>
+                                    <button onclick="window.viewIndependentLog('nowMonthly')"
+                                        style="background:none; border:none; cursor:pointer; opacity:0.6; font-size:0.8rem;">ℹ️</button>
                                 </td>
                             </tr>
                         </table>
@@ -254,24 +263,32 @@
                                 <td
                                     style="text-align:right; font-weight:bold; color: var(--color-accent-primary); font-size: 1.1rem;">
                                     <span id="out-goal-hourly">$0</span>
+                                    <button onclick="window.viewIndependentLog('goalHourly')"
+                                        style="background:none; border:none; cursor:pointer; opacity:0.6; font-size:0.8rem;">ℹ️</button>
                                 </td>
                             </tr>
                             <tr style="border-bottom: 1px dashed #eee;">
                                 <td style="padding: 8px 0; color: var(--color-text-muted);">Daily</td>
                                 <td style="text-align:right; font-weight:bold;">
                                     <span id="out-goal-daily">$0</span>
+                                    <button onclick="window.viewIndependentLog('goalDaily')"
+                                        style="background:none; border:none; cursor:pointer; opacity:0.6; font-size:0.8rem;">ℹ️</button>
                                 </td>
                             </tr>
                             <tr style="border-bottom: 1px dashed #eee;">
                                 <td style="padding: 8px 0; color: var(--color-text-muted);">Weekly</td>
                                 <td style="text-align:right; font-weight:bold;">
                                     <span id="out-goal-weekly">$0</span>
+                                    <button onclick="window.viewIndependentLog('goalWeekly')"
+                                        style="background:none; border:none; cursor:pointer; opacity:0.6; font-size:0.8rem;">ℹ️</button>
                                 </td>
                             </tr>
                             <tr>
                                 <td style="padding: 8px 0; color: var(--color-text-muted);">Monthly</td>
                                 <td style="text-align:right; font-weight:bold;">
                                     <span id="out-goal-monthly">$0</span>
+                                    <button onclick="window.viewIndependentLog('goalMonthly')"
+                                        style="background:none; border:none; cursor:pointer; opacity:0.6; font-size:0.8rem;">ℹ️</button>
                                 </td>
                             </tr>
                         </table>
@@ -282,12 +299,20 @@
                         style="margin-bottom: var(--spacing-lg); background: var(--color-bg-subtle); padding: var(--spacing-sm); border-radius: 4px;">
                         <div style="margin-bottom: 15px;">
                             <div class="result-label" style="font-size:0.8rem;">Goal Annual Net</div>
-                            <div class="result-value" id="out-goal-net" style="font-size:1.2rem;">$0</div>
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <div class="result-value" id="out-goal-net" style="font-size:1.2rem;">$0</div>
+                                <button onclick="window.viewIndependentLog('goalNet')"
+                                    style="background:none; border:none; cursor:pointer; opacity:0.6; font-size:0.8rem;">ℹ️</button>
+                            </div>
                         </div>
                         <div>
                             <div class="result-label" style="font-size:0.8rem;">Goal Annual Gross</div>
-                            <div class="result-value" id="out-goal-gross"
-                                style="color: var(--color-accent-primary); font-size:1.4rem;">$0</div>
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <div class="result-value" id="out-goal-gross"
+                                    style="color: var(--color-accent-primary); font-size:1.4rem;">$0</div>
+                                <button onclick="window.viewIndependentLog('goalGross')"
+                                    style="background:none; border:none; cursor:pointer; opacity:0.6; font-size:0.8rem;">ℹ️</button>
+                            </div>
                         </div>
                     </div>
 
@@ -437,7 +462,8 @@
 
                 <div
                     style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--color-border); padding-top:15px;">
-                    <div style="font-size:0.9rem;">Total Annual Overhead: <strong id="modal-biz-total">$0</strong></div>
+                    <div style="font-size:0.9rem;">Total Annual Overhead: <strong id="modal-biz-total">$0</strong>
+                    </div>
                     <div style="display:flex; gap:10px;">
                         <button onclick="document.getElementById('modal-business-expenses').close()"
                             style="padding:8px 16px; border:1px solid var(--color-border); background:none; cursor:pointer;">Cancel</button>
