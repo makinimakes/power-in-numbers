@@ -1,3 +1,5 @@
+console.log("Loading Spectrum Script...");
+alert("Spectrum Script Loaded vHotfix");
 
 /**
  * RATE SPECTRUM MODAL (Paired View)

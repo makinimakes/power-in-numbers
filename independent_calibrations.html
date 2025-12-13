@@ -350,10 +350,16 @@
         </form>
     </dialog>
 
-    <script src="js/utils.js"></script>
-    <script src="js/supabase_client.js"></script>
-    <script src="js/store.js"></script>
-    <script src="js/calibrations_spectrum.js"></script>
+    <script>
+        window.onerror = function (msg, url, lineNo, columnNo, error) {
+            alert('Global Error: ' + msg + '\nURL: ' + url + '\nLine: ' + lineNo);
+            return false;
+        };
+    </script>
+    <script src="js/utils.js?v=hotfix5"></script>
+    <script src="js/supabase_client.js?v=hotfix5"></script>
+    <script src="js/store.js?v=hotfix5"></script>
+    <script src="js/calibrations_spectrum.js?v=hotfix5"></script>
     <script>
         // Auth Check
         // Auth Check
