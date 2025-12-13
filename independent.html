@@ -34,515 +34,504 @@
 </head>
 
 <body>
-    <div id="main-container" class="grid-container">
-        <a href="profile.html" id="user-display"
-            style="display:block; font-size:0.8rem; font-weight:bold; margin-top:5px; text-decoration:none; color:inherit;">
-        </a>
-    </div>
-    </div>
-    </div>
+    <div class="container">
+        <header
+            style="padding: var(--spacing-sm) 0; border-bottom: var(--border-std); display:flex; justify-content:space-between; align-items:center; margin-bottom: var(--spacing-md);">
+            <a href="index.html"
+                style="text-decoration:none; color:inherit; font-weight:bold; letter-spacing: -0.5px; font-size:1.1rem;">Power
+                in Numbers</a>
+            <a href="profile.html" id="user-display"
+                style="font-size:0.8rem; text-decoration:none; color:var(--color-text-muted);">Guest</a>
+        </header>
 
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <p>This is your logic map. Define how your needs translate into your rates.</p>
-    </div>
-    <script>
-        // Inline session check to prevent flash of content
-        // However, Store.js needs to be loaded first.
-        // We will rely on the script tag at bottom check, or move script up.
-        // For now, let's just add the UI elements and rely on the bottom script check.
-    </script>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <p>This is your logic map. Define how your needs translate into your rates.</p>
+        </div>
+        <script>
+            // Inline session check to prevent flash of content
+            // However, Store.js needs to be loaded first.
+            // We will rely on the script tag at bottom check, or move script up.
+            // For now, let's just add the UI elements and rely on the bottom script check.
+        </script>
 
-    <div class="grid-2">
-        <!-- Left Column: The Ledger Inputs -->
-        <div style="border-right: var(--border-std);">
+        <div class="grid-2">
+            <!-- Left Column: The Ledger Inputs -->
+            <div style="border-right: var(--border-std);">
 
-            <!-- Section 1: Time Reclaimed (Schedule) -->
-            <div class="grid-header">
-                <div style="display:flex; justify-content:space-between; width:100%; align-items:baseline;">
-                    <span style="font-weight:700; font-size:1rem;">1. Time Reclaimed</span>
-                </div>
-            </div>
-
-            <!-- Schedule Inputs -->
-            <div
-                style="display: flex; gap: 10px; margin-bottom: 20px; padding: var(--spacing-sm); background: var(--color-bg-subtle);">
-                <div style="flex: 1;">
-                    <label style="font-size: 0.7rem; color: var(--color-text-muted);">Weeks/Year</label>
-                    <input type="number" id="in-weeks-per-year" placeholder="50" style="width: 100%;">
-                </div>
-                <div style="flex: 1;">
-                    <label style="font-size: 0.7rem; color: var(--color-text-muted);">Days/Week</label>
-                    <input type="number" id="in-days-per-week" placeholder="5" style="width: 100%;">
-                </div>
-                <div style="flex: 1;">
-                    <label style="font-size: 0.7rem; color: var(--color-text-muted);">Hours/Day</label>
-                    <input type="number" id="in-hours-per-day" placeholder="8" style="width: 100%;">
-                </div>
-            </div>
-
-            <!-- Lines of Work Calculator -->
-            <div
-                style="margin-top: var(--spacing-sm); border-top: 1px dotted var(--color-border); padding-top: var(--spacing-sm);">
-                <div
-                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-xs);">
-                    <button class="toggle-btn" onclick="toggleSection('lines-of-work-container', this)">
-                        <span class="toggle-icon">▼</span>
-                        <label
-                            style="margin:0; font-size: 0.7rem; text-transform:uppercase; letter-spacing:1px; cursor:pointer;">Lines
-                            of Work</label>
-                    </button>
-                    <button id="btn-add-line-of-work" style="font-size: 0.7rem; padding: 2px 6px; cursor: pointer;">+
-                        New Line</button>
-                </div>
-                <div id="lines-of-work-container">
-                    <!-- JS injected Lines of Work cards -->
-                </div>
-            </div>
-
-            <!-- Hours Summary moved to Right Panel -->
-
-            <!-- Tax Rate Input (Retained) -->
-
-            <div style="padding: var(--spacing-sm); border-bottom: var(--border-std);">
-                <div class="ledger-row" style="flex-wrap: wrap;">
-                    <label>Estimated Tax Rate (%)</label>
-                    <div style="width: 80px;">
-                        <input type="number" id="in-tax-rate" min="0" max="100" placeholder="30">
+                <!-- Section 1: Time Reclaimed (Schedule) -->
+                <div class="grid-header">
+                    <div style="display:flex; justify-content:space-between; width:100%; align-items:baseline;">
+                        <span style="font-weight:700; font-size:1rem;">1. Time Reclaimed</span>
                     </div>
+                </div>
+
+                <!-- Schedule Inputs -->
+                <div
+                    style="display: flex; gap: 10px; margin-bottom: 20px; padding: var(--spacing-sm); background: var(--color-bg-subtle);">
+                    <div style="flex: 1;">
+                        <label style="font-size: 0.7rem; color: var(--color-text-muted);">Weeks/Year</label>
+                        <input type="number" id="in-weeks-per-year" placeholder="50" style="width: 100%;">
+                    </div>
+                    <div style="flex: 1;">
+                        <label style="font-size: 0.7rem; color: var(--color-text-muted);">Days/Week</label>
+                        <input type="number" id="in-days-per-week" placeholder="5" style="width: 100%;">
+                    </div>
+                    <div style="flex: 1;">
+                        <label style="font-size: 0.7rem; color: var(--color-text-muted);">Hours/Day</label>
+                        <input type="number" id="in-hours-per-day" placeholder="8" style="width: 100%;">
+                    </div>
+                </div>
+
+                <!-- Lines of Work Calculator -->
+                <div
+                    style="margin-top: var(--spacing-sm); border-top: 1px dotted var(--color-border); padding-top: var(--spacing-sm);">
                     <div
-                        style="width: 100%; font-size: 0.7rem; color: var(--color-text-muted); margin-top: 5px; font-style: italic;">
-                        We suggest keeping this at 30% for self-employed folks
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-xs);">
+                        <button class="toggle-btn" onclick="toggleSection('lines-of-work-container', this)">
+                            <span class="toggle-icon">▼</span>
+                            <label
+                                style="margin:0; font-size: 0.7rem; text-transform:uppercase; letter-spacing:1px; cursor:pointer;">Lines
+                                of Work</label>
+                        </button>
+                        <button id="btn-add-line-of-work"
+                            style="font-size: 0.7rem; padding: 2px 6px; cursor: pointer;">+
+                            New Line</button>
+                    </div>
+                    <div id="lines-of-work-container">
+                        <!-- JS injected Lines of Work cards -->
                     </div>
                 </div>
-            </div>
+
+                <!-- Hours Summary moved to Right Panel -->
+
+                <!-- Tax Rate Input (Retained) -->
+
+                <div style="padding: var(--spacing-sm); border-bottom: var(--border-std);">
+                    <div class="ledger-row" style="flex-wrap: wrap;">
+                        <label>Estimated Tax Rate (%)</label>
+                        <div style="width: 80px;">
+                            <input type="number" id="in-tax-rate" min="0" max="100" placeholder="30">
+                        </div>
+                        <div
+                            style="width: 100%; font-size: 0.7rem; color: var(--color-text-muted); margin-top: 5px; font-style: italic;">
+                            We suggest keeping this at 30% for self-employed folks
+                        </div>
+                    </div>
+                </div>
 
 
 
-            <!-- Section 2: Personal Expenses -->
-            <div class="section-header"
-                style="margin-top: var(--spacing-md); display:flex; justify-content:space-between; align-items:center;">
-                <button class="toggle-btn" onclick="toggleSection('expenses-container', this)">
-                    <span class="toggle-icon">▼</span>
-                    <span style="font-size: 0.9rem; font-weight:700;">2. Personal Survival Expenses</span>
-                </button>
-                <button id="btn-add-expense" style="font-size: 0.7rem; padding: 2px 6px; cursor: pointer;">+ Add
-                    Expense</button>
-            </div>
-            <div id="expenses-container" style="padding: var(--spacing-sm);">
-                <!-- JS injected Expense Rows -->
-            </div>
+                <!-- Section 2: Personal Expenses -->
+                <div class="section-header"
+                    style="margin-top: var(--spacing-md); display:flex; justify-content:space-between; align-items:center;">
+                    <button class="toggle-btn" onclick="toggleSection('expenses-container', this)">
+                        <span class="toggle-icon">▼</span>
+                        <span style="font-size: 0.9rem; font-weight:700;">2. Personal Survival Expenses</span>
+                    </button>
+                    <button id="btn-add-expense" style="font-size: 0.7rem; padding: 2px 6px; cursor: pointer;">+ Add
+                        Expense</button>
+                </div>
+                <div id="expenses-container" style="padding: var(--spacing-sm);">
+                    <!-- JS injected Expense Rows -->
+                </div>
 
-            <!-- Business Overhead Profiles -->
-            <div class="section-header"
-                style="margin-top: var(--spacing-md); display:flex; justify-content:space-between; align-items:center;">
-                <button class="toggle-btn" onclick="toggleSection('overhead-profiles-container', this)">
-                    <span class="toggle-icon">▼</span>
-                    <span style="font-size: 0.9rem; font-weight:700;">Business Infrastructures</span>
-                </button>
-                <button class="btn" id="btn-add-overhead-profile" style="padding: 2px 8px; font-size: 0.7rem;">+
-                    Create
-                    Profile</button>
-            </div>
-            <div id="overhead-profiles-container" style="padding: var(--spacing-sm);">
-                <!-- JS Injected Overhead Profiles -->
-                <div style="font-style:italic; color:#666; font-size:0.9rem;">No business profiles yet. Create one
-                    to
-                    account for overhead.</div>
-            </div>
+                <!-- Business Overhead Profiles -->
+                <div class="section-header"
+                    style="margin-top: var(--spacing-md); display:flex; justify-content:space-between; align-items:center;">
+                    <button class="toggle-btn" onclick="toggleSection('overhead-profiles-container', this)">
+                        <span class="toggle-icon">▼</span>
+                        <span style="font-size: 0.9rem; font-weight:700;">Business Infrastructures</span>
+                    </button>
+                    <button class="btn" id="btn-add-overhead-profile" style="padding: 2px 8px; font-size: 0.7rem;">+
+                        Create
+                        Profile</button>
+                </div>
+                <div id="overhead-profiles-container" style="padding: var(--spacing-sm);">
+                    <!-- JS Injected Overhead Profiles -->
+                    <div style="font-style:italic; color:#666; font-size:0.9rem;">No business profiles yet. Create one
+                        to
+                        account for overhead.</div>
+                </div>
 
 
 
-            <!-- Section 3: Unearned Income -->
-            <div class="section-header"
-                style="margin-top: var(--spacing-md); display:flex; justify-content:space-between; align-items:center;">
-                <button class="toggle-btn" onclick="toggleSection('unearned-income-container', this)">
-                    <span class="toggle-icon">▼</span>
-                    <span style="font-size: 0.9rem; font-weight:700;">3. Current Unearned Income Sources</span>
-                </button>
-                <button id="btn-add-income" style="font-size: 0.7rem; padding: 2px 6px; cursor: pointer;">+ Add
-                    Income Source</button>
-            </div>
+                <!-- Section 3: Unearned Income -->
+                <div class="section-header"
+                    style="margin-top: var(--spacing-md); display:flex; justify-content:space-between; align-items:center;">
+                    <button class="toggle-btn" onclick="toggleSection('unearned-income-container', this)">
+                        <span class="toggle-icon">▼</span>
+                        <span style="font-size: 0.9rem; font-weight:700;">3. Current Unearned Income Sources</span>
+                    </button>
+                    <button id="btn-add-income" style="font-size: 0.7rem; padding: 2px 6px; cursor: pointer;">+ Add
+                        Income Source</button>
+                </div>
 
-            <div id="unearned-income-container" style="padding: var(--spacing-sm);">
-                <!-- JS Injected Income Rows -->
-            </div>
-            <!-- Total Unearned Footer -->
+                <div id="unearned-income-container" style="padding: var(--spacing-sm);">
+                    <!-- JS Injected Income Rows -->
+                </div>
+                <!-- Total Unearned Footer -->
+                <div
+                    style="padding: var(--spacing-sm); background: var(--color-bg-subtle); border-top: var(--border-std); display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-weight:bold; font-size:0.8rem; text-transform:uppercase;">Total Annual Unearned
+                        Income</span>
+                    <span id="out-total-unearned-income" style="font-weight:bold; font-family:monospace;">$0</span>
+                </div>
+
+                <!-- Section 4: Current Annual Income (Net) -->
+                <div class="section-header"
+                    style="margin-top: var(--spacing-md); display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size: 0.9rem;">4. Current Annual Income (Net)</span>
+                </div>
+
+                <div style="padding: var(--spacing-sm); border-bottom: var(--border-std);">
+                    <div class="ledger-row">
+                        <label>Current Net Income</label>
+                        <div style="width: 120px;">
+                            <input type="number" id="in-current-net-income" placeholder="0">
+                        </div>
+                    </div>
+                    <div class="ledger-row" style="margin-top:5px; border-bottom:none;">
+                        <span class="text-muted" style="font-size:0.8rem; font-weight:bold;">Current Gross Income</span>
+                        <span>
+                            <strong id="out-current-gross">$0</strong>
+                            <button onclick="window.viewIndependentLog('currentGross')"
+                                style="background:none; border:none; cursor:pointer; opacity:0.6; font-size:0.8rem;">ℹ️</button>
+                        </span>
+                    </div>
+                </div>
+            </div> <!-- End Left Column -->
+
+            <!-- Right Column: Results & Navigation -->
+            <div style="padding-left: var(--spacing-md);">
+
+                <!-- Results Dock -->
+                <aside class="result-dock">
+
+                    <!-- NOW RATES (Re-implemented) -->
+                    <div style="margin-bottom: var(--spacing-lg);">
+                        <div class="result-label"
+                            style="text-align:center; color: var(--color-text-main); margin-bottom: 10px; font-size: 1.1rem; border-bottom: 2px solid var(--color-text-main); padding-bottom: 5px;">
+                            NOW Rates
+                        </div>
+                        <table style="width:100%; border-collapse: collapse; font-size: 0.95rem;">
+                            <tr style="border-bottom: 1px dashed #eee;">
+                                <td style="padding: 8px 0; color: var(--color-text-muted);">Hourly</td>
+                                <td
+                                    style="text-align:right; font-weight:bold; color: var(--color-text-main); font-size: 1.1rem;">
+                                    <span id="out-now-hourly">$0</span>
+                                </td>
+                            </tr>
+                            <tr style="border-bottom: 1px dashed #eee;">
+                                <td style="padding: 8px 0; color: var(--color-text-muted);">Daily</td>
+                                <td style="text-align:right; font-weight:bold;">
+                                    <span id="out-now-daily">$0</span>
+                                </td>
+                            </tr>
+                            <tr style="border-bottom: 1px dashed #eee;">
+                                <td style="padding: 8px 0; color: var(--color-text-muted);">Weekly</td>
+                                <td style="text-align:right; font-weight:bold;">
+                                    <span id="out-now-weekly">$0</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px 0; color: var(--color-text-muted);">Monthly</td>
+                                <td style="text-align:right; font-weight:bold;">
+                                    <span id="out-now-monthly">$0</span>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <!-- GOAL FEES (Promoted to Top) -->
+                    <div style="margin-bottom: var(--spacing-lg);">
+                        <div class="result-label"
+                            style="text-align:center; color: var(--color-accent-primary); margin-bottom: 10px; font-size: 1.1rem; border-bottom: 2px solid var(--color-accent-primary); padding-bottom: 5px;">
+                            GOAL Rates
+                        </div>
+                        <table style="width:100%; border-collapse: collapse; font-size: 0.95rem;">
+                            <tr style="border-bottom: 1px dashed #eee;">
+                                <td style="padding: 8px 0; color: var(--color-text-muted);">Hourly</td>
+                                <td
+                                    style="text-align:right; font-weight:bold; color: var(--color-accent-primary); font-size: 1.1rem;">
+                                    <span id="out-goal-hourly">$0</span>
+                                </td>
+                            </tr>
+                            <tr style="border-bottom: 1px dashed #eee;">
+                                <td style="padding: 8px 0; color: var(--color-text-muted);">Daily</td>
+                                <td style="text-align:right; font-weight:bold;">
+                                    <span id="out-goal-daily">$0</span>
+                                </td>
+                            </tr>
+                            <tr style="border-bottom: 1px dashed #eee;">
+                                <td style="padding: 8px 0; color: var(--color-text-muted);">Weekly</td>
+                                <td style="text-align:right; font-weight:bold;">
+                                    <span id="out-goal-weekly">$0</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px 0; color: var(--color-text-muted);">Monthly</td>
+                                <td style="text-align:right; font-weight:bold;">
+                                    <span id="out-goal-monthly">$0</span>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <!-- Annual Totals -->
+                    <div
+                        style="margin-bottom: var(--spacing-lg); background: var(--color-bg-subtle); padding: var(--spacing-sm); border-radius: 4px;">
+                        <div style="margin-bottom: 15px;">
+                            <div class="result-label" style="font-size:0.8rem;">Goal Annual Net</div>
+                            <div class="result-value" id="out-goal-net" style="font-size:1.2rem;">$0</div>
+                        </div>
+                        <div>
+                            <div class="result-label" style="font-size:0.8rem;">Goal Annual Gross</div>
+                            <div class="result-value" id="out-goal-gross"
+                                style="color: var(--color-accent-primary); font-size:1.4rem;">$0</div>
+                        </div>
+                    </div>
+
+                    <!-- Hours Summary (Moved from Left) -->
+                    <div
+                        style="margin-bottom: var(--spacing-lg); padding-top: var(--spacing-sm); border-top: 1px dotted var(--color-border);">
+                        <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom: 5px;">
+                            <span class="text-muted">Total Work Hours</span>
+                            <span id="out-total-work-hours" style="font-weight:bold;">0</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom: 5px;">
+                            <span class="text-muted">Non-Billable</span>
+                            <span id="out-total-non-billable-hours">0</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; font-size:0.8rem;">
+                            <span class="text-muted" style="font-weight:bold;">Billable Hours</span>
+                            <span id="out-total-billable-hours" </div>
+
+
+
+                                <!-- SCENARIOS BUTTON -->
+                                <button onclick="showOverheadScenarios()"
+                                    style="width:100%; margin-top:20px; padding:10px; border:1px solid var(--color-accent-primary); background:var(--color-bg-subtle); color:var(--color-accent-primary); font-weight:bold; cursor:pointer;">
+                                    View Overhead Scenarios
+                                </button>
+
+                </aside>
+
+                <!-- Navigation -->
+                <div
+                    style="margin-top: var(--spacing-xl); padding-top: var(--spacing-md); border-top: var(--border-std);">
+                    <h4
+                        style="margin-bottom: var(--spacing-sm); font-size: 0.85rem; text-transform: uppercase; color: var(--color-text-muted); letter-spacing: 1px;">
+                        Deep Dives
+                    </h4>
+                    <a href="independent_sliding_scales.html" class="btn"
+                        style="display:flex; width:100%; margin-bottom:10px; font-size: 0.85rem; justify-content: space-between; text-decoration:none; background:white; border:1px solid #ddd; color: var(--color-text-main);">
+                        Sliding Scale Models <span>&rarr;</span>
+                    </a>
+                    <a href="independent_meantime.html" class="btn"
+                        style="display:flex; width:100%; margin-bottom:10px; font-size: 0.85rem; justify-content: space-between; text-decoration:none; background:white; border:1px solid #ddd; color: var(--color-text-main);">
+                        Meantime Steps <span>&rarr;</span>
+                    </a>
+                    <a href="independent_calibrations.html" class="btn"
+                        style="display:flex; width:100%; font-size: 0.85rem; justify-content: space-between; text-decoration:none; background:white; border:1px solid #ddd; color: var(--color-text-main);">
+                        Some Now Calibrations <span>&rarr;</span>
+                    </a>
+                </div>
+            </div> <!-- End Right Column -->
+
+            <!-- Modal: Overhead Scenarios -->
+            <dialog id="modal-scenarios"
+                style="padding: 0; border: none; background: transparent; max-width: 800px; width: 100%;">
+                <div
+                    style="background: var(--color-bg-base); padding: 20px; border-radius: 8px; border: 1px solid var(--color-border); box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                    <div
+                        style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--color-border); padding-bottom:10px; margin-bottom:15px;">
+                        <h3 style="margin:0; color:var(--color-accent-main);">Overhead Scenarios Matrix</h3>
+                        <button onclick="document.getElementById('modal-scenarios').close()"
+                            style="background:none; border:none; font-size:1.5rem; cursor:pointer;">&times;</button>
+                    </div>
+                    <p style="font-size:0.9rem; color:#666; margin-bottom:20px;">
+                        Compare your "Personal Baseline" rates with rates burdened by your various Business
+                        Infrastructures.
+                    </p>
+                    <div style="overflow-x:auto;">
+                        <table style="width:100%; border-collapse: collapse; font-size: 0.9rem;">
+                            <thead>
+                                <tr
+                                    style="background:var(--color-bg-subtle); border-bottom:2px solid var(--color-border);">
+                                    <th style="text-align:left; padding:10px;">Scenario</th>
+                                    <th style="text-align:right; padding:10px;">Total Fixed</th>
+                                    <th style="text-align:right; padding:10px;">Total %</th>
+                                    <th style="text-align:right; padding:10px;">Goal Net</th>
+                                    <th style="text-align:right; padding:10px; color:var(--color-accent-primary);">Goal
+                                        Hourly
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="scenarios-table-body">
+                                <!-- JS Injected -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style="text-align:right; margin-top:20px;">
+                        <button onclick="document.getElementById('modal-scenarios').close()" class="btn">Close</button>
+                    </div>
+                </div>
+            </dialog>
+        </div> <!-- End Grid-2 -->
+
+        <!-- Validation Modal -->
+        <dialog id="modal-override"
+            style="padding: 20px; border: 1px solid var(--color-border); background: var(--color-bg-base); color: var(--color-text-main); max-width: 400px; border-radius: 4px;">
+            <form method="dialog">
+                <h3 style="margin-top:0; color: var(--color-accent-surviving);">Confirm Duration</h3>
+                <p id="modal-override-msg" style="margin: 15px 0; line-height: 1.5;"></p>
+                <div style="display:flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                    <button type="button" onclick="cancelOverride()"
+                        style="padding: 8px 16px; cursor:pointer; background:none; border:1px solid var(--color-border); color:var(--color-text-main);">Cancel</button>
+                    <button type="button" onclick="confirmOverride()"
+                        style="padding: 8px 16px; background: var(--color-accent-surviving); color: #000; border: none; cursor:pointer; font-weight:bold;">Override</button>
+                </div>
+            </form>
+        </dialog>
+
+        <!-- Modal: Math Log -->
+        <div id="modal-math-log"
+            style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
             <div
-                style="padding: var(--spacing-sm); background: var(--color-bg-subtle); border-top: var(--border-std); display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-weight:bold; font-size:0.8rem; text-transform:uppercase;">Total Annual Unearned
-                    Income</span>
-                <span id="out-total-unearned-income" style="font-weight:bold; font-family:monospace;">$0</span>
-            </div>
-
-            <!-- Section 4: Current Annual Income (Net) -->
-            <div class="section-header"
-                style="margin-top: var(--spacing-md); display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-size: 0.9rem;">4. Current Annual Income (Net)</span>
-            </div>
-
-            <div style="padding: var(--spacing-sm); border-bottom: var(--border-std);">
-                <div class="ledger-row">
-                    <label>Current Net Income</label>
-                    <div style="width: 120px;">
-                        <input type="number" id="in-current-net-income" placeholder="0">
-                    </div>
-                </div>
-                <div class="ledger-row" style="margin-top:5px; border-bottom:none;">
-                    <span class="text-muted" style="font-size:0.8rem; font-weight:bold;">Current Gross Income</span>
-                    <span>
-                        <strong id="out-current-gross">$0</strong>
-                        <button onclick="window.viewIndependentLog('currentGross')"
-                            style="background:none; border:none; cursor:pointer; opacity:0.6; font-size:0.8rem;">ℹ️</button>
-                    </span>
-                </div>
-            </div>
-        </div> <!-- End Left Column -->
-
-        <!-- Right Column: Results & Navigation -->
-        <div style="padding-left: var(--spacing-md);">
-
-            <!-- Results Dock -->
-            <aside class="result-dock">
-
-                <!-- NOW RATES (Re-implemented) -->
-                <div style="margin-bottom: var(--spacing-lg);">
-                    <div class="result-label"
-                        style="text-align:center; color: var(--color-text-main); margin-bottom: 10px; font-size: 1.1rem; border-bottom: 2px solid var(--color-text-main); padding-bottom: 5px;">
-                        NOW Rates
-                    </div>
-                    <table style="width:100%; border-collapse: collapse; font-size: 0.95rem;">
-                        <tr style="border-bottom: 1px dashed #eee;">
-                            <td style="padding: 8px 0; color: var(--color-text-muted);">Hourly</td>
-                            <td
-                                style="text-align:right; font-weight:bold; color: var(--color-text-main); font-size: 1.1rem;">
-                                <span id="out-now-hourly">$0</span>
-                            </td>
-                        </tr>
-                        <tr style="border-bottom: 1px dashed #eee;">
-                            <td style="padding: 8px 0; color: var(--color-text-muted);">Daily</td>
-                            <td style="text-align:right; font-weight:bold;">
-                                <span id="out-now-daily">$0</span>
-                            </td>
-                        </tr>
-                        <tr style="border-bottom: 1px dashed #eee;">
-                            <td style="padding: 8px 0; color: var(--color-text-muted);">Weekly</td>
-                            <td style="text-align:right; font-weight:bold;">
-                                <span id="out-now-weekly">$0</span>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 8px 0; color: var(--color-text-muted);">Monthly</td>
-                            <td style="text-align:right; font-weight:bold;">
-                                <span id="out-now-monthly">$0</span>
-                            </td>
-                        </tr>
-                    </table>
-                </div>
-
-                <!-- GOAL FEES (Promoted to Top) -->
-                <div style="margin-bottom: var(--spacing-lg);">
-                    <div class="result-label"
-                        style="text-align:center; color: var(--color-accent-primary); margin-bottom: 10px; font-size: 1.1rem; border-bottom: 2px solid var(--color-accent-primary); padding-bottom: 5px;">
-                        GOAL Rates
-                    </div>
-                    <table style="width:100%; border-collapse: collapse; font-size: 0.95rem;">
-                        <tr style="border-bottom: 1px dashed #eee;">
-                            <td style="padding: 8px 0; color: var(--color-text-muted);">Hourly</td>
-                            <td
-                                style="text-align:right; font-weight:bold; color: var(--color-accent-primary); font-size: 1.1rem;">
-                                <span id="out-goal-hourly">$0</span>
-                            </td>
-                        </tr>
-                        <tr style="border-bottom: 1px dashed #eee;">
-                            <td style="padding: 8px 0; color: var(--color-text-muted);">Daily</td>
-                            <td style="text-align:right; font-weight:bold;">
-                                <span id="out-goal-daily">$0</span>
-                            </td>
-                        </tr>
-                        <tr style="border-bottom: 1px dashed #eee;">
-                            <td style="padding: 8px 0; color: var(--color-text-muted);">Weekly</td>
-                            <td style="text-align:right; font-weight:bold;">
-                                <span id="out-goal-weekly">$0</span>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 8px 0; color: var(--color-text-muted);">Monthly</td>
-                            <td style="text-align:right; font-weight:bold;">
-                                <span id="out-goal-monthly">$0</span>
-                            </td>
-                        </tr>
-                    </table>
-                </div>
-
-                <!-- Annual Totals -->
+                style="background:var(--color-bg-base); padding:20px; border-radius:8px; max-width:600px; width:90%; box-shadow:0 4px 12px rgba(0,0,0,0.2);">
                 <div
-                    style="margin-bottom: var(--spacing-lg); background: var(--color-bg-subtle); padding: var(--spacing-sm); border-radius: 4px;">
-                    <div style="margin-bottom: 15px;">
-                        <div class="result-label" style="font-size:0.8rem;">Goal Annual Net</div>
-                        <div class="result-value" id="out-goal-net" style="font-size:1.2rem;">$0</div>
-                    </div>
-                    <div>
-                        <div class="result-label" style="font-size:0.8rem;">Goal Annual Gross</div>
-                        <div class="result-value" id="out-goal-gross"
-                            style="color: var(--color-accent-primary); font-size:1.4rem;">$0</div>
-                    </div>
+                    style="border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center;">
+                    <h3 style="margin:0;">Calculation Details</h3>
+                    <button onclick="document.getElementById('modal-math-log').style.display='none'"
+                        style="background:none; border:none; font-size:1.5rem; cursor:pointer;">&times;</button>
                 </div>
-
-                <!-- Hours Summary (Moved from Left) -->
-                <div
-                    style="margin-bottom: var(--spacing-lg); padding-top: var(--spacing-sm); border-top: 1px dotted var(--color-border);">
-                    <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom: 5px;">
-                        <span class="text-muted">Total Work Hours</span>
-                        <span id="out-total-work-hours" style="font-weight:bold;">0</span>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom: 5px;">
-                        <span class="text-muted">Non-Billable</span>
-                        <span id="out-total-non-billable-hours">0</span>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; font-size:0.8rem;">
-                        <span class="text-muted" style="font-weight:bold;">Billable Hours</span>
-                        <span id="out-total-billable-hours" </div>
-
-                            <!-- NOW FEES (Comparison) -->
-                            <div
-                                style="margin-top: var(--spacing-lg); padding-top: var(--spacing-sm); border-top: 2px solid var(--color-border); opacity: 0.7;">
-                                <div class="result-label"
-                                    style="text-align:center; color: var(--color-text-muted); margin-bottom: 5px; font-size:0.9rem;">
-                                    Current (NOW) Rates
-                                </div>
-                                <div
-                                    style="display:flex; justify-content: space-between; font-size: 0.8rem; margin-bottom:4px;">
-                                    <span>Hourly</span> <strong id="out-now-hourly">$0</strong>
-                                </div>
-                                <div
-                                    style="display:flex; justify-content: space-between; font-size: 0.8rem; margin-bottom:4px;">
-                                    <span>Daily</span> <strong id="out-now-daily">$0</strong>
-                                </div>
-                                <div style="display:flex; justify-content: space-between; font-size: 0.8rem;">
-                                    <span>Weekly</span> <strong id="out-now-weekly">$0</strong>
-                                </div>
-                            </div>
-
-                            <!-- SCENARIOS BUTTON -->
-                            <button onclick="showOverheadScenarios()"
-                                style="width:100%; margin-top:20px; padding:10px; border:1px solid var(--color-accent-primary); background:var(--color-bg-subtle); color:var(--color-accent-primary); font-weight:bold; cursor:pointer;">
-                                View Overhead Scenarios
-                            </button>
-
-            </aside>
-
-            <!-- Navigation -->
-            <div style="margin-top: var(--spacing-xl); padding-top: var(--spacing-md); border-top: var(--border-std);">
-                <h4
-                    style="margin-bottom: var(--spacing-sm); font-size: 0.85rem; text-transform: uppercase; color: var(--color-text-muted); letter-spacing: 1px;">
-                    Deep Dives
-                </h4>
-                <a href="independent_sliding_scales.html" class="btn"
-                    style="display:flex; width:100%; margin-bottom:10px; font-size: 0.85rem; justify-content: space-between; text-decoration:none; background:white; border:1px solid #ddd; color: var(--color-text-main);">
-                    Sliding Scale Models <span>&rarr;</span>
-                </a>
-                <a href="independent_meantime.html" class="btn"
-                    style="display:flex; width:100%; margin-bottom:10px; font-size: 0.85rem; justify-content: space-between; text-decoration:none; background:white; border:1px solid #ddd; color: var(--color-text-main);">
-                    Meantime Steps <span>&rarr;</span>
-                </a>
-                <a href="independent_calibrations.html" class="btn"
-                    style="display:flex; width:100%; font-size: 0.85rem; justify-content: space-between; text-decoration:none; background:white; border:1px solid #ddd; color: var(--color-text-main);">
-                    Some Now Calibrations <span>&rarr;</span>
-                </a>
+                <div id="math-log-content"
+                    style="max-height:400px; overflow-y:auto; font-family:var(--font-mono); font-size:0.9rem; line-height:1.6;">
+                    <!-- JS Injected Content -->
+                </div>
+                <div style="text-align:right; margin-top:20px;">
+                    <button onclick="document.getElementById('modal-math-log').style.display='none'"
+                        class="btn">Close</button>
+                </div>
             </div>
-        </div> <!-- End Right Column -->
+        </div>
 
-        <!-- Modal: Overhead Scenarios -->
-        <dialog id="modal-scenarios"
-            style="padding: 0; border: none; background: transparent; max-width: 800px; width: 100%;">
+        <!-- Modal: Edit Business Expenses -->
+        <dialog id="modal-business-expenses"
+            style="padding: 0; border: none; background: transparent; max-width: 600px; width: 100%;">
             <div
                 style="background: var(--color-bg-base); padding: 20px; border-radius: 8px; border: 1px solid var(--color-border); box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
                 <div
                     style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--color-border); padding-bottom:10px; margin-bottom:15px;">
-                    <h3 style="margin:0; color:var(--color-accent-main);">Overhead Scenarios Matrix</h3>
-                    <button onclick="document.getElementById('modal-scenarios').close()"
+                    <h3 id="modal-biz-title" style="margin:0; color:var(--color-accent-surviving);">Manage Business
+                        Expenses
+                    </h3>
+                    <button onclick="document.getElementById('modal-business-expenses').close()"
                         style="background:none; border:none; font-size:1.5rem; cursor:pointer;">&times;</button>
                 </div>
-                <p style="font-size:0.9rem; color:#666; margin-bottom:20px;">
-                    Compare your "Personal Baseline" rates with rates burdened by your various Business Infrastructures.
-                </p>
-                <div style="overflow-x:auto;">
-                    <table style="width:100%; border-collapse: collapse; font-size: 0.9rem;">
-                        <thead>
-                            <tr style="background:var(--color-bg-subtle); border-bottom:2px solid var(--color-border);">
-                                <th style="text-align:left; padding:10px;">Scenario</th>
-                                <th style="text-align:right; padding:10px;">Total Fixed</th>
-                                <th style="text-align:right; padding:10px;">Total %</th>
-                                <th style="text-align:right; padding:10px;">Goal Net</th>
-                                <th style="text-align:right; padding:10px; color:var(--color-accent-primary);">Goal
-                                    Hourly
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody id="scenarios-table-body">
-                            <!-- JS Injected -->
-                        </tbody>
-                    </table>
+
+                <div style="margin-bottom: 20px;">
+                    <div
+                        style="display:grid; grid-template-columns: 2fr 1fr 1fr 1fr 40px; gap:5px; margin-bottom:10px; font-size:0.8rem; font-weight:bold; color:var(--color-text-muted);">
+                        <span>Expense Item</span>
+                        <span>Cost/Value</span>
+                        <span>Type</span>
+                        <span>Freq</span>
+                        <span></span>
+                    </div>
+                    <div id="modal-biz-list" style="max-height: 300px; overflow-y: auto;">
+                        <!-- JS Injected Rows -->
+                    </div>
+                    <button onclick="addBusinessExpenseRow()"
+                        style="margin-top:10px; width:100%; border:1px dashed var(--color-border); padding:8px; background:var(--color-bg-subtle); cursor:pointer;">+
+                        Add Item</button>
                 </div>
-                <div style="text-align:right; margin-top:20px;">
-                    <button onclick="document.getElementById('modal-scenarios').close()" class="btn">Close</button>
+
+                <div
+                    style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--color-border); padding-top:15px;">
+                    <div style="font-size:0.9rem;">Total Annual Overhead: <strong id="modal-biz-total">$0</strong></div>
+                    <div style="display:flex; gap:10px;">
+                        <button onclick="document.getElementById('modal-business-expenses').close()"
+                            style="padding:8px 16px; border:1px solid var(--color-border); background:none; cursor:pointer;">Cancel</button>
+                        <button onclick="saveBusinessExpenses()"
+                            style="padding:8px 16px; background:var(--color-accent-surviving); color:black; border:none; font-weight:bold; cursor:pointer;">Save
+                            Changes</button>
+                    </div>
                 </div>
             </div>
         </dialog>
-    </div> <!-- End Grid-2 -->
 
-    <!-- Validation Modal -->
-    <dialog id="modal-override"
-        style="padding: 20px; border: 1px solid var(--color-border); background: var(--color-bg-base); color: var(--color-text-main); max-width: 400px; border-radius: 4px;">
-        <form method="dialog">
-            <h3 style="margin-top:0; color: var(--color-accent-surviving);">Confirm Duration</h3>
-            <p id="modal-override-msg" style="margin: 15px 0; line-height: 1.5;"></p>
-            <div style="display:flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
-                <button type="button" onclick="cancelOverride()"
-                    style="padding: 8px 16px; cursor:pointer; background:none; border:1px solid var(--color-border); color:var(--color-text-main);">Cancel</button>
-                <button type="button" onclick="confirmOverride()"
-                    style="padding: 8px 16px; background: var(--color-accent-surviving); color: #000; border: none; cursor:pointer; font-weight:bold;">Override</button>
-            </div>
-        </form>
-    </dialog>
+        <!-- Scripts -->
+        <script src="js/utils.js"></script>
+        <script src="js/supabase_client.js"></script>
+        <script src="js/store.js"></script>
+        <script>
+            /**
+             * Independent Tool Logic - Final Refactor (Inlined for Debugging)
+             */
 
-    <!-- Modal: Math Log -->
-    <div id="modal-math-log"
-        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
-        <div
-            style="background:var(--color-bg-base); padding:20px; border-radius:8px; max-width:600px; width:90%; box-shadow:0 4px 12px rgba(0,0,0,0.2);">
-            <div
-                style="border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center;">
-                <h3 style="margin:0;">Calculation Details</h3>
-                <button onclick="document.getElementById('modal-math-log').style.display='none'"
-                    style="background:none; border:none; font-size:1.5rem; cursor:pointer;">&times;</button>
-            </div>
-            <div id="math-log-content"
-                style="max-height:400px; overflow-y:auto; font-family:var(--font-mono); font-size:0.9rem; line-height:1.6;">
-                <!-- JS Injected Content -->
-            </div>
-            <div style="text-align:right; margin-top:20px;">
-                <button onclick="document.getElementById('modal-math-log').style.display='none'"
-                    class="btn">Close</button>
-            </div>
-        </div>
-    </div>
+            // Global Toggle Function
+            window.toggleSection = (id, btn) => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.classList.toggle('hidden');
+                    btn.classList.toggle('collapsed');
+                }
+            };
 
-    <!-- Modal: Edit Business Expenses -->
-    <dialog id="modal-business-expenses"
-        style="padding: 0; border: none; background: transparent; max-width: 600px; width: 100%;">
-        <div
-            style="background: var(--color-bg-base); padding: 20px; border-radius: 8px; border: 1px solid var(--color-border); box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
-            <div
-                style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--color-border); padding-bottom:10px; margin-bottom:15px;">
-                <h3 id="modal-biz-title" style="margin:0; color:var(--color-accent-surviving);">Manage Business Expenses
-                </h3>
-                <button onclick="document.getElementById('modal-business-expenses').close()"
-                    style="background:none; border:none; font-size:1.5rem; cursor:pointer;">&times;</button>
-            </div>
-
-            <div style="margin-bottom: 20px;">
-                <div
-                    style="display:grid; grid-template-columns: 2fr 1fr 1fr 1fr 40px; gap:5px; margin-bottom:10px; font-size:0.8rem; font-weight:bold; color:var(--color-text-muted);">
-                    <span>Expense Item</span>
-                    <span>Cost/Value</span>
-                    <span>Type</span>
-                    <span>Freq</span>
-                    <span></span>
-                </div>
-                <div id="modal-biz-list" style="max-height: 300px; overflow-y: auto;">
-                    <!-- JS Injected Rows -->
-                </div>
-                <button onclick="addBusinessExpenseRow()"
-                    style="margin-top:10px; width:100%; border:1px dashed var(--color-border); padding:8px; background:var(--color-bg-subtle); cursor:pointer;">+
-                    Add Item</button>
-            </div>
-
-            <div
-                style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--color-border); padding-top:15px;">
-                <div style="font-size:0.9rem;">Total Annual Overhead: <strong id="modal-biz-total">$0</strong></div>
-                <div style="display:flex; gap:10px;">
-                    <button onclick="document.getElementById('modal-business-expenses').close()"
-                        style="padding:8px 16px; border:1px solid var(--color-border); background:none; cursor:pointer;">Cancel</button>
-                    <button onclick="saveBusinessExpenses()"
-                        style="padding:8px 16px; background:var(--color-accent-surviving); color:black; border:none; font-weight:bold; cursor:pointer;">Save
-                        Changes</button>
-                </div>
-            </div>
-        </div>
-    </dialog>
-
-    <!-- Scripts -->
-    <script src="js/utils.js"></script>
-    <script src="js/supabase_client.js"></script>
-    <script src="js/store.js"></script>
-    <script>
-        /**
-         * Independent Tool Logic - Final Refactor (Inlined for Debugging)
-         */
-
-        // Global Toggle Function
-        window.toggleSection = (id, btn) => {
-            const el = document.getElementById(id);
-            if (el) {
-                el.classList.toggle('hidden');
-                btn.classList.toggle('collapsed');
+            // Debug Logger
+            function logToScreen(msg) {
+                console.log(msg);
+                const el = document.getElementById('debug-console');
+                if (el) {
+                    const time = new Date().toLocaleTimeString();
+                    el.innerHTML += `\n[${time}] ${msg}`;
+                }
             }
-        };
 
-        // Debug Logger
-        function logToScreen(msg) {
-            console.log(msg);
-            const el = document.getElementById('debug-console');
-            if (el) {
-                const time = new Date().toLocaleTimeString();
-                el.innerHTML += `\n[${time}] ${msg}`;
-            }
-        }
+            const inputs = {
+                weeks: document.getElementById('in-weeks-per-year'),
+                days: document.getElementById('in-days-per-week'),
+                hours: document.getElementById('in-hours-per-day'),
+                taxRate: document.getElementById('in-tax-rate'),
+            };
 
-        const inputs = {
-            weeks: document.getElementById('in-weeks-per-year'),
-            days: document.getElementById('in-days-per-week'),
-            hours: document.getElementById('in-hours-per-day'),
-            taxRate: document.getElementById('in-tax-rate'),
-        };
+            const outputs = {
+                goalNet: document.getElementById('out-goal-net'),
+                goalGross: document.getElementById('out-goal-gross'),
+                dayRate: document.getElementById('out-day-rate'),
 
-        const outputs = {
-            goalNet: document.getElementById('out-goal-net'),
-            goalGross: document.getElementById('out-goal-gross'),
-            dayRate: document.getElementById('out-day-rate'),
+                totalWorkHours: document.getElementById('out-total-work-hours'),
+                totalNonBillable: document.getElementById('out-total-non-billable-hours'),
+                totalBillable: document.getElementById('out-total-billable-hours')
+            };
 
-            totalWorkHours: document.getElementById('out-total-work-hours'),
-            totalNonBillable: document.getElementById('out-total-non-billable-hours'),
-            totalBillable: document.getElementById('out-total-billable-hours')
-        };
+            // 2. State Management
+            let profile = {};
+            let overheadProjects = [];
 
-        // 2. State Management
-        let profile = {};
-        let overheadProjects = [];
+            // const BASE_EXPENSE_CATEGORIES = [ ... ]; // Already defined in store.js
+            // using global BASE_EXPENSE_CATEGORIES from store.js        ];
 
-        // const BASE_EXPENSE_CATEGORIES = [ ... ]; // Already defined in store.js
-        // using global BASE_EXPENSE_CATEGORIES from store.js        ];
+            const Normalizer = Utils.Normalizer;
 
-        const Normalizer = Utils.Normalizer;
+            // EXPENSE MANAGER
+            const ExpenseManager = {
+                container: document.getElementById('expenses-container'),
 
-        // EXPENSE MANAGER
-        const ExpenseManager = {
-            container: document.getElementById('expenses-container'),
+                render: () => {
+                    ExpenseManager.container.innerHTML = '';
+                    profile.expenses.items.forEach((item, index) => {
+                        const row = document.createElement('div');
+                        row.className = 'ledger-row';
+                        row.style.display = 'grid';
+                        row.style.gridTemplateColumns = '2fr 1fr 1fr 1fr auto';
+                        row.style.gap = '10px';
+                        row.style.alignItems = 'center';
 
-            render: () => {
-                ExpenseManager.container.innerHTML = '';
-                profile.expenses.items.forEach((item, index) => {
-                    const row = document.createElement('div');
-                    row.className = 'ledger-row';
-                    row.style.display = 'grid';
-                    row.style.gridTemplateColumns = '2fr 1fr 1fr 1fr auto';
-                    row.style.gap = '10px';
-                    row.style.alignItems = 'center';
+                        const showFreq = item.type === 'Periodic';
 
-                    const showFreq = item.type === 'Periodic';
-
-                    row.innerHTML = `
+                        row.innerHTML = `
                     <input type="text" value="${item.label}" placeholder="Category" onchange="updateExpense(${index}, 'label', this.value)">
                     <input type="number" value="${item.amount}" placeholder="Amount" onchange="updateExpense(${index}, 'amount', this.value)">
                     <select onchange="updateExpense(${index}, 'type', this.value)">
@@ -555,59 +544,59 @@
                         onchange="updateExpense(${index}, 'frequency', this.value)">
                     <button onclick="removeExpense(${index})" style="color:red; background:none; border:none; cursor:pointer;">&times;</button>
                 `;
-                    ExpenseManager.container.appendChild(row);
-                });
-            },
+                        ExpenseManager.container.appendChild(row);
+                    });
+                },
 
-            addExpense: () => {
-                profile.expenses.items.push({
-                    id: crypto.randomUUID(),
-                    label: '',
-                    amount: 0,
-                    type: 'Monthly',
-                    frequency: 1
-                });
-                ExpenseManager.render();
-                calculateAndDisplay();
-                Store.saveIndependentProfile(profile);
-            },
-
-            removeExpense: (index) => {
-                if (confirm('Remove this expense?')) {
-                    profile.expenses.items.splice(index, 1);
+                addExpense: () => {
+                    profile.expenses.items.push({
+                        id: crypto.randomUUID(),
+                        label: '',
+                        amount: 0,
+                        type: 'Monthly',
+                        frequency: 1
+                    });
                     ExpenseManager.render();
                     calculateAndDisplay();
                     Store.saveIndependentProfile(profile);
+                },
+
+                removeExpense: (index) => {
+                    if (confirm('Remove this expense?')) {
+                        profile.expenses.items.splice(index, 1);
+                        ExpenseManager.render();
+                        calculateAndDisplay();
+                        Store.saveIndependentProfile(profile);
+                    }
+                },
+
+                updateExpense: (index, field, value) => {
+                    const val = (field === 'amount' || field === 'frequency') ? parseFloat(value) : value;
+                    profile.expenses.items[index][field] = val;
+                    if (field === 'type') ExpenseManager.render();
+
+                    calculateAndDisplay();
+                    Store.saveIndependentProfile(profile);
                 }
-            },
+            };
 
-            updateExpense: (index, field, value) => {
-                const val = (field === 'amount' || field === 'frequency') ? parseFloat(value) : value;
-                profile.expenses.items[index][field] = val;
-                if (field === 'type') ExpenseManager.render();
+            // INCOME MANAGER
+            const IncomeManager = {
+                container: document.getElementById('unearned-income-container'),
 
-                calculateAndDisplay();
-                Store.saveIndependentProfile(profile);
-            }
-        };
+                render: () => {
+                    IncomeManager.container.innerHTML = '';
+                    profile.unearnedIncome.items.forEach((item, index) => {
+                        const row = document.createElement('div');
+                        row.className = 'ledger-row';
+                        row.style.display = 'grid';
+                        row.style.gridTemplateColumns = '2fr 1fr 1fr 1fr auto';
+                        row.style.gap = '10px';
+                        row.style.alignItems = 'center';
 
-        // INCOME MANAGER
-        const IncomeManager = {
-            container: document.getElementById('unearned-income-container'),
+                        const showFreq = item.type === 'Periodic';
 
-            render: () => {
-                IncomeManager.container.innerHTML = '';
-                profile.unearnedIncome.items.forEach((item, index) => {
-                    const row = document.createElement('div');
-                    row.className = 'ledger-row';
-                    row.style.display = 'grid';
-                    row.style.gridTemplateColumns = '2fr 1fr 1fr 1fr auto';
-                    row.style.gap = '10px';
-                    row.style.alignItems = 'center';
-
-                    const showFreq = item.type === 'Periodic';
-
-                    row.innerHTML = `
+                        row.innerHTML = `
                     <input type="text" value="${item.label}" placeholder="Source" onchange="updateIncome(${index}, 'label', this.value)">
                     <input type="number" value="${item.amount}" placeholder="Amount" onchange="updateIncome(${index}, 'amount', this.value)">
                     <select onchange="updateIncome(${index}, 'type', this.value)">
@@ -620,85 +609,85 @@
                         onchange="updateIncome(${index}, 'frequency', this.value)">
                     <button onclick="removeIncome(${index})" style="color:red; background:none; border:none; cursor:pointer;">&times;</button>
                 `;
-                    IncomeManager.container.appendChild(row);
-                });
-            },
+                        IncomeManager.container.appendChild(row);
+                    });
+                },
 
-            addIncome: () => {
-                profile.unearnedIncome.items.push({
-                    id: crypto.randomUUID(),
-                    label: '',
-                    amount: 0,
-                    type: 'Annual',
-                    frequency: 1
-                });
-                IncomeManager.render();
-                calculateAndDisplay();
-                Store.saveIndependentProfile(profile);
-            },
-
-            removeIncome: (index) => {
-                if (confirm('Remove this income source?')) {
-                    profile.unearnedIncome.items.splice(index, 1);
+                addIncome: () => {
+                    profile.unearnedIncome.items.push({
+                        id: crypto.randomUUID(),
+                        label: '',
+                        amount: 0,
+                        type: 'Annual',
+                        frequency: 1
+                    });
                     IncomeManager.render();
                     calculateAndDisplay();
                     Store.saveIndependentProfile(profile);
+                },
+
+                removeIncome: (index) => {
+                    if (confirm('Remove this income source?')) {
+                        profile.unearnedIncome.items.splice(index, 1);
+                        IncomeManager.render();
+                        calculateAndDisplay();
+                        Store.saveIndependentProfile(profile);
+                    }
+                },
+
+                updateIncome: (index, field, value) => {
+                    const val = (field === 'amount' || field === 'frequency') ? parseFloat(value) : value;
+                    profile.unearnedIncome.items[index][field] = val;
+                    if (field === 'type') IncomeManager.render();
+
+                    calculateAndDisplay();
+                    Store.saveIndependentProfile(profile);
                 }
-            },
+            };
 
-            updateIncome: (index, field, value) => {
-                const val = (field === 'amount' || field === 'frequency') ? parseFloat(value) : value;
-                profile.unearnedIncome.items[index][field] = val;
-                if (field === 'type') IncomeManager.render();
+            // BUSINESS PROFILE MANAGER
+            const BusinessProfileManager = {
+                container: document.getElementById('overhead-profiles-container'),
 
-                calculateAndDisplay();
-                Store.saveIndependentProfile(profile);
-            }
-        };
+                render: () => {
+                    if (!BusinessProfileManager.container) return;
+                    BusinessProfileManager.container.innerHTML = '';
 
-        // BUSINESS PROFILE MANAGER
-        const BusinessProfileManager = {
-            container: document.getElementById('overhead-profiles-container'),
-
-            render: () => {
-                if (!BusinessProfileManager.container) return;
-                BusinessProfileManager.container.innerHTML = '';
-
-                if (overheadProjects.length === 0) {
-                    BusinessProfileManager.container.innerHTML = '<div style="font-style:italic; color:#666; font-size:0.9rem;">No business profiles yet. Create one to account for overhead.</div>';
-                    return;
-                }
-
-                overheadProjects.forEach((proj, index) => {
-                    const row = document.createElement('div');
-                    row.className = 'ledger-row';
-                    row.style.display = 'flex';
-                    row.style.justifyContent = 'space-between';
-                    row.style.alignItems = 'center';
-                    row.style.marginBottom = '10px';
-                    row.style.background = '#fff';
-                    row.style.padding = '8px';
-                    row.style.border = '1px solid #eee';
-
-                    let cardFixed = 0;
-                    let cardPercent = 0;
-                    (proj.expenses || []).forEach(e => {
-                        // Logic must match calculateAndDisplay
-                        if (e.type === 'Percent') {
-                            cardPercent += (e.baseAmount || e.amount || 0);
-                        } else {
-                            // Fixed: Annual, Monthly, Periodic
-                            // Note: e.amount SHOULD be the annualized Fixed amount (calculated in saveBusinessExpenses)
-                            cardFixed += (e.amount || 0);
-                        }
-                    });
-
-                    let totalExp = cardFixed;
-                    if (cardPercent > 0 && cardPercent < 100) {
-                        totalExp = cardFixed / (1 - (cardPercent / 100));
+                    if (overheadProjects.length === 0) {
+                        BusinessProfileManager.container.innerHTML = '<div style="font-style:italic; color:#666; font-size:0.9rem;">No business profiles yet. Create one to account for overhead.</div>';
+                        return;
                     }
 
-                    row.innerHTML = `
+                    overheadProjects.forEach((proj, index) => {
+                        const row = document.createElement('div');
+                        row.className = 'ledger-row';
+                        row.style.display = 'flex';
+                        row.style.justifyContent = 'space-between';
+                        row.style.alignItems = 'center';
+                        row.style.marginBottom = '10px';
+                        row.style.background = '#fff';
+                        row.style.padding = '8px';
+                        row.style.border = '1px solid #eee';
+
+                        let cardFixed = 0;
+                        let cardPercent = 0;
+                        (proj.expenses || []).forEach(e => {
+                            // Logic must match calculateAndDisplay
+                            if (e.type === 'Percent') {
+                                cardPercent += (e.baseAmount || e.amount || 0);
+                            } else {
+                                // Fixed: Annual, Monthly, Periodic
+                                // Note: e.amount SHOULD be the annualized Fixed amount (calculated in saveBusinessExpenses)
+                                cardFixed += (e.amount || 0);
+                            }
+                        });
+
+                        let totalExp = cardFixed;
+                        if (cardPercent > 0 && cardPercent < 100) {
+                            totalExp = cardFixed / (1 - (cardPercent / 100));
+                        }
+
+                        row.innerHTML = `
                     <div style="flex-grow:1;">
                         <input type="text" value="${proj.name}" 
                             onchange="BusinessProfileManager.update(${index}, 'name', this.value)"
@@ -710,74 +699,74 @@
                     </div>
                     <button onclick="BusinessProfileManager.remove(${index})" style="color:red; background:none; border:none; cursor:pointer;">&times;</button>
                 `;
-                    BusinessProfileManager.container.appendChild(row);
-                });
-            },
+                        BusinessProfileManager.container.appendChild(row);
+                    });
+                },
 
-            create: async () => {
-                const name = prompt("Enter Business Name (e.g. Makini Makes):");
-                if (!name) return;
-                try {
-                    const newProj = await Store.createOverheadProject(name);
-                    if (newProj) {
-                        overheadProjects.push(newProj);
-                        BusinessProfileManager.render();
-                        renderLinesOfWork();
+                create: async () => {
+                    const name = prompt("Enter Business Name (e.g. Makini Makes):");
+                    if (!name) return;
+                    try {
+                        const newProj = await Store.createOverheadProject(name);
+                        if (newProj) {
+                            overheadProjects.push(newProj);
+                            BusinessProfileManager.render();
+                            renderLinesOfWork();
+                        }
+                    } catch (e) { alert(e.message); }
+                },
+
+                update: async (index, field, value) => {
+                    overheadProjects[index][field] = value;
+                    try {
+                        await Store.saveOverheadProject(overheadProjects[index]);
+                    } catch (e) { console.error(e); }
+                },
+
+                remove: async (index) => {
+                    if (!confirm("Delete this business profile?")) return;
+                    alert("Deletion not fully supported in this draft. (Contact support to remove DB row)");
+                },
+
+                editExpenses: (id) => {
+                    const proj = overheadProjects.find(p => p.id === id);
+                    if (!proj) return;
+
+                    // State for Modal
+                    window.currentBizId = id;
+                    document.getElementById('modal-biz-title').innerText = `Expenses for: ${proj.name}`;
+
+                    const list = document.getElementById('modal-biz-list');
+                    list.innerHTML = '';
+
+                    // Populate existing items
+                    if (proj.expenses && proj.expenses.length > 0) {
+                        proj.expenses.forEach(item => addBusinessExpenseRow(item));
+                    } else {
+                        addBusinessExpenseRow(); // Add one empty row by default
                     }
-                } catch (e) { alert(e.message); }
-            },
 
-            update: async (index, field, value) => {
-                overheadProjects[index][field] = value;
-                try {
-                    await Store.saveOverheadProject(overheadProjects[index]);
-                } catch (e) { console.error(e); }
-            },
-
-            remove: async (index) => {
-                if (!confirm("Delete this business profile?")) return;
-                alert("Deletion not fully supported in this draft. (Contact support to remove DB row)");
-            },
-
-            editExpenses: (id) => {
-                const proj = overheadProjects.find(p => p.id === id);
-                if (!proj) return;
-
-                // State for Modal
-                window.currentBizId = id;
-                document.getElementById('modal-biz-title').innerText = `Expenses for: ${proj.name}`;
-
-                const list = document.getElementById('modal-biz-list');
-                list.innerHTML = '';
-
-                // Populate existing items
-                if (proj.expenses && proj.expenses.length > 0) {
-                    proj.expenses.forEach(item => addBusinessExpenseRow(item));
-                } else {
-                    addBusinessExpenseRow(); // Add one empty row by default
+                    updateBusinessExpenseTotal();
+                    document.getElementById('modal-business-expenses').showModal();
                 }
+            };
+            window.BusinessProfileManager = BusinessProfileManager;
 
-                updateBusinessExpenseTotal();
-                document.getElementById('modal-business-expenses').showModal();
-            }
-        };
-        window.BusinessProfileManager = BusinessProfileManager;
+            // --- Business Expense Modal Helpers ---
+            window.addBusinessExpenseRow = (data = {}) => {
+                const list = document.getElementById('modal-biz-list');
+                const div = document.createElement('div');
+                div.className = 'biz-expense-row';
+                div.style.display = "grid";
+                div.style.gridTemplateColumns = "2fr 1fr 1fr 1fr 40px";
+                div.style.gap = "5px";
+                div.style.marginBottom = "5px";
+                div.style.alignItems = "center";
 
-        // --- Business Expense Modal Helpers ---
-        window.addBusinessExpenseRow = (data = {}) => {
-            const list = document.getElementById('modal-biz-list');
-            const div = document.createElement('div');
-            div.className = 'biz-expense-row';
-            div.style.display = "grid";
-            div.style.gridTemplateColumns = "2fr 1fr 1fr 1fr 40px";
-            div.style.gap = "5px";
-            div.style.marginBottom = "5px";
-            div.style.alignItems = "center";
+                const type = data.type || 'Annual';
+                const freqVal = data.frequency || 1;
 
-            const type = data.type || 'Annual';
-            const freqVal = data.frequency || 1;
-
-            div.innerHTML = `
+                div.innerHTML = `
                 <input type="text" class="bez-name" placeholder="Item Name" value="${data.label || ''}" style="width:100%;">
                 <input type="number" class="bez-cost" placeholder="0.00" value="${data.baseAmount || data.amount || ''}" oninput="updateBusinessExpenseTotal()" style="width:100%;">
                 
@@ -794,131 +783,131 @@
 
                 <button onclick="this.parentElement.remove(); updateBusinessExpenseTotal();" style="color:red; background:none; border:none; cursor:pointer;">&times;</button>
             `;
-            list.appendChild(div);
-        };
+                list.appendChild(div);
+            };
 
-        window.toggleBizFreq = (selectEl) => {
-            const row = selectEl.parentElement;
-            const freqInput = row.querySelector('.bez-freq');
-            if (selectEl.value === 'Periodic') {
-                freqInput.style.display = 'block';
-            } else {
-                freqInput.style.display = 'none';
-            }
-        };
-
-        window.updateBusinessExpenseTotal = () => {
-            const rows = document.querySelectorAll('.biz-expense-row');
-            let totalFixed = 0;
-            let totalPercent = 0;
-
-            rows.forEach(row => {
-                const cost = parseFloat(row.querySelector('.bez-cost').value) || 0;
-                const type = row.querySelector('.bez-type').value;
-                const freq = parseFloat(row.querySelector('.bez-freq').value) || 1;
-
-                if (type === 'Annual') totalFixed += cost;
-                if (type === 'Monthly') totalFixed += (cost * 12);
-                if (type === 'Periodic') totalFixed += (cost * freq);
-                if (type === 'Percent') totalPercent += cost;
-            });
-
-            // User Logic: Total = Fixed / (1 - Rate)
-            // Example: 9000 / (1 - 0.10) = 10,000
-            let finalTotal = totalFixed;
-            if (totalPercent > 0 && totalPercent < 100) {
-                finalTotal = totalFixed / (1 - (totalPercent / 100));
-            }
-
-            document.getElementById('modal-biz-total').innerText = Utils.formatCurrency(finalTotal);
-        };
-
-        window.saveBusinessExpenses = async () => {
-            console.log("Saving business expenses...");
-            const id = window.currentBizId;
-            const proj = overheadProjects.find(p => p.id === id);
-
-            if (!proj) {
-                alert("Error: Project not found.");
-                return;
-            }
-
-            const rows = document.querySelectorAll('.biz-expense-row');
-            const newExpenses = [];
-
-            rows.forEach(row => {
-                const name = row.querySelector('.bez-name').value.trim();
-                const cost = parseFloat(row.querySelector('.bez-cost').value) || 0;
-                const type = row.querySelector('.bez-type').value;
-                const freq = parseFloat(row.querySelector('.bez-freq').value) || 1;
-
-                let annualAmount = 0;
-                if (type === 'Annual') annualAmount = cost;
-                if (type === 'Monthly') annualAmount = cost * 12;
-                if (type === 'Periodic') annualAmount = cost * freq;
-                if (type === 'Percent') annualAmount = cost; // Stored as raw percentage
-
-                if (name) { // Allow 0 cost items, but require a name
-                    newExpenses.push({
-                        label: name,
-                        baseAmount: cost,
-                        type: type,
-                        frequency: freq,
-                        amount: annualAmount
-                    });
+            window.toggleBizFreq = (selectEl) => {
+                const row = selectEl.parentElement;
+                const freqInput = row.querySelector('.bez-freq');
+                if (selectEl.value === 'Periodic') {
+                    freqInput.style.display = 'block';
+                } else {
+                    freqInput.style.display = 'none';
                 }
-            });
+            };
 
-            proj.expenses = newExpenses;
+            window.updateBusinessExpenseTotal = () => {
+                const rows = document.querySelectorAll('.biz-expense-row');
+                let totalFixed = 0;
+                let totalPercent = 0;
 
-            try {
-                await Store.saveOverheadProject(proj);
-                console.log("Saved to Supabase.");
+                rows.forEach(row => {
+                    const cost = parseFloat(row.querySelector('.bez-cost').value) || 0;
+                    const type = row.querySelector('.bez-type').value;
+                    const freq = parseFloat(row.querySelector('.bez-freq').value) || 1;
 
-                BusinessProfileManager.render();
-                calculateAndDisplay();
+                    if (type === 'Annual') totalFixed += cost;
+                    if (type === 'Monthly') totalFixed += (cost * 12);
+                    if (type === 'Periodic') totalFixed += (cost * freq);
+                    if (type === 'Percent') totalPercent += cost;
+                });
 
-                // Force Close
-                const modal = document.getElementById('modal-business-expenses');
-                if (modal) {
-                    modal.close();
-                    console.log("Modal closed.");
+                // User Logic: Total = Fixed / (1 - Rate)
+                // Example: 9000 / (1 - 0.10) = 10,000
+                let finalTotal = totalFixed;
+                if (totalPercent > 0 && totalPercent < 100) {
+                    finalTotal = totalFixed / (1 - (totalPercent / 100));
                 }
-            } catch (e) {
-                console.error("Save failed:", e);
-                alert("Error saving: " + e.message);
-            }
-        };
 
-        // LINE ITEMS (Work)
-        const LineManager = {
-            container: document.getElementById('lines-of-work-container'),
+                document.getElementById('modal-biz-total').innerText = Utils.formatCurrency(finalTotal);
+            };
 
-            render: () => {
-                LineManager.container.innerHTML = '';
-                const globalWeeks = parseFloat(inputs.weeks.value) || 0;
-                const globalDays = parseFloat(inputs.days.value) || 0;
-                const globalHours = parseFloat(inputs.hours.value) || 0;
+            window.saveBusinessExpenses = async () => {
+                console.log("Saving business expenses...");
+                const id = window.currentBizId;
+                const proj = overheadProjects.find(p => p.id === id);
 
-                profile.linesOfWork.forEach((line, lineIndex) => {
-                    const card = document.createElement('div');
-                    card.className = 'grid-card';
-                    card.style.marginBottom = 'var(--spacing-md)';
-                    card.style.padding = 'var(--spacing-sm)';
-                    card.style.border = '1px solid var(--color-border)';
+                if (!proj) {
+                    alert("Error: Project not found.");
+                    return;
+                }
 
-                    const header = document.createElement('div');
-                    header.style.display = 'flex';
-                    header.style.justifyContent = 'space-between';
-                    header.style.marginBottom = 'var(--spacing-sm)';
-                    header.style.borderBottom = '1px dotted var(--color-border)';
-                    header.style.paddingBottom = 'var(--spacing-xs)';
+                const rows = document.querySelectorAll('.biz-expense-row');
+                const newExpenses = [];
 
-                    const overheadOptions = overheadProjects.map(proj =>
-                        `<option value="${proj.id}" ${line.overheadProjectId === proj.id ? 'selected' : ''}>${proj.name}</option>`
-                    ).join('');
+                rows.forEach(row => {
+                    const name = row.querySelector('.bez-name').value.trim();
+                    const cost = parseFloat(row.querySelector('.bez-cost').value) || 0;
+                    const type = row.querySelector('.bez-type').value;
+                    const freq = parseFloat(row.querySelector('.bez-freq').value) || 1;
 
-                    header.innerHTML = `
+                    let annualAmount = 0;
+                    if (type === 'Annual') annualAmount = cost;
+                    if (type === 'Monthly') annualAmount = cost * 12;
+                    if (type === 'Periodic') annualAmount = cost * freq;
+                    if (type === 'Percent') annualAmount = cost; // Stored as raw percentage
+
+                    if (name) { // Allow 0 cost items, but require a name
+                        newExpenses.push({
+                            label: name,
+                            baseAmount: cost,
+                            type: type,
+                            frequency: freq,
+                            amount: annualAmount
+                        });
+                    }
+                });
+
+                proj.expenses = newExpenses;
+
+                try {
+                    await Store.saveOverheadProject(proj);
+                    console.log("Saved to Supabase.");
+
+                    BusinessProfileManager.render();
+                    calculateAndDisplay();
+
+                    // Force Close
+                    const modal = document.getElementById('modal-business-expenses');
+                    if (modal) {
+                        modal.close();
+                        console.log("Modal closed.");
+                    }
+                } catch (e) {
+                    console.error("Save failed:", e);
+                    alert("Error saving: " + e.message);
+                }
+            };
+
+            // LINE ITEMS (Work)
+            const LineManager = {
+                container: document.getElementById('lines-of-work-container'),
+
+                render: () => {
+                    LineManager.container.innerHTML = '';
+                    const globalWeeks = parseFloat(inputs.weeks.value) || 0;
+                    const globalDays = parseFloat(inputs.days.value) || 0;
+                    const globalHours = parseFloat(inputs.hours.value) || 0;
+
+                    profile.linesOfWork.forEach((line, lineIndex) => {
+                        const card = document.createElement('div');
+                        card.className = 'grid-card';
+                        card.style.marginBottom = 'var(--spacing-md)';
+                        card.style.padding = 'var(--spacing-sm)';
+                        card.style.border = '1px solid var(--color-border)';
+
+                        const header = document.createElement('div');
+                        header.style.display = 'flex';
+                        header.style.justifyContent = 'space-between';
+                        header.style.marginBottom = 'var(--spacing-sm)';
+                        header.style.borderBottom = '1px dotted var(--color-border)';
+                        header.style.paddingBottom = 'var(--spacing-xs)';
+
+                        const overheadOptions = overheadProjects.map(proj =>
+                            `<option value="${proj.id}" ${line.overheadProjectId === proj.id ? 'selected' : ''}>${proj.name}</option>`
+                        ).join('');
+
+                        header.innerHTML = `
                     <div style="display:flex; gap: var(--spacing-sm); width: 100%;">
                         <div style="flex-grow:1;">
                             <label style="font-size:0.6rem;">Role / Line of Work</label>
@@ -939,73 +928,73 @@
                     </div>
                     <button onclick="removeLine(${lineIndex})" style="color:red; background:none; border:none; cursor:pointer; font-size:1.2rem; line-height:1;">&times;</button>
                 `;
-                    card.appendChild(header);
+                        card.appendChild(header);
 
-                    const overheadSelectorDiv = document.createElement('div');
-                    overheadSelectorDiv.style.marginBottom = 'var(--spacing-sm)';
+                        const overheadSelectorDiv = document.createElement('div');
+                        overheadSelectorDiv.style.marginBottom = 'var(--spacing-sm)';
 
-                    let rateDisplay = '';
-                    let computedOverheadRate = 0;
+                        let rateDisplay = '';
+                        let computedOverheadRate = 0;
 
-                    if (line.overheadProjectId) {
-                        const linkedProj = overheadProjects.find(p => p.id === line.overheadProjectId);
-                        if (linkedProj) {
-                            // Calculate Total Overhead using Gross-Up Logic (Matching BusinessProfileManager)
-                            let projFixed = 0;
-                            let projPercent = 0;
-                            (linkedProj.expenses || []).forEach(e => {
-                                if (e.type === 'Percent') {
-                                    projPercent += (e.baseAmount || e.amount || 0);
-                                } else {
-                                    projFixed += (e.amount || 0);
+                        if (line.overheadProjectId) {
+                            const linkedProj = overheadProjects.find(p => p.id === line.overheadProjectId);
+                            if (linkedProj) {
+                                // Calculate Total Overhead using Gross-Up Logic (Matching BusinessProfileManager)
+                                let projFixed = 0;
+                                let projPercent = 0;
+                                (linkedProj.expenses || []).forEach(e => {
+                                    if (e.type === 'Percent') {
+                                        projPercent += (e.baseAmount || e.amount || 0);
+                                    } else {
+                                        projFixed += (e.amount || 0);
+                                    }
+                                });
+
+                                let totalOverhead = projFixed;
+                                if (projPercent > 0 && projPercent < 100) {
+                                    totalOverhead = projFixed / (1 - (projPercent / 100));
                                 }
-                            });
 
-                            let totalOverhead = projFixed;
-                            if (projPercent > 0 && projPercent < 100) {
-                                totalOverhead = projFixed / (1 - (projPercent / 100));
-                            }
+                                let lineWeeks = parseFloat(line.duration.value) || 0;
+                                if (line.duration.unit === 'Months') lineWeeks *= 4.33;
+                                if (line.duration.unit === 'Years') lineWeeks *= 52;
+                                if (line.duration.unit === '% of Year') lineWeeks = (parseFloat(line.duration.value) / 100) * globalWeeks;
 
-                            let lineWeeks = parseFloat(line.duration.value) || 0;
-                            if (line.duration.unit === 'Months') lineWeeks *= 4.33;
-                            if (line.duration.unit === 'Years') lineWeeks *= 52;
-                            if (line.duration.unit === '% of Year') lineWeeks = (parseFloat(line.duration.value) / 100) * globalWeeks;
+                                // Calculate Billable Capacity for this Line
+                                const globalHoursPerWeek = globalDays * globalHours;
+                                const lineTotalCapacity = lineWeeks * globalHoursPerWeek;
 
-                            // Calculate Billable Capacity for this Line
-                            const globalHoursPerWeek = globalDays * globalHours;
-                            const lineTotalCapacity = lineWeeks * globalHoursPerWeek;
+                                // Non-Billable using Activity Frequency Normalizer
+                                const lineTotalNonBillable = (line.activities || []).reduce((sum, act) => {
+                                    const hrs = Normalizer.getActivityAnnualHours(act, lineWeeks, globalDays, globalHours);
+                                    return sum + (hrs > 0 ? hrs : 0);
+                                }, 0);
 
-                            // Non-Billable using Activity Frequency Normalizer
-                            const lineTotalNonBillable = (line.activities || []).reduce((sum, act) => {
-                                const hrs = Normalizer.getActivityAnnualHours(act, lineWeeks, globalDays, globalHours);
-                                return sum + (hrs > 0 ? hrs : 0);
-                            }, 0);
+                                // Derived Billable Hours
+                                const lineBillableHours = Math.max(0, lineTotalCapacity - lineTotalNonBillable);
 
-                            // Derived Billable Hours
-                            const lineBillableHours = Math.max(0, lineTotalCapacity - lineTotalNonBillable);
+                                if (window.BudgetEngine) {
+                                    computedOverheadRate = BudgetEngine.calculateOverheadRate(totalOverhead, lineBillableHours);
+                                } else {
+                                    computedOverheadRate = lineBillableHours > 0 ? (totalOverhead / lineBillableHours) : 0;
+                                }
 
-                            if (window.BudgetEngine) {
-                                computedOverheadRate = BudgetEngine.calculateOverheadRate(totalOverhead, lineBillableHours);
-                            } else {
-                                computedOverheadRate = lineBillableHours > 0 ? (totalOverhead / lineBillableHours) : 0;
-                            }
+                                line.derivedOverheadRate = computedOverheadRate;
 
-                            line.derivedOverheadRate = computedOverheadRate;
-
-                            if (lineBillableHours > 0) {
-                                rateDisplay = `<div style="margin-top:5px; font-size:0.8rem; color:var(--color-primary); font-weight:bold; background:var(--color-bg-subtle); padding:5px; border-radius:4px;">
+                                if (lineBillableHours > 0) {
+                                    rateDisplay = `<div style="margin-top:5px; font-size:0.8rem; color:var(--color-primary); font-weight:bold; background:var(--color-bg-subtle); padding:5px; border-radius:4px;">
                                 Linked Overhead Rate: $${computedOverheadRate.toFixed(2)}/hr
                                 <span style="font-weight:normal; color:#666;">(${linkedProj.name}: $${Math.round(totalOverhead).toLocaleString()} / ${Math.round(lineBillableHours)} billable hrs)</span>
                             </div>`;
-                            } else {
-                                rateDisplay = `<div style="margin-top:5px; font-size:0.8rem; color:red;">Add activities to calculate rate.</div>`;
+                                } else {
+                                    rateDisplay = `<div style="margin-top:5px; font-size:0.8rem; color:red;">Add activities to calculate rate.</div>`;
+                                }
                             }
+                        } else {
+                            line.derivedOverheadRate = 0;
                         }
-                    } else {
-                        line.derivedOverheadRate = 0;
-                    }
 
-                    overheadSelectorDiv.innerHTML = `
+                        overheadSelectorDiv.innerHTML = `
                     <label style="font-size:0.6rem;">Associated Business Profile (Overhead)</label>
                     <select onchange="updateLine(${lineIndex}, 'overheadProjectId', this.value)" style="width:100%; margin-bottom:5px;">
                         <option value="">None</option>
@@ -1013,36 +1002,36 @@
                     </select>
                     ${rateDisplay}
                 `;
-                    card.appendChild(overheadSelectorDiv);
+                        card.appendChild(overheadSelectorDiv);
 
-                    const actsContainer = document.createElement('div');
-                    const subHeader = document.createElement('div');
-                    subHeader.style.display = 'flex';
-                    subHeader.style.justifyContent = 'space-between';
-                    subHeader.style.marginBottom = 'var(--spacing-xs)';
-                    subHeader.innerHTML = `
+                        const actsContainer = document.createElement('div');
+                        const subHeader = document.createElement('div');
+                        subHeader.style.display = 'flex';
+                        subHeader.style.justifyContent = 'space-between';
+                        subHeader.style.marginBottom = 'var(--spacing-xs)';
+                        subHeader.innerHTML = `
                      <div style="font-size:0.7rem; font-weight:bold;">NON-BILLABLE ACTIVITIES</div>
                      <button onclick="addActivity(${lineIndex})" style="font-size:0.7rem; cursor:pointer;">+ Service</button>
                 `;
-                    card.appendChild(subHeader);
+                        card.appendChild(subHeader);
 
-                    line.activities.forEach((act, actIndex) => {
-                        const lineWeeks = Normalizer.getLineWeeks(line.duration.value, line.duration.unit, globalWeeks);
-                        const annualHours = Normalizer.getActivityAnnualHours(act, lineWeeks, globalDays, globalHours);
-                        const isInvalid = annualHours === -1;
+                        line.activities.forEach((act, actIndex) => {
+                            const lineWeeks = Normalizer.getLineWeeks(line.duration.value, line.duration.unit, globalWeeks);
+                            const annualHours = Normalizer.getActivityAnnualHours(act, lineWeeks, globalDays, globalHours);
+                            const isInvalid = annualHours === -1;
 
-                        const displayValue = isInvalid ?
-                            `<span style="color:var(--color-accent-surviving); font-weight:bold; font-size:0.6rem;">please revise your selections</span>` :
-                            `≈ ${Math.round(annualHours)} hrs`;
+                            const displayValue = isInvalid ?
+                                `<span style="color:var(--color-accent-surviving); font-weight:bold; font-size:0.6rem;">please revise your selections</span>` :
+                                `≈ ${Math.round(annualHours)} hrs`;
 
-                        const actRow = document.createElement('div');
-                        actRow.style.display = 'grid';
-                        actRow.style.gridTemplateColumns = '2fr 1fr 1fr 1fr auto auto';
-                        actRow.style.gap = '5px';
-                        actRow.style.marginBottom = '5px';
-                        actRow.style.alignItems = 'center';
+                            const actRow = document.createElement('div');
+                            actRow.style.display = 'grid';
+                            actRow.style.gridTemplateColumns = '2fr 1fr 1fr 1fr auto auto';
+                            actRow.style.gap = '5px';
+                            actRow.style.marginBottom = '5px';
+                            actRow.style.alignItems = 'center';
 
-                        actRow.innerHTML = `
+                            actRow.innerHTML = `
                         <div>
                             <input type="text" placeholder="Activity Name" value="${act.label}" onchange="updateAct(${lineIndex}, ${actIndex}, 'label', this.value)">
                         </div>
@@ -1070,523 +1059,523 @@
                         </div>
                         <button onclick="removeActivity(${lineIndex}, ${actIndex})" style="border:none; bg:none; cursor:pointer;">&times;</button>
                     `;
-                        actsContainer.appendChild(actRow);
+                            actsContainer.appendChild(actRow);
+                        });
+
+                        card.appendChild(actsContainer);
+                        LineManager.container.appendChild(card);
                     });
 
-                    card.appendChild(actsContainer);
-                    LineManager.container.appendChild(card);
-                });
+                    if (profile.linesOfWork.length > 0) {
+                        const bottomBtn = document.createElement('button');
+                        bottomBtn.innerText = "+ New Line";
+                        bottomBtn.style.fontSize = "0.8rem";
+                        bottomBtn.style.padding = "5px 10px";
+                        bottomBtn.style.marginTop = "10px";
+                        bottomBtn.style.cursor = "pointer";
+                        bottomBtn.style.width = "100%";
+                        bottomBtn.style.border = "1px dashed #ccc";
+                        bottomBtn.style.background = "#fafafa";
+                        bottomBtn.onclick = () => LineManager.addLine();
+                        LineManager.container.appendChild(bottomBtn);
+                    }
+                },
 
-                if (profile.linesOfWork.length > 0) {
-                    const bottomBtn = document.createElement('button');
-                    bottomBtn.innerText = "+ New Line";
-                    bottomBtn.style.fontSize = "0.8rem";
-                    bottomBtn.style.padding = "5px 10px";
-                    bottomBtn.style.marginTop = "10px";
-                    bottomBtn.style.cursor = "pointer";
-                    bottomBtn.style.width = "100%";
-                    bottomBtn.style.border = "1px dashed #ccc";
-                    bottomBtn.style.background = "#fafafa";
-                    bottomBtn.onclick = () => LineManager.addLine();
-                    LineManager.container.appendChild(bottomBtn);
-                }
-            },
-
-            addLine: () => {
-                profile.linesOfWork.push({
-                    id: crypto.randomUUID(),
-                    label: 'New Line of Work',
-                    duration: { value: 52, unit: 'Weeks' },
-                    activities: [],
-                    overheadProjectId: ''
-                });
-                renderLinesOfWork();
-                calculateAndDisplay();
-                Store.saveIndependentProfile(profile);
-            },
-
-            removeLine: (index) => {
-                if (confirm('Delete this line of work?')) {
-                    profile.linesOfWork.splice(index, 1);
+                addLine: () => {
+                    profile.linesOfWork.push({
+                        id: crypto.randomUUID(),
+                        label: 'New Line of Work',
+                        duration: { value: 52, unit: 'Weeks' },
+                        activities: [],
+                        overheadProjectId: ''
+                    });
                     renderLinesOfWork();
                     calculateAndDisplay();
                     Store.saveIndependentProfile(profile);
-                }
-            },
+                },
 
-            updateLine: (index, field, value) => {
-                profile.linesOfWork[index][field] = value;
-                calculateAndDisplay();
-                Store.saveIndependentProfile(profile);
-            },
+                removeLine: (index) => {
+                    if (confirm('Delete this line of work?')) {
+                        profile.linesOfWork.splice(index, 1);
+                        renderLinesOfWork();
+                        calculateAndDisplay();
+                        Store.saveIndependentProfile(profile);
+                    }
+                },
 
-            pendingOverride: null,
+                updateLine: (index, field, value) => {
+                    profile.linesOfWork[index][field] = value;
+                    calculateAndDisplay();
+                    Store.saveIndependentProfile(profile);
+                },
 
-            updateLineDuration: (index, subField, value) => {
-                const newVal = subField === 'value' ? parseFloat(value) : value;
-                const currentObj = profile.linesOfWork[index].duration;
-                let proposedValue = currentObj.value;
-                let proposedUnit = currentObj.unit;
-                if (subField === 'unit') proposedUnit = newVal;
-                if (subField === 'value') proposedValue = newVal;
+                pendingOverride: null,
 
-                const globalWeeks = parseFloat(inputs.weeks.value) || 0;
-                let proposedWeeks = Normalizer.getLineWeeks(proposedValue, proposedUnit, globalWeeks);
-                // Special check for Direct Input of % to ensure we aren't double counting if Normalizer changed
-                // Actually Normalizer handles it. But let's verify line 1092 logic mentioned earlier.
+                updateLineDuration: (index, subField, value) => {
+                    const newVal = subField === 'value' ? parseFloat(value) : value;
+                    const currentObj = profile.linesOfWork[index].duration;
+                    let proposedValue = currentObj.value;
+                    let proposedUnit = currentObj.unit;
+                    if (subField === 'unit') proposedUnit = newVal;
+                    if (subField === 'value') proposedValue = newVal;
 
-                if (proposedWeeks > globalWeeks) {
-                    LineManager.pendingOverride = { index, subField, value: newVal };
-                    const msg = `This duration (<strong>${Math.round(proposedWeeks)} weeks</strong>) exceeds your declared Time Reclaimed Schedule (<strong>${globalWeeks} weeks</strong>).<br><br>Do you want to override and keep this duration?`;
-                    document.getElementById('modal-override-msg').innerHTML = msg;
-                    document.getElementById('modal-override').showModal();
-                    return;
-                }
+                    const globalWeeks = parseFloat(inputs.weeks.value) || 0;
+                    let proposedWeeks = Normalizer.getLineWeeks(proposedValue, proposedUnit, globalWeeks);
+                    // Special check for Direct Input of % to ensure we aren't double counting if Normalizer changed
+                    // Actually Normalizer handles it. But let's verify line 1092 logic mentioned earlier.
 
-                profile.linesOfWork[index].duration[subField] = newVal;
-                calculateAndDisplay();
-                Store.saveIndependentProfile(profile);
-                if (subField === 'unit') renderLinesOfWork();
-            },
+                    if (proposedWeeks > globalWeeks) {
+                        LineManager.pendingOverride = { index, subField, value: newVal };
+                        const msg = `This duration (<strong>${Math.round(proposedWeeks)} weeks</strong>) exceeds your declared Time Reclaimed Schedule (<strong>${globalWeeks} weeks</strong>).<br><br>Do you want to override and keep this duration?`;
+                        document.getElementById('modal-override-msg').innerHTML = msg;
+                        document.getElementById('modal-override').showModal();
+                        return;
+                    }
 
-            confirmOverride: () => {
-                if (LineManager.pendingOverride) {
-                    const { index, subField, value } = LineManager.pendingOverride;
-                    profile.linesOfWork[index].duration[subField] = value;
+                    profile.linesOfWork[index].duration[subField] = newVal;
                     calculateAndDisplay();
                     Store.saveIndependentProfile(profile);
                     if (subField === 'unit') renderLinesOfWork();
+                },
+
+                confirmOverride: () => {
+                    if (LineManager.pendingOverride) {
+                        const { index, subField, value } = LineManager.pendingOverride;
+                        profile.linesOfWork[index].duration[subField] = value;
+                        calculateAndDisplay();
+                        Store.saveIndependentProfile(profile);
+                        if (subField === 'unit') renderLinesOfWork();
+                        LineManager.pendingOverride = null;
+                    }
+                    document.getElementById('modal-override').close();
+                },
+
+                cancelOverride: () => {
                     LineManager.pendingOverride = null;
+                    document.getElementById('modal-override').close();
+                    renderLinesOfWork();
+                },
+
+                addActivity: (lineIndex) => {
+                    profile.linesOfWork[lineIndex].activities.push({
+                        label: '',
+                        amount: 0,
+                        unit: 'Hours',
+                        frequency: 'Per Week'
+                    });
+                    renderLinesOfWork();
+                    Store.saveIndependentProfile(profile);
+                },
+
+                removeActivity: (lineIndex, actIndex) => {
+                    profile.linesOfWork[lineIndex].activities.splice(actIndex, 1);
+                    renderLinesOfWork();
+                    calculateAndDisplay();
+                    Store.saveIndependentProfile(profile);
+                },
+
+                updateActivity: (lineIndex, actIndex, field, value) => {
+                    const val = (field === 'amount') ? parseFloat(value) : value;
+                    profile.linesOfWork[lineIndex].activities[actIndex][field] = val;
+                    calculateAndDisplay();
+                    Store.saveIndependentProfile(profile);
                 }
-                document.getElementById('modal-override').close();
-            },
-
-            cancelOverride: () => {
-                LineManager.pendingOverride = null;
-                document.getElementById('modal-override').close();
-                renderLinesOfWork();
-            },
-
-            addActivity: (lineIndex) => {
-                profile.linesOfWork[lineIndex].activities.push({
-                    label: '',
-                    amount: 0,
-                    unit: 'Hours',
-                    frequency: 'Per Week'
-                });
-                renderLinesOfWork();
-                Store.saveIndependentProfile(profile);
-            },
-
-            removeActivity: (lineIndex, actIndex) => {
-                profile.linesOfWork[lineIndex].activities.splice(actIndex, 1);
-                renderLinesOfWork();
-                calculateAndDisplay();
-                Store.saveIndependentProfile(profile);
-            },
-
-            updateActivity: (lineIndex, actIndex, field, value) => {
-                const val = (field === 'amount') ? parseFloat(value) : value;
-                profile.linesOfWork[lineIndex].activities[actIndex][field] = val;
-                calculateAndDisplay();
-                Store.saveIndependentProfile(profile);
-            }
-        };
-
-        const renderLinesOfWork = LineManager.render;
-        window.updateLine = LineManager.updateLine;
-        window.updateLineDuration = LineManager.updateLineDuration;
-        window.removeLine = LineManager.removeLine;
-        window.addActivity = LineManager.addActivity;
-        window.removeActivity = LineManager.removeActivity;
-        window.updateAct = LineManager.updateActivity;
-        window.confirmOverride = LineManager.confirmOverride;
-        window.cancelOverride = LineManager.cancelOverride;
-        window.updateExpense = ExpenseManager.updateExpense;
-        window.removeExpense = ExpenseManager.removeExpense;
-        window.updateIncome = IncomeManager.updateIncome;
-        window.removeIncome = IncomeManager.removeIncome;
-
-        document.getElementById('btn-add-line-of-work').onclick = LineManager.addLine;
-        document.getElementById('btn-add-expense').onclick = ExpenseManager.addExpense;
-        document.getElementById('btn-add-income').onclick = IncomeManager.addIncome;
-        document.getElementById('btn-add-overhead-profile').onclick = BusinessProfileManager.create;
-
-        function calculateAndDisplay() {
-            const weeks = parseFloat(inputs.weeks.value) || 0;
-            const days = parseFloat(inputs.days.value) || 0;
-            const hours = parseFloat(inputs.hours.value) || 0;
-            const taxRate = parseFloat(inputs.taxRate.value) || 0;
-
-            if (!profile.schedule) profile.schedule = {};
-            profile.schedule.weeks = weeks;
-            profile.schedule.days = days;
-            profile.schedule.hours = hours;
-            if (!profile.expenses) profile.expenses = {};
-            profile.expenses.taxRate = taxRate;
-
-            const capacity = Utils.calculateBillableCapacity(profile);
-            const totalWorkHours = capacity.totalWorkHours;
-            const totalNonBillableHours = capacity.totalNonBillableHours;
-            const totalBillableHours = capacity.totalBillableHours;
-
-            const nbPercent = totalWorkHours > 0 ? (totalNonBillableHours / totalWorkHours) * 100 : 0;
-            const bPercent = totalWorkHours > 0 ? (totalBillableHours / totalWorkHours) * 100 : 0;
-
-            profile.billableRatio = capacity.billableRatio;
-            Store.saveIndependentProfile(profile);
-
-            outputs.totalWorkHours.textContent = Math.round(totalWorkHours).toLocaleString();
-            outputs.totalNonBillable.innerHTML = `${Math.round(totalNonBillableHours).toLocaleString()} <span style="font-size:0.7em; opacity:0.7;">(${Math.round(nbPercent)}%)</span>`;
-            outputs.totalBillable.innerHTML = `${Math.round(totalBillableHours).toLocaleString()} <span style="font-size:0.7em; opacity:0.7;">(${Math.round(bPercent)}%)</span>`;
-
-            let fixedSum = 0;
-            let percentSum = 0;
-
-            profile.expenses.items.forEach(item => {
-                const amount = parseFloat(item.amount) || 0;
-                if (item.type === 'Monthly') {
-                    fixedSum += amount * 12;
-                } else if (item.type === 'Periodic') {
-                    const freq = parseFloat(item.frequency) || 1;
-                    fixedSum += amount * freq;
-                } else if (item.type === 'Percent') {
-                    percentSum += amount;
-                }
-            });
-
-            /* 
-            // OVERHEAD DECOUPLED: 
-            // Business Overhead is now calculated separately for "Scenarios" and not included 
-            // in the base "Personal Survival Goal".
-            
-            overheadProjects.forEach(proj => {
-                 if (proj.expenses) {
-                     proj.expenses.forEach(item => { ... });
-                 }
-            });
-            */
-
-            let unearnedSum = 0;
-            profile.unearnedIncome.items.forEach(item => {
-                const amount = parseFloat(item.amount) || 0;
-                if (item.type === 'Monthly') {
-                    unearnedSum += amount * 12;
-                } else if (item.type === 'Periodic') {
-                    const freq = parseFloat(item.frequency) || 1;
-                    unearnedSum += amount * freq;
-                } else {
-                    unearnedSum += amount;
-                }
-            });
-
-            const unearnedTotalEl = document.getElementById('out-total-unearned-income');
-            if (unearnedTotalEl) {
-                unearnedTotalEl.textContent = Utils.formatCurrency(unearnedSum);
-            }
-
-            let goalNetTotal = 0;
-            if (percentSum < 100) {
-                goalNetTotal = fixedSum / (1 - (percentSum / 100));
-            } else {
-                goalNetTotal = Infinity;
-            }
-
-            let goalNetWork = goalNetTotal;
-            let goalGross = 0;
-            if (goalNetWork !== Infinity) {
-                goalGross = goalNetWork * (1 + (taxRate / 100));
-            } else {
-                goalGross = Infinity;
-            }
-            const currentNet = profile.currentNetIncome || 0;
-            const currentGross = currentNet * (1 + (taxRate / 100));
-
-            outputs.goalNet.textContent = Utils.formatCurrency(goalNetWork);
-            outputs.goalGross.textContent = Utils.formatCurrency(goalGross);
-
-            const outCurrentGross = document.getElementById('out-current-gross');
-            if (outCurrentGross) {
-                outCurrentGross.textContent = Utils.formatCurrency(currentGross);
-            }
-
-            profile.goals = {
-                net: goalNetWork,
-                gross: goalGross,
-                current: currentGross
             };
-            Store.saveIndependentProfile(profile);
 
-            // Populate GOAL Rates
-            setVal('out-goal-hourly', totalBillableHours > 0 ? goalGross / totalBillableHours : 0);
-            setVal('out-goal-daily', (totalBillableHours > 0 ? goalGross / totalBillableHours : 0) * (hours * (totalBillableHours / totalWorkHours * 100 / 100))); // Rough Approx?
-            // Actually, stick to standard: Annual / Weeks / Days?
-            // Better: Hourly * Hours/Day (Billable Only?)
-            // Let's use simple math:
-            const goalHourly = totalBillableHours > 0 ? goalGross / totalBillableHours : 0;
-            setVal('out-goal-daily', goalHourly * hours); // Assuming full day billing? Or adjusted?
-            // Let's stick to: Rates are usually based on "Billable Hour".
-            setVal('out-goal-weekly', goalGross / (weeks || 1));
-            setVal('out-goal-monthly', goalGross / 12);
+            const renderLinesOfWork = LineManager.render;
+            window.updateLine = LineManager.updateLine;
+            window.updateLineDuration = LineManager.updateLineDuration;
+            window.removeLine = LineManager.removeLine;
+            window.addActivity = LineManager.addActivity;
+            window.removeActivity = LineManager.removeActivity;
+            window.updateAct = LineManager.updateActivity;
+            window.confirmOverride = LineManager.confirmOverride;
+            window.cancelOverride = LineManager.cancelOverride;
+            window.updateExpense = ExpenseManager.updateExpense;
+            window.removeExpense = ExpenseManager.removeExpense;
+            window.updateIncome = IncomeManager.updateIncome;
+            window.removeIncome = IncomeManager.removeIncome;
 
-            // Populate NOW Rates
-            const currentHourly = totalBillableHours > 0 ? currentGross / totalBillableHours : 0;
-            setVal('out-now-hourly', currentHourly);
-            setVal('out-now-daily', currentHourly * hours);
-            setVal('out-now-weekly', currentGross / (weeks || 1));
-            setVal('out-now-monthly', currentGross / 12);
+            document.getElementById('btn-add-line-of-work').onclick = LineManager.addLine;
+            document.getElementById('btn-add-expense').onclick = ExpenseManager.addExpense;
+            document.getElementById('btn-add-income').onclick = IncomeManager.addIncome;
+            document.getElementById('btn-add-overhead-profile').onclick = BusinessProfileManager.create;
 
-            // --- SCENARIO ANALYSIS (New Feature) ---
-            window.calculateOverheadScenarios = () => {
-                // 1. Get Base Personal Numbers
-                const personalFixed = fixedSum; // Calculated in calculateAndDisplay (Personal Expense + Unearned)
-                const personalPercent = percentSum; // Personal Percent Expense
+            function calculateAndDisplay() {
+                const weeks = parseFloat(inputs.weeks.value) || 0;
+                const days = parseFloat(inputs.days.value) || 0;
+                const hours = parseFloat(inputs.hours.value) || 0;
                 const taxRate = parseFloat(inputs.taxRate.value) || 0;
+
+                if (!profile.schedule) profile.schedule = {};
+                profile.schedule.weeks = weeks;
+                profile.schedule.days = days;
+                profile.schedule.hours = hours;
+                if (!profile.expenses) profile.expenses = {};
+                profile.expenses.taxRate = taxRate;
+
                 const capacity = Utils.calculateBillableCapacity(profile);
-                const billableHours = capacity.totalBillableHours;
+                const totalWorkHours = capacity.totalWorkHours;
+                const totalNonBillableHours = capacity.totalNonBillableHours;
+                const totalBillableHours = capacity.totalBillableHours;
 
-                const scenarios = [];
+                const nbPercent = totalWorkHours > 0 ? (totalNonBillableHours / totalWorkHours) * 100 : 0;
+                const bPercent = totalWorkHours > 0 ? (totalBillableHours / totalWorkHours) * 100 : 0;
 
-                // Base Scenario (Personal Only)
-                scenarios.push({
-                    name: "Personal Baseline (You)",
-                    fixed: personalFixed,
-                    percent: personalPercent,
-                    tax: taxRate,
-                    totalNet: profile.goals.net, // Already stored
-                    totalGross: profile.goals.gross // Already stored
+                profile.billableRatio = capacity.billableRatio;
+                Store.saveIndependentProfile(profile);
+
+                outputs.totalWorkHours.textContent = Math.round(totalWorkHours).toLocaleString();
+                outputs.totalNonBillable.innerHTML = `${Math.round(totalNonBillableHours).toLocaleString()} <span style="font-size:0.7em; opacity:0.7;">(${Math.round(nbPercent)}%)</span>`;
+                outputs.totalBillable.innerHTML = `${Math.round(totalBillableHours).toLocaleString()} <span style="font-size:0.7em; opacity:0.7;">(${Math.round(bPercent)}%)</span>`;
+
+                let fixedSum = 0;
+                let percentSum = 0;
+
+                profile.expenses.items.forEach(item => {
+                    const amount = parseFloat(item.amount) || 0;
+                    if (item.type === 'Monthly') {
+                        fixedSum += amount * 12;
+                    } else if (item.type === 'Periodic') {
+                        const freq = parseFloat(item.frequency) || 1;
+                        fixedSum += amount * freq;
+                    } else if (item.type === 'Percent') {
+                        percentSum += amount;
+                    }
                 });
 
-                // Business Scenarios
+                /* 
+                // OVERHEAD DECOUPLED: 
+                // Business Overhead is now calculated separately for "Scenarios" and not included 
+                // in the base "Personal Survival Goal".
+                
                 overheadProjects.forEach(proj => {
-                    let bizFixed = 0;
-                    let bizPercent = 0;
+                     if (proj.expenses) {
+                         proj.expenses.forEach(item => { ... });
+                     }
+                });
+                */
 
-                    if (proj.expenses) {
-                        proj.expenses.forEach(item => {
-                            const amount = parseFloat(item.amount) || 0;
-                            if (item.type === 'Percent') {
-                                bizPercent += (item.baseAmount || item.amount || 0);
-                            } else {
-                                bizFixed += (item.amount || 0); // Annualized amount
+                let unearnedSum = 0;
+                profile.unearnedIncome.items.forEach(item => {
+                    const amount = parseFloat(item.amount) || 0;
+                    if (item.type === 'Monthly') {
+                        unearnedSum += amount * 12;
+                    } else if (item.type === 'Periodic') {
+                        const freq = parseFloat(item.frequency) || 1;
+                        unearnedSum += amount * freq;
+                    } else {
+                        unearnedSum += amount;
+                    }
+                });
+
+                const unearnedTotalEl = document.getElementById('out-total-unearned-income');
+                if (unearnedTotalEl) {
+                    unearnedTotalEl.textContent = Utils.formatCurrency(unearnedSum);
+                }
+
+                let goalNetTotal = 0;
+                if (percentSum < 100) {
+                    goalNetTotal = fixedSum / (1 - (percentSum / 100));
+                } else {
+                    goalNetTotal = Infinity;
+                }
+
+                let goalNetWork = goalNetTotal;
+                let goalGross = 0;
+                if (goalNetWork !== Infinity) {
+                    goalGross = goalNetWork * (1 + (taxRate / 100));
+                } else {
+                    goalGross = Infinity;
+                }
+                const currentNet = profile.currentNetIncome || 0;
+                const currentGross = currentNet * (1 + (taxRate / 100));
+
+                outputs.goalNet.textContent = Utils.formatCurrency(goalNetWork);
+                outputs.goalGross.textContent = Utils.formatCurrency(goalGross);
+
+                const outCurrentGross = document.getElementById('out-current-gross');
+                if (outCurrentGross) {
+                    outCurrentGross.textContent = Utils.formatCurrency(currentGross);
+                }
+
+                profile.goals = {
+                    net: goalNetWork,
+                    gross: goalGross,
+                    current: currentGross
+                };
+                Store.saveIndependentProfile(profile);
+
+                // Populate GOAL Rates
+                setVal('out-goal-hourly', totalBillableHours > 0 ? goalGross / totalBillableHours : 0);
+                setVal('out-goal-daily', (totalBillableHours > 0 ? goalGross / totalBillableHours : 0) * (hours * (totalBillableHours / totalWorkHours * 100 / 100))); // Rough Approx?
+                // Actually, stick to standard: Annual / Weeks / Days?
+                // Better: Hourly * Hours/Day (Billable Only?)
+                // Let's use simple math:
+                const goalHourly = totalBillableHours > 0 ? goalGross / totalBillableHours : 0;
+                setVal('out-goal-daily', goalHourly * hours); // Assuming full day billing? Or adjusted?
+                // Let's stick to: Rates are usually based on "Billable Hour".
+                setVal('out-goal-weekly', goalGross / (weeks || 1));
+                setVal('out-goal-monthly', goalGross / 12);
+
+                // Populate NOW Rates
+                const currentHourly = totalBillableHours > 0 ? currentGross / totalBillableHours : 0;
+                setVal('out-now-hourly', currentHourly);
+                setVal('out-now-daily', currentHourly * hours);
+                setVal('out-now-weekly', currentGross / (weeks || 1));
+                setVal('out-now-monthly', currentGross / 12);
+
+                // --- SCENARIO ANALYSIS (New Feature) ---
+                window.calculateOverheadScenarios = () => {
+                    // 1. Get Base Personal Numbers
+                    const personalFixed = fixedSum; // Calculated in calculateAndDisplay (Personal Expense + Unearned)
+                    const personalPercent = percentSum; // Personal Percent Expense
+                    const taxRate = parseFloat(inputs.taxRate.value) || 0;
+                    const capacity = Utils.calculateBillableCapacity(profile);
+                    const billableHours = capacity.totalBillableHours;
+
+                    const scenarios = [];
+
+                    // Base Scenario (Personal Only)
+                    scenarios.push({
+                        name: "Personal Baseline (You)",
+                        fixed: personalFixed,
+                        percent: personalPercent,
+                        tax: taxRate,
+                        totalNet: profile.goals.net, // Already stored
+                        totalGross: profile.goals.gross // Already stored
+                    });
+
+                    // Business Scenarios
+                    overheadProjects.forEach(proj => {
+                        let bizFixed = 0;
+                        let bizPercent = 0;
+
+                        if (proj.expenses) {
+                            proj.expenses.forEach(item => {
+                                const amount = parseFloat(item.amount) || 0;
+                                if (item.type === 'Percent') {
+                                    bizPercent += (item.baseAmount || item.amount || 0);
+                                } else {
+                                    bizFixed += (item.amount || 0); // Annualized amount
+                                }
+                            });
+                        }
+
+                        // Combined Calculation
+                        // Goal Net = (Personal Fixed + Biz Fixed) / (1 - (Personal % + Biz %))
+                        const combinedFixed = personalFixed + bizFixed;
+                        const combinedPercent = personalPercent + bizPercent;
+
+                        let combinedNet = Infinity;
+                        if (combinedPercent < 100) {
+                            combinedNet = combinedFixed / (1 - (combinedPercent / 100));
+                        }
+
+                        const combinedGross = combinedNet * (1 + (taxRate / 100));
+
+                        scenarios.push({
+                            name: `+ ${proj.name}`,
+                            fixed: combinedFixed,
+                            percent: combinedPercent,
+                            totalNet: combinedNet,
+                            totalGross: combinedGross,
+                            hourly: (billableHours > 0) ? (combinedGross / billableHours) : 0
+                        });
+                    });
+
+                    // All Combined Scenario (if > 1 project)
+                    if (overheadProjects.length > 1) {
+                        let allBizFixed = 0;
+                        let allBizPercent = 0;
+                        overheadProjects.forEach(proj => {
+                            if (proj.expenses) {
+                                proj.expenses.forEach(item => {
+                                    if (item.type === 'Percent') allBizPercent += (item.baseAmount || item.amount || 0);
+                                    else allBizFixed += (item.amount || 0);
+                                });
                             }
+                        });
+
+                        const totalFixed = personalFixed + allBizFixed;
+                        const totalPercent = personalPercent + allBizPercent;
+                        let totalNet = Infinity;
+                        if (totalPercent < 100) totalNet = totalFixed / (1 - (totalPercent / 100));
+                        const totalGross = totalNet * (1 + (taxRate / 100));
+
+                        scenarios.push({
+                            name: "+ All Business Overhead",
+                            fixed: totalFixed,
+                            percent: totalPercent,
+                            totalNet: totalNet,
+                            totalGross: totalGross,
+                            hourly: (billableHours > 0) ? (totalGross / billableHours) : 0
                         });
                     }
 
-                    // Combined Calculation
-                    // Goal Net = (Personal Fixed + Biz Fixed) / (1 - (Personal % + Biz %))
-                    const combinedFixed = personalFixed + bizFixed;
-                    const combinedPercent = personalPercent + bizPercent;
+                    return scenarios;
+                };
 
-                    let combinedNet = Infinity;
-                    if (combinedPercent < 100) {
-                        combinedNet = combinedFixed / (1 - (combinedPercent / 100));
+                const pBillable = totalWorkHours > 0 ? (totalBillableHours / totalWorkHours) : 0;
+                const weeksPerYear = weeks || 0;
+                const calculateFees = (grossAmount, isGoal = false) => {
+                    if (weeksPerYear <= 0 || pBillable <= 0) {
+                        return { hourly: 0, daily: 0, weekly: 0, monthly: 0 };
                     }
+                    const adjustedGross = Math.max(0, grossAmount - unearnedSum);
+                    const weekly = adjustedGross / weeksPerYear / pBillable;
+                    const monthly = weekly * weeksPerYear / 12;
+                    const daily = days > 0 ? (weekly / days) : 0;
+                    const hourly = hours > 0 ? (daily / hours) : 0;
+                    return { hourly, daily, weekly, monthly };
+                };
 
-                    const combinedGross = combinedNet * (1 + (taxRate / 100));
+                const goalFees = calculateFees(goalGross, true);
+                setVal('out-goal-hourly', goalFees.hourly);
+                setVal('out-goal-daily', goalFees.daily);
+                setVal('out-goal-weekly', goalFees.weekly);
+                setVal('out-goal-monthly', goalFees.monthly);
 
-                    scenarios.push({
-                        name: `+ ${proj.name}`,
-                        fixed: combinedFixed,
-                        percent: combinedPercent,
-                        totalNet: combinedNet,
-                        totalGross: combinedGross,
-                        hourly: (billableHours > 0) ? (combinedGross / billableHours) : 0
-                    });
-                });
+                const nowFees = calculateFees(currentGross, false);
+                setVal('out-now-hourly', nowFees.hourly);
+                setVal('out-now-daily', nowFees.daily);
+                setVal('out-now-weekly', nowFees.weekly);
+                setVal('out-now-monthly', nowFees.monthly);
+            }
 
-                // All Combined Scenario (if > 1 project)
-                if (overheadProjects.length > 1) {
-                    let allBizFixed = 0;
-                    let allBizPercent = 0;
-                    overheadProjects.forEach(proj => {
-                        if (proj.expenses) {
-                            proj.expenses.forEach(item => {
-                                if (item.type === 'Percent') allBizPercent += (item.baseAmount || item.amount || 0);
-                                else allBizFixed += (item.amount || 0);
-                            });
-                        }
-                    });
+            // --- SCENARIO ANALYSIS UI (Global Scope) ---
+            window.showOverheadScenarios = () => {
+                const scenarios = calculateOverheadScenarios();
+                const tbody = document.getElementById('scenarios-table-body');
+                tbody.innerHTML = '';
 
-                    const totalFixed = personalFixed + allBizFixed;
-                    const totalPercent = personalPercent + allBizPercent;
-                    let totalNet = Infinity;
-                    if (totalPercent < 100) totalNet = totalFixed / (1 - (totalPercent / 100));
-                    const totalGross = totalNet * (1 + (taxRate / 100));
+                scenarios.forEach(sc => {
+                    const tr = document.createElement('tr');
+                    tr.style.borderBottom = "1px solid #eee";
 
-                    scenarios.push({
-                        name: "+ All Business Overhead",
-                        fixed: totalFixed,
-                        percent: totalPercent,
-                        totalNet: totalNet,
-                        totalGross: totalGross,
-                        hourly: (billableHours > 0) ? (totalGross / billableHours) : 0
-                    });
-                }
+                    // Highlight "Personal Baseline" row
+                    const isBase = sc.name.includes("Baseline");
+                    if (isBase) tr.style.background = "var(--color-bg-subtle)";
 
-                return scenarios;
-            };
-
-            const pBillable = totalWorkHours > 0 ? (totalBillableHours / totalWorkHours) : 0;
-            const weeksPerYear = weeks || 0;
-            const calculateFees = (grossAmount, isGoal = false) => {
-                if (weeksPerYear <= 0 || pBillable <= 0) {
-                    return { hourly: 0, daily: 0, weekly: 0, monthly: 0 };
-                }
-                const adjustedGross = Math.max(0, grossAmount - unearnedSum);
-                const weekly = adjustedGross / weeksPerYear / pBillable;
-                const monthly = weekly * weeksPerYear / 12;
-                const daily = days > 0 ? (weekly / days) : 0;
-                const hourly = hours > 0 ? (daily / hours) : 0;
-                return { hourly, daily, weekly, monthly };
-            };
-
-            const goalFees = calculateFees(goalGross, true);
-            setVal('out-goal-hourly', goalFees.hourly);
-            setVal('out-goal-daily', goalFees.daily);
-            setVal('out-goal-weekly', goalFees.weekly);
-            setVal('out-goal-monthly', goalFees.monthly);
-
-            const nowFees = calculateFees(currentGross, false);
-            setVal('out-now-hourly', nowFees.hourly);
-            setVal('out-now-daily', nowFees.daily);
-            setVal('out-now-weekly', nowFees.weekly);
-            setVal('out-now-monthly', nowFees.monthly);
-        }
-
-        // --- SCENARIO ANALYSIS UI (Global Scope) ---
-        window.showOverheadScenarios = () => {
-            const scenarios = calculateOverheadScenarios();
-            const tbody = document.getElementById('scenarios-table-body');
-            tbody.innerHTML = '';
-
-            scenarios.forEach(sc => {
-                const tr = document.createElement('tr');
-                tr.style.borderBottom = "1px solid #eee";
-
-                // Highlight "Personal Baseline" row
-                const isBase = sc.name.includes("Baseline");
-                if (isBase) tr.style.background = "var(--color-bg-subtle)";
-
-                tr.innerHTML = `
+                    tr.innerHTML = `
                         <td style="padding:10px; font-weight:${isBase ? 'bold' : 'normal'}">${sc.name}</td>
                         <td style="padding:10px; text-align:right;">${Utils.formatCurrency(sc.fixed)}</td>
                         <td style="padding:10px; text-align:right;">${sc.percent.toFixed(1)}%</td>
                         <td style="padding:10px; text-align:right;">${Utils.formatCurrency(sc.totalNet)}</td>
                         <td style="padding:10px; text-align:right; font-weight:bold; color:var(--color-accent-primary);">${Utils.formatCurrency(sc.hourly)}/hr</td>
                     `;
-                tbody.appendChild(tr);
-            });
+                    tbody.appendChild(tr);
+                });
 
-            document.getElementById('modal-scenarios').showModal();
-        };
+                document.getElementById('modal-scenarios').showModal();
+            };
 
-        // 3. Initialization
-        async function init() {
-            logToScreen("Init() started.");
-            try {
-                logToScreen("Fetching Profile...");
+            // 3. Initialization
+            async function init() {
+                logToScreen("Init() started.");
                 try {
-                    profile = await Store.getIndependentProfile();
-                    logToScreen("Profile loaded: " + (profile ? "Found" : "Null"));
-                } catch (e) {
-                    logToScreen("Profile Fetch Error: " + e.message);
-                }
-
-                // 2. Load Overhead (Always run this)
-                try {
-                    overheadProjects = await Store.getOverheadProjects();
-                    if (!Array.isArray(overheadProjects)) overheadProjects = [];
-                    if (window.calculateOverheadScenarios) {
-                        console.table(window.calculateOverheadScenarios());
+                    logToScreen("Fetching Profile...");
+                    try {
+                        profile = await Store.getIndependentProfile();
+                        logToScreen("Profile loaded: " + (profile ? "Found" : "Null"));
+                    } catch (e) {
+                        logToScreen("Profile Fetch Error: " + e.message);
                     }
-                } catch (e) {
-                    console.error("Overhead Load Error:", e);
-                    overheadProjects = [];
-                }
 
-                if (!profile) profile = {};
-                if (!profile.linesOfWork) profile.linesOfWork = [];
-                if (!profile.expenses) profile.expenses = {};
+                    // 2. Load Overhead (Always run this)
+                    try {
+                        overheadProjects = await Store.getOverheadProjects();
+                        if (!Array.isArray(overheadProjects)) overheadProjects = [];
+                        if (window.calculateOverheadScenarios) {
+                            console.table(window.calculateOverheadScenarios());
+                        }
+                    } catch (e) {
+                        console.error("Overhead Load Error:", e);
+                        overheadProjects = [];
+                    }
 
-                if (!profile.expenses.items || profile.expenses.items.length === 0) {
-                    logToScreen("Expenses empty/missing. Restoring Defaults...");
-                    profile.expenses.items = BASE_EXPENSE_CATEGORIES.map(item => ({
-                        id: crypto.randomUUID(),
-                        ...item,
-                        amount: 0
-                    }));
-                    if (profile.expenses.taxRate === undefined) profile.expenses.taxRate = 30;
-                }
+                    if (!profile) profile = {};
+                    if (!profile.linesOfWork) profile.linesOfWork = [];
+                    if (!profile.expenses) profile.expenses = {};
 
-                if (!profile.unearnedIncome || !profile.unearnedIncome.items) {
-                    profile.unearnedIncome = { items: [] };
-                }
+                    if (!profile.expenses.items || profile.expenses.items.length === 0) {
+                        logToScreen("Expenses empty/missing. Restoring Defaults...");
+                        profile.expenses.items = BASE_EXPENSE_CATEGORIES.map(item => ({
+                            id: crypto.randomUUID(),
+                            ...item,
+                            amount: 0
+                        }));
+                        if (profile.expenses.taxRate === undefined) profile.expenses.taxRate = 30;
+                    }
 
-                if (profile.schedule) {
-                    inputs.weeks.value = profile.schedule.weeks;
-                    inputs.days.value = profile.schedule.days;
-                    inputs.hours.value = profile.schedule.hours;
-                } else {
-                    // Defaults if new user
-                    inputs.weeks.value = 50;
-                    inputs.days.value = 5;
-                    inputs.hours.value = 8;
-                    profile.schedule = { weeks: 50, days: 5, hours: 8 }; // Save defaults to state
-                    Store.saveIndependentProfile(profile); // FORCE SAVE DEFAULTS
-                }
+                    if (!profile.unearnedIncome || !profile.unearnedIncome.items) {
+                        profile.unearnedIncome = { items: [] };
+                    }
 
-                if (profile.expenses.taxRate !== undefined) {
-                    inputs.taxRate.value = profile.expenses.taxRate;
-                }
+                    if (profile.schedule) {
+                        inputs.weeks.value = profile.schedule.weeks;
+                        inputs.days.value = profile.schedule.days;
+                        inputs.hours.value = profile.schedule.hours;
+                    } else {
+                        // Defaults if new user
+                        inputs.weeks.value = 50;
+                        inputs.days.value = 5;
+                        inputs.hours.value = 8;
+                        profile.schedule = { weeks: 50, days: 5, hours: 8 }; // Save defaults to state
+                        Store.saveIndependentProfile(profile); // FORCE SAVE DEFAULTS
+                    }
 
-                const currentNetInput = document.getElementById('in-current-net-income');
-                if (currentNetInput) {
-                    currentNetInput.value = profile.currentNetIncome || 0;
-                    currentNetInput.addEventListener('input', (e) => {
-                        profile.currentNetIncome = parseFloat(e.target.value) || 0;
-                        Store.saveIndependentProfile(profile);
+                    if (profile.expenses.taxRate !== undefined) {
+                        inputs.taxRate.value = profile.expenses.taxRate;
+                    }
+
+                    const currentNetInput = document.getElementById('in-current-net-income');
+                    if (currentNetInput) {
+                        currentNetInput.value = profile.currentNetIncome || 0;
+                        currentNetInput.addEventListener('input', (e) => {
+                            profile.currentNetIncome = parseFloat(e.target.value) || 0;
+                            Store.saveIndependentProfile(profile);
+                        });
+                    }
+
+                    LineManager.render();
+                    ExpenseManager.render();
+                    logToScreen("Expenses Rendered. Count: " + (profile.expenses.items ? profile.expenses.items.length : 0));
+                    IncomeManager.render();
+                    BusinessProfileManager.render();
+                    calculateAndDisplay();
+                    logToScreen("Init Complete. UI should be ready.");
+
+                    ['weeks', 'days', 'hours'].forEach(key => {
+                        inputs[key].addEventListener('input', (e) => {
+                            profile.schedule[key] = parseFloat(e.target.value);
+                            Store.saveIndependentProfile(profile);
+                            LineManager.render(); // Update overhead rates based on new capacity
+                            calculateAndDisplay();
+                        });
                     });
-                }
 
-                LineManager.render();
-                ExpenseManager.render();
-                logToScreen("Expenses Rendered. Count: " + (profile.expenses.items ? profile.expenses.items.length : 0));
-                IncomeManager.render();
-                BusinessProfileManager.render();
-                calculateAndDisplay();
-                logToScreen("Init Complete. UI should be ready.");
-
-                ['weeks', 'days', 'hours'].forEach(key => {
-                    inputs[key].addEventListener('input', (e) => {
-                        profile.schedule[key] = parseFloat(e.target.value);
+                    inputs.taxRate.addEventListener('input', (e) => {
+                        profile.expenses.taxRate = parseFloat(e.target.value);
                         Store.saveIndependentProfile(profile);
-                        LineManager.render(); // Update overhead rates based on new capacity
                         calculateAndDisplay();
                     });
-                });
-
-                inputs.taxRate.addEventListener('input', (e) => {
-                    profile.expenses.taxRate = parseFloat(e.target.value);
-                    Store.saveIndependentProfile(profile);
-                    calculateAndDisplay();
-                });
-            } catch (e) {
-                console.error("Critical Init Error:", e);
-                logToScreen("CRITICAL ERROR: " + e.message);
+                } catch (e) {
+                    console.error("Critical Init Error:", e);
+                    logToScreen("CRITICAL ERROR: " + e.message);
+                }
             }
-        }
 
-        // Start
-        init();
-    </script>
-    <script>
-        // Authentication Check
-        (async () => {
-            const user = await Store.checkSession();
-            if (!user) return;
-        })();
-    </script>
+            // Start
+            init();
+        </script>
+        <script>
+            // Authentication Check
+            (async () => {
+                const user = await Store.checkSession();
+                if (!user) return;
+            })();
+        </script>
 </body>
 
 </html>
