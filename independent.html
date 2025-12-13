@@ -1354,27 +1354,50 @@
                 const weeksInput = document.getElementById('in-weeks-per-year'); // Corrected ID
                 const workWeeks = weeksInput ? (parseFloat(weeksInput.value) || 52) : 52;
 
-                // Helper: Calculate Metrics for a given Net Target & Overhead
-                const calculateMetrics = (baseFixed, bizFixed, basePercent, bizPercent) => {
-                    const totalFixed = baseFixed + bizFixed;
-                    const totalPercent = basePercent + bizPercent;
-
-                    let netObj = Infinity;
-                    if (totalPercent < 100) {
-                        netObj = totalFixed / (1 - (totalPercent / 100)); // The Net Income needed to cover Fixed + Percent
+                // Helper: Calculate Base Personal Metrics (Geometric: Gross Up + Tax)
+                const calculatePersonalMetrics = (baseFixed, basePercent, netTarget) => {
+                    let netObj = netTarget;
+                    if (netTarget === Infinity && basePercent < 100) {
+                        // Derive net from fixed? No, usually we start with a Net Target (Goal or Now)
+                        // If we are calculating "Goal" metrics, netTarget is defined (Personal Fixed / (1-Percent)).
+                        // Actually, the previous logic derived Net FROM Fixed for "Goal".
+                        // Let's stick to the previous flow but isolate it.
+                        netObj = baseFixed / (1 - (basePercent / 100));
                     }
 
-                    const grossObj = netObj * (1 + (taxRate / 100)); // Add Tax
+                    const grossObj = netObj * (1 + (taxRate / 100));
 
                     const hourly = (billableHours > 0) ? (grossObj / billableHours) : 0;
                     const weekly = (workWeeks > 0) ? (grossObj / workWeeks) : 0;
                     const monthly = grossObj / 12;
 
                     return {
-                        fixed: totalFixed,
-                        percent: totalPercent,
+                        fixed: baseFixed,
+                        percent: basePercent,
                         net: netObj,
                         gross: grossObj,
+                        hourly: hourly,
+                        weekly: weekly,
+                        monthly: monthly
+                    };
+                };
+
+                // Helper: Calculate Isolated Business Metrics (Additive: Cost to Cover / (1 - BizPercent))
+                // Assumes Business Expenses are deductible (No Tax Gross Up on this portion)
+                const calculateBizMetrics = (bFixed, bPercent) => {
+                    let grossNeeded = 0;
+                    if (bPercent < 100) {
+                        grossNeeded = bFixed / (1 - (bPercent / 100)); // Revenue needed to cover Fixed + Percent Fee
+                    } else {
+                        grossNeeded = Infinity; // Mathematical impossibility
+                    }
+
+                    const hourly = (billableHours > 0) ? (grossNeeded / billableHours) : 0;
+                    const weekly = (workWeeks > 0) ? (grossNeeded / workWeeks) : 0;
+                    const monthly = grossNeeded / 12;
+
+                    return {
+                        gross: grossNeeded,
                         hourly: hourly,
                         weekly: weekly,
                         monthly: monthly
@@ -1385,10 +1408,60 @@
 
                 // --- Scenario Generation ---
                 const addScenario = (name, bizFixed, bizPercent) => {
+                    // 1. Calculate Personal Base (Goal & Now)
+                    // Goal: Based on Personal Fixed Cost
+                    const goalBase = calculatePersonalMetrics(personalFixed, personalPercent, Infinity); // Auto-derive Net
+
+                    // Now: Based on Current Net Income
+                    // For "Now", the Net is Fixed. We Gross It Up.
+                    // Gross = Net * (1+Tax) / (1 - Percent)? 
+                    // Logic check: Current Gross = Current Net * (1+Tax). 
+                    // If Personal Percent exists (e.g. Agent 10% of Gross), then Gross = (Net * 1.3) / 0.9.
+                    // Let's match consistent logic:
+                    // Gross = (NetTarget / (1 - Percent)) * (1 + Tax) ?? 
+                    // No. Usually Tax is on taxable income. Agent is on Gross.
+                    // Let's reuse calculateMetrics logic structure if possible, but distinct.
+                    // Standard Personal Formula: Net = (Gross * (1-Agent)) / (1+Tax). 
+                    // So Gross = Net * (1+Tax) / (1-Agent).
+
+                    const calcBaseNow = (netInput) => {
+                        const gross = (netInput * (1 + (taxRate / 100))) / (1 - (personalPercent / 100));
+                        return {
+                            net: netInput,
+                            gross: gross,
+                            fixed: netInput, // Conceptually
+                            percent: personalPercent,
+                            hourly: (billableHours > 0) ? (gross / billableHours) : 0,
+                            weekly: (workWeeks > 0) ? (gross / workWeeks) : 0,
+                            monthly: gross / 12
+                        };
+                    };
+                    const nowBase = calcBaseNow(nowFixedBase);
+
+                    // 2. Calculate Business Burden (Isolated)
+                    const biz = calculateBizMetrics(bizFixed, bizPercent);
+
+                    // 3. Additive Combination
                     scenarios.push({
                         name: name,
-                        goal: calculateMetrics(personalFixed, bizFixed, personalPercent, bizPercent),
-                        now: calculateMetrics(nowFixedBase, bizFixed, personalPercent, bizPercent) // NOW uses Current Net as Base
+                        goal: {
+                            fixed: goalBase.fixed + bizFixed,
+                            percent: goalBase.percent + bizPercent, // Sum for display
+                            net: goalBase.net, // Net Stay Same (Target)
+                            gross: goalBase.gross + biz.gross, // Total Revenue Needed
+                            hourly: goalBase.hourly + biz.hourly,
+                            weekly: goalBase.weekly + biz.weekly,
+                            monthly: goalBase.monthly + biz.monthly
+                        },
+                        now: {
+                            fixed: nowBase.fixed + bizFixed, // Display logic
+                            percent: nowBase.percent + bizPercent,
+                            net: nowBase.net,
+                            gross: nowBase.gross + biz.gross,
+                            hourly: nowBase.hourly + biz.hourly,
+                            weekly: nowBase.weekly + biz.weekly,
+                            monthly: nowBase.monthly + biz.monthly
+                        }
                     });
                 };
 
