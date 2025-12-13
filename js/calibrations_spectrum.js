@@ -40,7 +40,8 @@ async function openSpectrumModal() {
         console.log("Profile fetched");
 
         // Filter for Overhead Projects (Logic copied from independent.js/BusinessProfileManager)
-        overheadProjects = allProjects.filter(p => p.type === 'infrastructure' || (p.data && p.data.type === 'business_overhead'));
+        console.log("Filtering for type='overhead'...");
+        overheadProjects = allProjects.filter(p => p.type === 'overhead' || p.type === 'infrastructure' || (p.data && p.data.type === 'business_overhead'));
         console.log("Overhead projects:", overheadProjects.length);
 
         // Calculate Hourly Rate for each Project
