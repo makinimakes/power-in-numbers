@@ -502,29 +502,21 @@
             DELTAS.forEach(delta => {
                 const row = document.createElement('tr');
 
-                // Augmented (Higher)
-                const augRate = totalRate / (1 - delta);
-                const augPercent = Math.round((augRate / totalRate) * 100); // e.g. 111%
-
-                // Discounted (Lower) matches the delta? 
-                // Sliding Scale Logic: 
-                // "High" payers cover "Low" payers.
-                // If I pay 10% less, someone else pays 10% more?
-                // Visual logic from screenshot: 
-                // Left Col: Rate, Mid: +%, Mid: -%, Right: Rate
-
-                // Let's follow standard "Sliding Scale" reciprocal math typically used:
-                // If Discount is 20% (0.8 * Rate), Augmented is Rate / 0.8? Or Rate * 1.2?
-                // Usually Rate / (1-Delta) balances Rate * (1-Delta) if volumes equal?
-                // Let's stick to simple math for now:
-
+                // Discounted (Lower)
                 const discRate = totalRate * (1 - delta);
 
+                // Redistribution Needed (Gap)
+                const gapDiff = totalRate - discRate;
+
+                // Augmented (Higher) - Additive Logic: Base + Gap
+                const augRate = totalRate + gapDiff;
+                const augPercent = Math.round((augRate / totalRate - 1) * 100);
+
                 row.innerHTML = `
-                    <td style="text-align:center; font-weight:bold; color:var(--color-primary);">$${augRate.toFixed(2)}</td>
-                    <td style="text-align:center; color:#666;">+${Math.round((augRate / totalRate - 1) * 100)}%</td>
                     <td style="text-align:center; color:#666;">-${Math.round(delta * 100)}%</td>
                     <td style="text-align:center; color:var(--color-text-muted);">$${discRate.toFixed(2)}</td>
+                    <td style="text-align:center; font-weight:bold; color:var(--color-primary);">+$${gapDiff.toFixed(2)}</td>
+                    <td style="text-align:center; font-weight:bold;">$${augRate.toFixed(2)}</td>
                 `;
                 tbody.appendChild(row);
             });

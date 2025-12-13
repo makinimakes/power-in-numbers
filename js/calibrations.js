@@ -209,12 +209,13 @@
         const totalIncome = sumC + sumP;
 
         // --- NOW SCENARIO (Using Current Net Income as Target) ---
-        // "Now" = How we are tracking against what we CURRENTLY make (or user-defined current baseline).
-        // If currentNetIncome is 0, use expenses logic as fallback? No, use 0.
-        const annualTargetNow = profile.currentNetIncome || 0;
-        // Note: Independent Tool usually grosses this up? "Current Net" -> "Current Gross"?
-        // Let's assume currentNetIncome is NET, so we Gross It Up.
-        const taxRate = (profile.expenses.taxRate || 30) / 100;
+        // Safeguard Net Income
+        const annualTargetNow = (profile && profile.currentNetIncome) ? parseFloat(profile.currentNetIncome) : 0;
+
+        // Safeguard Tax Rate
+        const rawTax = (profile && profile.expenses && profile.expenses.taxRate) ? profile.expenses.taxRate : 30;
+        const taxRate = parseFloat(rawTax) / 100;
+
         const annualGrossTargetNow = annualTargetNow / (1 - taxRate);
         const periodTargetNow = annualGrossTargetNow * yearFraction;
 
@@ -222,7 +223,12 @@
         const requiredRateNow = (gapNow > 0 && remainingCapacity > 0) ? (gapNow / remainingCapacity) : 0;
 
         // --- GOAL SCENARIO (Using Calculated Expenses as Target) ---
-        const totalNeeds = Utils.calculateTotalNeeds(profile.expenses);
+        // Safeguard Total Needs
+        let totalNeeds = 0;
+        if (profile && profile.expenses) {
+            totalNeeds = Utils.calculateTotalNeeds(profile.expenses);
+        }
+
         const annualGrossTargetGoal = totalNeeds / (1 - taxRate);
         const periodTargetGoal = annualGrossTargetGoal * yearFraction;
 
