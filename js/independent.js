@@ -998,74 +998,89 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 3. Initialization
     async function init() {
-        // 1. Load Profile
-        profile = await Store.getIndependentProfile();
+        try {
+            // 1. Load Profile
+            try {
+                profile = await Store.getIndependentProfile();
+            } catch (e) {
+                console.error("Profile Load Error:", e);
+                // Fallback to empty if load fails? Or alert?
+                // profile = {}; 
+                // We should probably alert.
+            }
 
-        // 2. Load Overhead Projects
-        overheadProjects = await Store.getOverheadProjects();
+            // 2. Load Overhead Projects
+            try {
+                overheadProjects = await Store.getOverheadProjects();
+                if (!Array.isArray(overheadProjects)) overheadProjects = [];
+            } catch (e) {
+                console.error("Overhead Load Error:", e);
+                overheadProjects = [];
+            }
 
-        // 3. Defaults
-        if (!profile.linesOfWork) profile.linesOfWork = [];
+            // 3. Defaults
+            if (!profile) profile = {}; // Safety
+            if (!profile.linesOfWork) profile.linesOfWork = [];
 
-        // Ensure expenses object exists
-        if (!profile.expenses) profile.expenses = {};
+            // Ensure expenses object exists
+            if (!profile.expenses) profile.expenses = {};
 
-        // Ensure items array exists (even if taxRate exists)
-        if (!profile.expenses.items) {
-            profile.expenses.items = BASE_EXPENSE_CATEGORIES.map(item => ({
-                id: crypto.randomUUID(),
-                ...item,
-                amount: 0
-            }));
-            // Default tax if missing
-            if (profile.expenses.taxRate === undefined) profile.expenses.taxRate = 30;
-        }
+            // Ensure items array exists (even if taxRate exists)
+            if (!profile.expenses.items) {
+                profile.expenses.items = BASE_EXPENSE_CATEGORIES.map(item => ({
+                    id: crypto.randomUUID(),
+                    ...item,
+                    amount: 0
+                }));
+                // Default tax if missing
+                if (profile.expenses.taxRate === undefined) profile.expenses.taxRate = 30;
+            }
 
 
-        if (!profile.unearnedIncome || !profile.unearnedIncome.items) {
-            profile.unearnedIncome = { items: [] };
-        }
+            if (!profile.unearnedIncome || !profile.unearnedIncome.items) {
+                profile.unearnedIncome = { items: [] };
+            }
 
-        if (profile.schedule) {
-            inputs.weeks.value = profile.schedule.weeks;
-            inputs.days.value = profile.schedule.days;
-            inputs.hours.value = profile.schedule.hours;
-        }
+            if (profile.schedule) {
+                inputs.weeks.value = profile.schedule.weeks;
+                inputs.days.value = profile.schedule.days;
+                inputs.hours.value = profile.schedule.hours;
+            }
 
-        if (profile.expenses.taxRate !== undefined) {
-            inputs.taxRate.value = profile.expenses.taxRate;
-        }
+            if (profile.expenses.taxRate !== undefined) {
+                inputs.taxRate.value = profile.expenses.taxRate;
+            }
 
-        const currentNetInput = document.getElementById('in-current-net-income');
-        if (currentNetInput) {
-            currentNetInput.value = profile.currentNetIncome || 0;
-            currentNetInput.addEventListener('input', (e) => {
-                profile.currentNetIncome = parseFloat(e.target.value) || 0;
-                Store.saveIndependentProfile(profile);
+            const currentNetInput = document.getElementById('in-current-net-income');
+            if (currentNetInput) {
+                currentNetInput.value = profile.currentNetIncome || 0;
+                currentNetInput.addEventListener('input', (e) => {
+                    profile.currentNetIncome = parseFloat(e.target.value) || 0;
+                    Store.saveIndependentProfile(profile);
+                });
+            }
+
+            LineManager.render();
+            ExpenseManager.render();
+            IncomeManager.render();
+            BusinessProfileManager.render(); // Ensure Personalities are rendered
+            calculateAndDisplay();
+
+            // Listeners for Global Inputs
+            ['weeks', 'days', 'hours'].forEach(key => {
+                inputs[key].addEventListener('input', (e) => {
+                    profile.schedule[key] = parseFloat(e.target.value);
+                    Store.saveIndependentProfile(profile);
+                    calculateAndDisplay();
+                });
             });
-        }
 
-        LineManager.render();
-        ExpenseManager.render();
-        IncomeManager.render();
-        BusinessProfileManager.render(); // Ensure Personalities are rendered
-        calculateAndDisplay();
-
-        // Listeners for Global Inputs
-        ['weeks', 'days', 'hours'].forEach(key => {
-            inputs[key].addEventListener('input', (e) => {
-                profile.schedule[key] = parseFloat(e.target.value);
+            inputs.taxRate.addEventListener('input', (e) => {
+                profile.expenses.taxRate = parseFloat(e.target.value);
                 Store.saveIndependentProfile(profile);
                 calculateAndDisplay();
             });
-        });
-
-        inputs.taxRate.addEventListener('input', (e) => {
-            profile.expenses.taxRate = parseFloat(e.target.value);
-            Store.saveIndependentProfile(profile);
-            calculateAndDisplay();
-        });
-    }
+        }
 
     init();
-});
+    });
