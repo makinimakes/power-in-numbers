@@ -31,7 +31,8 @@ async function openSpectrumModal() {
 
     try {
         console.log("Fetching projects...");
-        const allProjects = await Store.getProjects();
+        const projectMap = await Store.getProjects();
+        const allProjects = Object.values(projectMap);
         console.log("Projects fetched:", allProjects.length);
 
         console.log("Fetching profile...");
