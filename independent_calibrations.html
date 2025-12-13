@@ -364,7 +364,7 @@
 
     <!-- INLINED SPECTRUM LOGIC (Nuclear Option) -->
     <script>
-        console.log("Initializing Inlined Spectrum Logic...");
+        // Spectrum Logic (Inlined for reliability)
 
         const modalSpectrum = document.getElementById('modal-spectrum');
         const tableNow = document.getElementById('spectrum-table-now');
@@ -379,7 +379,7 @@
         const DELTAS = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9];
 
         async function openSpectrumModal() {
-            console.log("openSpectrumModal called (Inline)");
+            // toggleOverheadSpectrum logic
             try {
                 // Initialize Store if needed
                 if (!window.supabaseClient) await Store.init();
@@ -391,9 +391,7 @@
                 console.log("Fetching profile...");
                 const profile = await Store.getIndependentProfile();
 
-                // USER REPORTING ALERT
-                const user = await Store.getCurrentUser();
-                alert(`System Check v6:\nUser: ${user ? user.email : 'Unknown'}\nFound ${overheadProjects.length} Business Profiles.\n(If 0, then database is returning empty).`);
+                // User Verified: Profiles Found
 
                 const capacity = Utils.calculateBillableCapacity(profile);
                 const billableHours = capacity.totalBillableHours || 1;
