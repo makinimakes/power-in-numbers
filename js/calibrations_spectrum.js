@@ -213,15 +213,22 @@ function createRateCell(baseRate, multiplier, hpd, dpw) {
 }
 
 // Event Listener Binding
-document.addEventListener('DOMContentLoaded', () => {
+// Event Listener Binding
+function bindSpectrumBtn() {
     const btn = document.getElementById('btn-view-spectrum');
     if (btn) {
         console.log("Attached event listener to btn-view-spectrum");
-        btn.addEventListener('click', openSpectrumModal);
+        btn.onclick = openSpectrumModal; // Direct binding to avoid stacking listeners if run multiple times
     } else {
-        console.warn("btn-view-spectrum not found on DOMContentLoaded");
+        console.warn("btn-view-spectrum not found");
     }
-});
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bindSpectrumBtn);
+} else {
+    bindSpectrumBtn();
+}
 
 // Expose to window (fallback)
 window.openSpectrumModal = openSpectrumModal;
