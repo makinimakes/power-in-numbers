@@ -30,19 +30,15 @@ async function openSpectrumModal() {
     // We'll reload to be safe.
 
     try {
-        console.log("Fetching projects...");
-        const projectMap = await Store.getProjects();
-        const allProjects = Object.values(projectMap);
-        console.log("Projects fetched:", allProjects.length);
+        console.log("Fetching overhead projects...");
+        overheadProjects = await Store.getOverheadProjects();
+        console.log("Overhead projects fetched:", overheadProjects.length);
 
         console.log("Fetching profile...");
         const profile = await Store.getIndependentProfile(); // Ensure fresh profile for Billable Hours
         console.log("Profile fetched");
 
-        // Filter for Overhead Projects (Logic copied from independent.js/BusinessProfileManager)
-        console.log("Filtering for type='overhead'...");
-        overheadProjects = allProjects.filter(p => p.type === 'overhead' || p.type === 'infrastructure' || (p.data && p.data.type === 'business_overhead'));
-        console.log("Overhead projects:", overheadProjects.length);
+        // (Filter step removed as getOverheadProjects handles it)
 
         // Calculate Hourly Rate for each Project
         const capacity = Utils.calculateBillableCapacity(profile);
