@@ -345,12 +345,52 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Overhead Project Selector
                 const overheadSelectorDiv = document.createElement('div');
                 overheadSelectorDiv.style.marginBottom = 'var(--spacing-sm)';
+
+                // Calculate Rate if linked
+                let rateDisplay = '';
+                let computedOverheadRate = 0;
+
+                if (line.overheadProjectId) {
+                    const linkedProj = overheadProjects.find(p => p.id === line.overheadProjectId);
+                    if (linkedProj) {
+                        const totalOverhead = (linkedProj.expenses || []).reduce((acc, i) => acc + (parseFloat(i.amount) || 0), 0);
+
+                        // Calculate Line Hours
+                        // Assume line duration is in Weeks for simplicity or convert.
+                        // Logic mirrors global calc: weeks * hours_per_week
+                        let lineWeeks = parseFloat(line.duration.value) || 0;
+                        if (line.duration.unit === 'Months') lineWeeks *= 4.33;
+                        if (line.duration.unit === 'Years') lineWeeks *= 52;
+
+                        const weeklyHours = (line.activities || []).reduce((sum, act) => sum + (parseFloat(act.amount) || 0), 0);
+                        const totalLineHours = lineWeeks * weeklyHours;
+
+                        computedOverheadRate = BudgetEngine.calculateOverheadRate(totalOverhead, totalLineHours);
+
+                        // Save to line object for persistence (so Project Tool can read it)
+                        line.derivedOverheadRate = computedOverheadRate;
+
+                        // Formatting
+                        if (totalLineHours > 0) {
+                            rateDisplay = `<div style="margin-top:5px; font-size:0.8rem; color:var(--color-primary); font-weight:bold; background:var(--color-bg-subtle); padding:5px; border-radius:4px;">
+                                Linked Overhead Rate: $${computedOverheadRate.toFixed(2)}/hr
+                                <span style="font-weight:normal; color:#666;">(${linkedProj.name}: $${totalOverhead.toLocaleString()} / ${Math.round(totalLineHours)} hrs)</span>
+                            </div>`;
+                        } else {
+                            rateDisplay = `<div style="margin-top:5px; font-size:0.8rem; color:red;">Add activities to calculate rate.</div>`;
+                        }
+                    }
+                } else {
+                    line.derivedOverheadRate = 0;
+                }
+
                 overheadSelectorDiv.innerHTML = `
                     <label style="font-size:0.6rem;">Associated Business Profile (Overhead)</label>
-                    <select onchange="updateLine(${lineIndex}, 'overheadProjectId', this.value)">
+                    <select onchange="updateLine(${lineIndex}, 'overheadProjectId', this.value)" style="width:100%; margin-bottom:5px;">
                         <option value="">None</option>
                         ${overheadOptions}
                     </select>
+                    ${rateDisplay}
                 `;
                 card.appendChild(overheadSelectorDiv);
 

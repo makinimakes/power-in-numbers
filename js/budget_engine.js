@@ -61,6 +61,14 @@ const BudgetEngine = {
     },
 
     /**
+     * Calculate Overhead Rate for a specific Line of Work
+     */
+    calculateOverheadRate: (totalOverheadExpenses, totalBillableHours) => {
+        if (totalBillableHours <= 0) return 0;
+        return totalOverheadExpenses / totalBillableHours;
+    },
+
+    /**
      * Calculate Project-Wide Min/Max Wage
      */
     calculateProjectParams: (teamMembers, userMap, minModifierPct = 100, maxModifierPct = 100) => {
