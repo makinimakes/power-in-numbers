@@ -1481,13 +1481,22 @@
 
                 container.innerHTML = renderTable('goal') + renderTable('now');
 
-                document.getElementById('modal-scenarios').style.display = 'flex';
+                const modal = document.getElementById('modal-scenarios');
+                if (modal) {
+                    modal.showModal();
+                } else {
+                    console.error("Modal definition not found");
+                }
             };
 
             // Ensure Close Button works
-            document.getElementById('close-scenarios').onclick = () => {
-                document.getElementById('modal-scenarios').style.display = 'none';
-            };
+            const closeBtn = document.getElementById('close-scenarios');
+            if (closeBtn) {
+                closeBtn.onclick = () => {
+                    const modal = document.getElementById('modal-scenarios');
+                    if (modal) modal.close();
+                };
+            }
 
             // 3. Initialization
             async function init() {
