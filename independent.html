@@ -1145,6 +1145,12 @@
                     inputs.weeks.value = profile.schedule.weeks;
                     inputs.days.value = profile.schedule.days;
                     inputs.hours.value = profile.schedule.hours;
+                } else {
+                    // Defaults if new user
+                    inputs.weeks.value = 50;
+                    inputs.days.value = 5;
+                    inputs.hours.value = 8;
+                    profile.schedule = { weeks: 50, days: 5, hours: 8 }; // Save defaults to state
                 }
 
                 if (profile.expenses.taxRate !== undefined) {
