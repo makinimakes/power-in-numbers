@@ -356,13 +356,180 @@
             return false;
         };
     </script>
-    <script src="js/utils.js?v=hotfix5"></script>
-    <script src="js/supabase_client.js?v=hotfix5"></script>
-    <script src="js/store.js?v=hotfix5"></script>
-    <script src="js/calibrations_spectrum.js?v=hotfix5"></script>
+    <!-- JS IMPORTS -->
+    <script src="js/utils.js?v=hotfix6"></script>
+    <script src="js/supabase_client.js?v=hotfix6"></script>
+    <script src="js/store.js?v=hotfix6"></script>
+    <script src="js/calibrations.js"></script>
+
+    <!-- INLINED SPECTRUM LOGIC (Nuclear Option) -->
     <script>
-        // Auth Check
-        // Auth Check
+        console.log("Initializing Inlined Spectrum Logic...");
+
+        const modalSpectrum = document.getElementById('modal-spectrum');
+        const tableNow = document.getElementById('spectrum-table-now');
+        const tableGoal = document.getElementById('spectrum-table-goal');
+        const overheadList = document.getElementById('overhead-toggles-list');
+
+        let overheadProjects = [];
+        let selectedOverheadRate = 0;
+        let cachedPersonalRateNow = 0;
+        let cachedPersonalRateGoal = 0;
+
+        const DELTAS = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9];
+
+        async function openSpectrumModal() {
+            console.log("openSpectrumModal called (Inline)");
+            try {
+                // Initialize Store if needed
+                if (!window.supabaseClient) await Store.init();
+
+                console.log("Fetching overhead projects...");
+                overheadProjects = await Store.getOverheadProjects();
+                console.log("Overhead projects fetched:", overheadProjects.length);
+
+                console.log("Fetching profile...");
+                const profile = await Store.getIndependentProfile();
+
+                // USER REPORTING ALERT
+                const user = await Store.getCurrentUser();
+                alert(`System Check v6:\nUser: ${user ? user.email : 'Unknown'}\nFound ${overheadProjects.length} Business Profiles.\n(If 0, then database is returning empty).`);
+
+                const capacity = Utils.calculateBillableCapacity(profile);
+                const billableHours = capacity.totalBillableHours || 1;
+
+                overheadProjects.forEach(p => {
+                    let fixed = 0;
+                    let percent = 0;
+                    const expenses = p.expenses || (p.data && p.data.expenses) || [];
+
+                    expenses.forEach(e => {
+                        const val = parseFloat(e.amount) || 0;
+                        if (e.type === 'Percent') percent += (e.baseAmount || val);
+                        else fixed += val;
+                    });
+
+                    let cost = 0;
+                    if (percent < 100) {
+                        cost = fixed / (1 - (percent / 100));
+                    }
+                    p.hourlyRate = cost / billableHours;
+                });
+
+                renderOverheadToggles();
+                renderPairedSpectrum();
+                if (modalSpectrum) {
+                    modalSpectrum.showModal();
+                }
+            } catch (err) {
+                console.error("Error in openSpectrumModal:", err);
+                alert("Inline System Error: " + err.message);
+            }
+        }
+
+        function closeSpectrumModal() {
+            if (modalSpectrum) modalSpectrum.close();
+        }
+
+        function renderOverheadToggles() {
+            if (!overheadList) return;
+            overheadList.innerHTML = '';
+            if (overheadProjects.length === 0) {
+                overheadList.innerHTML = '<span style="color:#888; font-size:0.8rem;">No business profiles found (Database Empty).</span>';
+                return;
+            }
+            overheadProjects.forEach(p => {
+                const label = document.createElement('label');
+                label.style.display = 'flex';
+                label.style.alignItems = 'center';
+                label.style.padding = '5px';
+                label.style.border = '1px solid #eee';
+                label.style.borderRadius = '4px';
+                label.style.fontSize = '0.8rem';
+                label.style.background = '#fff';
+                label.style.cursor = 'pointer';
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.value = p.id;
+                checkbox.style.marginRight = '8px';
+                checkbox.onchange = recalculateSelectedOverhead;
+
+                label.appendChild(checkbox);
+                label.appendChild(document.createTextNode(`${p.name} (+$${p.hourlyRate.toFixed(2)}/hr)`));
+                overheadList.appendChild(label);
+            });
+        }
+
+        function recalculateSelectedOverhead() {
+            selectedOverheadRate = 0;
+            const checkboxes = overheadList.querySelectorAll('input[type="checkbox"]:checked');
+            checkboxes.forEach(cb => {
+                const proj = overheadProjects.find(p => p.id == cb.value);
+                if (proj) selectedOverheadRate += proj.hourlyRate;
+            });
+            renderPairedSpectrum();
+        }
+
+        function renderPairedSpectrum() {
+            // Re-read inputs or use cached profile data? 
+            // Better to pull from DOM elements if possible to match live edits, 
+            // but for now let's assume saved data since modal triggers a "save state" usually.
+            // Actually, we need to read the "out-now-hourly" and "out-goal-hourly" from the page if avail,
+            // OR re-calculate. The independent page calculates them and puts them in Store.profile?
+            // Let's grab from the DOM outputs since they are right there.
+
+            const nowRateText = document.getElementById('out-now-hourly').textContent.replace(/[^0-9.]/g, '');
+            const goalRateText = document.getElementById('out-goal-hourly').textContent.replace(/[^0-9.]/g, '');
+
+            cachedPersonalRateNow = parseFloat(nowRateText) || 0;
+            cachedPersonalRateGoal = parseFloat(goalRateText) || 0;
+
+            renderTable(tableNow, cachedPersonalRateNow);
+            renderTable(tableGoal, cachedPersonalRateGoal);
+        }
+
+        function renderTable(tbody, baseRate) {
+            tbody.innerHTML = '';
+            if (baseRate <= 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#999;">Calculate a base rate first.</td></tr>';
+                return;
+            }
+
+            const totalRate = baseRate + selectedOverheadRate;
+
+            DELTAS.forEach(delta => {
+                const row = document.createElement('tr');
+
+                // Augmented (Higher)
+                const augRate = totalRate / (1 - delta);
+                const augPercent = Math.round((augRate / totalRate) * 100); // e.g. 111%
+
+                // Discounted (Lower) matches the delta? 
+                // Sliding Scale Logic: 
+                // "High" payers cover "Low" payers.
+                // If I pay 10% less, someone else pays 10% more?
+                // Visual logic from screenshot: 
+                // Left Col: Rate, Mid: +%, Mid: -%, Right: Rate
+
+                // Let's follow standard "Sliding Scale" reciprocal math typically used:
+                // If Discount is 20% (0.8 * Rate), Augmented is Rate / 0.8? Or Rate * 1.2?
+                // Usually Rate / (1-Delta) balances Rate * (1-Delta) if volumes equal?
+                // Let's stick to simple math for now:
+
+                const discRate = totalRate * (1 - delta);
+
+                row.innerHTML = `
+                    <td style="text-align:center; font-weight:bold; color:var(--color-primary);">$${augRate.toFixed(2)}</td>
+                    <td style="text-align:center; color:#666;">+${Math.round((augRate / totalRate - 1) * 100)}%</td>
+                    <td style="text-align:center; color:#666;">-${Math.round(delta * 100)}%</td>
+                    <td style="text-align:center; color:var(--color-text-muted);">$${discRate.toFixed(2)}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Init Logic (Page Load)
         (async () => {
             await Store.init();
             const currentUser = await Store.checkSession();
@@ -371,6 +538,11 @@
             }
         })();
     </script>
+
+    <div
+        style="text-align: center; color: green; font-weight: bold; padding: 10px; border-top: 1px solid #ccc; margin-top: 20px;">
+        System Ready v6 (Inlined)
+    </div>
     <script src="js/calibrations.js"></script>
 </body>
 
