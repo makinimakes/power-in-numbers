@@ -738,9 +738,15 @@
         };
 
         window.saveBusinessExpenses = async () => {
+            console.log("saveBusinessExpenses called. CurrentBizId:", window.currentBizId);
             const id = window.currentBizId;
             const proj = overheadProjects.find(p => p.id === id);
-            if (!proj) return;
+
+            if (!proj) {
+                console.error("Project not found for ID:", id);
+                alert("Error: Could not find project to save.");
+                return;
+            }
 
             const rows = document.querySelectorAll('.biz-expense-row');
             const newExpenses = [];
