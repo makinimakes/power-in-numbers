@@ -1080,7 +1080,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 Store.saveIndependentProfile(profile);
                 calculateAndDisplay();
             });
+        } catch (e) {
+            console.error("Critical Init Error:", e);
+            alert("Failed to load application data. Please refresh.");
         }
+    }
 
     init();
-    });
+});
