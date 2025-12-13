@@ -456,14 +456,14 @@ const Store = {
         const profile = await Store.getIndependentProfile();
 
         const newProject = {
-            id: crypto.randomUUID ? crypto.randomUUID() : undefined, // Let Supabase gen ID if crypto missing
+            id: Utils.generateId(),
             name: name,
             owner: user.email,
             teamMembers: [],
             incomeSources: [],
             phases: [
                 {
-                    id: crypto.randomUUID(),
+                    id: Utils.generateId(),
                     name: 'Phase 1',
                     schedule: {},
                     lineItems: [],
@@ -475,7 +475,7 @@ const Store = {
 
         // Auto-add creator
         newProject.teamMembers.push({
-            id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(), // Fallback for file://
+            id: Utils.generateId(), // Fallback for file://
             name: profile.fullName || "Me",
             rate: 0,
             days: 0,
@@ -530,7 +530,7 @@ const DEFAULT_INDEPENDENT = {
         taxRate: 30,
         items: BASE_EXPENSE_CATEGORIES.map(item => ({
             ...item,
-            id: crypto.randomUUID(),
+            id: Utils.generateId(),
             amount: 0
         }))
     },
