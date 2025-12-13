@@ -603,7 +603,23 @@
                     row.style.padding = '8px';
                     row.style.border = '1px solid #eee';
 
-                    const totalExp = (proj.expenses || []).reduce((acc, item) => acc + (parseFloat(item.amount || 0)), 0);
+                    let cardFixed = 0;
+                    let cardPercent = 0;
+                    (proj.expenses || []).forEach(e => {
+                        // Logic must match calculateAndDisplay
+                        if (e.type === 'Percent') {
+                            cardPercent += (e.baseAmount || e.amount || 0);
+                        } else {
+                            // Fixed: Annual, Monthly, Periodic
+                            // Note: e.amount SHOULD be the annualized Fixed amount (calculated in saveBusinessExpenses)
+                            cardFixed += (e.amount || 0);
+                        }
+                    });
+
+                    let totalExp = cardFixed;
+                    if (cardPercent > 0 && cardPercent < 100) {
+                        totalExp = cardFixed / (1 - (cardPercent / 100));
+                    }
 
                     row.innerHTML = `
                     <div style="flex-grow:1;">
