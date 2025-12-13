@@ -267,28 +267,33 @@
                 </div>
                 <div style="display:flex; justify-content:space-between; font-size:0.8rem;">
                     <span class="text-muted" style="font-weight:bold;">Billable Hours</span>
-                    <span id="out-total-billable-hours"
-                        style="font-weight:bold; color: var(--color-accent-primary);">0</span>
-                </div>
-            </div>
+                    <span id="out-total-billable-hours" </div>
 
-            <!-- NOW FEES (Comparison) -->
-            <div
-                style="margin-top: var(--spacing-lg); padding-top: var(--spacing-sm); border-top: 2px solid var(--color-border); opacity: 0.7;">
-                <div class="result-label"
-                    style="text-align:center; color: var(--color-text-muted); margin-bottom: 5px; font-size:0.9rem;">
-                    Current (NOW) Rates
-                </div>
-                <div style="display:flex; justify-content: space-between; font-size: 0.8rem; margin-bottom:4px;">
-                    <span>Hourly</span> <strong id="out-now-hourly">$0</strong>
-                </div>
-                <div style="display:flex; justify-content: space-between; font-size: 0.8rem; margin-bottom:4px;">
-                    <span>Daily</span> <strong id="out-now-daily">$0</strong>
-                </div>
-                <div style="display:flex; justify-content: space-between; font-size: 0.8rem;">
-                    <span>Weekly</span> <strong id="out-now-weekly">$0</strong>
-                </div>
-            </div>
+                        <!-- NOW FEES (Comparison) -->
+                        <div
+                            style="margin-top: var(--spacing-lg); padding-top: var(--spacing-sm); border-top: 2px solid var(--color-border); opacity: 0.7;">
+                            <div class="result-label"
+                                style="text-align:center; color: var(--color-text-muted); margin-bottom: 5px; font-size:0.9rem;">
+                                Current (NOW) Rates
+                            </div>
+                            <div
+                                style="display:flex; justify-content: space-between; font-size: 0.8rem; margin-bottom:4px;">
+                                <span>Hourly</span> <strong id="out-now-hourly">$0</strong>
+                            </div>
+                            <div
+                                style="display:flex; justify-content: space-between; font-size: 0.8rem; margin-bottom:4px;">
+                                <span>Daily</span> <strong id="out-now-daily">$0</strong>
+                            </div>
+                            <div style="display:flex; justify-content: space-between; font-size: 0.8rem;">
+                                <span>Weekly</span> <strong id="out-now-weekly">$0</strong>
+                            </div>
+                        </div>
+
+                        <!-- SCENARIOS BUTTON -->
+                        <button onclick="showOverheadScenarios()"
+                            style="width:100%; margin-top:20px; padding:10px; border:1px solid var(--color-accent-primary); background:var(--color-bg-subtle); color:var(--color-accent-primary); font-weight:bold; cursor:pointer;">
+                            View Overhead Scenarios
+                        </button>
 
         </aside>
 
@@ -300,7 +305,7 @@
             </h4>
             <a href="independent_sliding_scales.html" class="btn"
                 style="display:flex; width:100%; margin-bottom:10px; font-size: 0.85rem; justify-content: space-between; text-decoration:none; background:white; border:1px solid #ddd; color: var(--color-text-main);">
-                Some NOW Calibrations <span>&rarr;</span>
+                Sliding Scale Models <span>&rarr;</span>
             </a>
             <a href="independent_meantime.html" class="btn"
                 style="display:flex; width:100%; margin-bottom:10px; font-size: 0.85rem; justify-content: space-between; text-decoration:none; background:white; border:1px solid #ddd; color: var(--color-text-main);">
@@ -312,6 +317,43 @@
             </a>
         </div>
     </div> <!-- End Right Column -->
+
+    <!-- Modal: Overhead Scenarios -->
+    <dialog id="modal-scenarios"
+        style="padding: 0; border: none; background: transparent; max-width: 800px; width: 100%;">
+        <div
+            style="background: var(--color-bg-base); padding: 20px; border-radius: 8px; border: 1px solid var(--color-border); box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+            <div
+                style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--color-border); padding-bottom:10px; margin-bottom:15px;">
+                <h3 style="margin:0; color:var(--color-accent-main);">Overhead Scenarios Matrix</h3>
+                <button onclick="document.getElementById('modal-scenarios').close()"
+                    style="background:none; border:none; font-size:1.5rem; cursor:pointer;">&times;</button>
+            </div>
+            <p style="font-size:0.9rem; color:#666; margin-bottom:20px;">
+                Compare your "Personal Baseline" rates with rates burdened by your various Business Infrastructures.
+            </p>
+            <div style="overflow-x:auto;">
+                <table style="width:100%; border-collapse: collapse; font-size: 0.9rem;">
+                    <thead>
+                        <tr style="background:var(--color-bg-subtle); border-bottom:2px solid var(--color-border);">
+                            <th style="text-align:left; padding:10px;">Scenario</th>
+                            <th style="text-align:right; padding:10px;">Total Fixed</th>
+                            <th style="text-align:right; padding:10px;">Total %</th>
+                            <th style="text-align:right; padding:10px;">Goal Net</th>
+                            <th style="text-align:right; padding:10px; color:var(--color-accent-primary);">Goal Hourly
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="scenarios-table-body">
+                        <!-- JS Injected -->
+                    </tbody>
+                </table>
+            </div>
+            <div style="text-align:right; margin-top:20px;">
+                <button onclick="document.getElementById('modal-scenarios').close()" class="btn">Close</button>
+            </div>
+        </div>
+    </dialog>
     </div> <!-- End Grid-2 -->
 
     <!-- Validation Modal -->
@@ -1299,139 +1341,159 @@
                     });
                 }
 
-                return scenarios;
-            };
+                window.showOverheadScenarios = () => {
+                    const scenarios = calculateOverheadScenarios();
+                    const tbody = document.getElementById('scenarios-table-body');
+                    tbody.innerHTML = '';
 
-            const hasBillableHours = totalBillableHours > 0;
-            const pBillable = totalWorkHours > 0 ? (totalBillableHours / totalWorkHours) : 0;
-            const weeksPerYear = weeks || 0;
-            const calculateFees = (grossAmount, isGoal = false) => {
-                if (weeksPerYear <= 0 || pBillable <= 0) {
-                    return { hourly: 0, daily: 0, weekly: 0, monthly: 0 };
-                }
-                const adjustedGross = Math.max(0, grossAmount - unearnedSum);
-                const weekly = adjustedGross / weeksPerYear / pBillable;
-                const monthly = weekly * weeksPerYear / 12;
-                const daily = days > 0 ? (weekly / days) : 0;
-                const hourly = hours > 0 ? (daily / hours) : 0;
-                return { hourly, daily, weekly, monthly };
-            };
+                    scenarios.forEach(sc => {
+                        const tr = document.createElement('tr');
+                        tr.style.borderBottom = "1px solid #eee";
 
-            const goalFees = calculateFees(goalGross, true);
-            setVal('out-goal-hourly', goalFees.hourly);
-            setVal('out-goal-daily', goalFees.daily);
-            setVal('out-goal-weekly', goalFees.weekly);
-            setVal('out-goal-monthly', goalFees.monthly);
+                        // Highlight "Personal Baseline" row
+                        const isBase = sc.name.includes("Baseline");
+                        if (isBase) tr.style.background = "var(--color-bg-subtle)";
 
-            const nowFees = calculateFees(currentGross, false);
-            setVal('out-now-hourly', nowFees.hourly);
-            setVal('out-now-daily', nowFees.daily);
-            setVal('out-now-weekly', nowFees.weekly);
-            setVal('out-now-monthly', nowFees.monthly);
-        }
+                        tr.innerHTML = `
+                        <td style="padding:10px; font-weight:${isBase ? 'bold' : 'normal'}">${sc.name}</td>
+                        <td style="padding:10px; text-align:right;">${Utils.formatCurrency(sc.fixed)}</td>
+                        <td style="padding:10px; text-align:right;">${sc.percent.toFixed(1)}%</td>
+                        <td style="padding:10px; text-align:right;">${Utils.formatCurrency(sc.totalNet)}</td>
+                        <td style="padding:10px; text-align:right; font-weight:bold; color:var(--color-accent-primary);">${Utils.formatCurrency(sc.hourly)}/hr</td>
+                    `;
+                        tbody.appendChild(tr);
+                    });
 
-        // 3. Initialization
-        async function init() {
-            logToScreen("Init() started.");
-            try {
-                logToScreen("Fetching Profile...");
+                    document.getElementById('modal-scenarios').showModal();
+                };
+                const pBillable = totalWorkHours > 0 ? (totalBillableHours / totalWorkHours) : 0;
+                const weeksPerYear = weeks || 0;
+                const calculateFees = (grossAmount, isGoal = false) => {
+                    if (weeksPerYear <= 0 || pBillable <= 0) {
+                        return { hourly: 0, daily: 0, weekly: 0, monthly: 0 };
+                    }
+                    const adjustedGross = Math.max(0, grossAmount - unearnedSum);
+                    const weekly = adjustedGross / weeksPerYear / pBillable;
+                    const monthly = weekly * weeksPerYear / 12;
+                    const daily = days > 0 ? (weekly / days) : 0;
+                    const hourly = hours > 0 ? (daily / hours) : 0;
+                    return { hourly, daily, weekly, monthly };
+                };
+
+                const goalFees = calculateFees(goalGross, true);
+                setVal('out-goal-hourly', goalFees.hourly);
+                setVal('out-goal-daily', goalFees.daily);
+                setVal('out-goal-weekly', goalFees.weekly);
+                setVal('out-goal-monthly', goalFees.monthly);
+
+                const nowFees = calculateFees(currentGross, false);
+                setVal('out-now-hourly', nowFees.hourly);
+                setVal('out-now-daily', nowFees.daily);
+                setVal('out-now-weekly', nowFees.weekly);
+                setVal('out-now-monthly', nowFees.monthly);
+            }
+
+            // 3. Initialization
+            async function init() {
+                logToScreen("Init() started.");
                 try {
-                    profile = await Store.getIndependentProfile();
-                    logToScreen("Profile loaded: " + (profile ? "Found" : "Null"));
-                } catch (e) {
-                    logToScreen("Profile Fetch Error: " + e.message);
-
+                    logToScreen("Fetching Profile...");
                     try {
-                        overheadProjects = await Store.getOverheadProjects();
-                        if (!Array.isArray(overheadProjects)) overheadProjects = [];
-                        if (window.calculateOverheadScenarios) {
-                            console.table(window.calculateOverheadScenarios());
-                        }
-                        overheadProjects = [];
+                        profile = await Store.getIndependentProfile();
+                        logToScreen("Profile loaded: " + (profile ? "Found" : "Null"));
                     } catch (e) {
-                        console.error("Overhead Load Error:", e);
-                        overheadProjects = [];
-                    }
+                        logToScreen("Profile Fetch Error: " + e.message);
 
-                    if (!profile) profile = {};
-                    if (!profile.linesOfWork) profile.linesOfWork = [];
-                    if (!profile.expenses) profile.expenses = {};
+                        try {
+                            overheadProjects = await Store.getOverheadProjects();
+                            if (!Array.isArray(overheadProjects)) overheadProjects = [];
+                            if (window.calculateOverheadScenarios) {
+                                console.table(window.calculateOverheadScenarios());
+                            }
+                        } catch (e) {
+                            console.error("Overhead Load Error:", e);
+                            overheadProjects = [];
+                        }
 
-                    if (!profile.expenses.items || profile.expenses.items.length === 0) {
-                        logToScreen("Expenses empty/missing. Restoring Defaults...");
-                        profile.expenses.items = BASE_EXPENSE_CATEGORIES.map(item => ({
-                            id: crypto.randomUUID(),
-                            ...item,
-                            amount: 0
-                        }));
-                        if (profile.expenses.taxRate === undefined) profile.expenses.taxRate = 30;
-                    }
+                        if (!profile) profile = {};
+                        if (!profile.linesOfWork) profile.linesOfWork = [];
+                        if (!profile.expenses) profile.expenses = {};
 
-                    if (!profile.unearnedIncome || !profile.unearnedIncome.items) {
-                        profile.unearnedIncome = { items: [] };
-                    }
+                        if (!profile.expenses.items || profile.expenses.items.length === 0) {
+                            logToScreen("Expenses empty/missing. Restoring Defaults...");
+                            profile.expenses.items = BASE_EXPENSE_CATEGORIES.map(item => ({
+                                id: crypto.randomUUID(),
+                                ...item,
+                                amount: 0
+                            }));
+                            if (profile.expenses.taxRate === undefined) profile.expenses.taxRate = 30;
+                        }
 
-                    if (profile.schedule) {
-                        inputs.weeks.value = profile.schedule.weeks;
-                        inputs.days.value = profile.schedule.days;
-                        inputs.hours.value = profile.schedule.hours;
-                    } else {
-                        // Defaults if new user
-                        inputs.weeks.value = 50;
-                        inputs.days.value = 5;
-                        inputs.hours.value = 8;
-                        profile.schedule = { weeks: 50, days: 5, hours: 8 }; // Save defaults to state
-                    }
+                        if (!profile.unearnedIncome || !profile.unearnedIncome.items) {
+                            profile.unearnedIncome = { items: [] };
+                        }
 
-                    if (profile.expenses.taxRate !== undefined) {
-                        inputs.taxRate.value = profile.expenses.taxRate;
-                    }
+                        if (profile.schedule) {
+                            inputs.weeks.value = profile.schedule.weeks;
+                            inputs.days.value = profile.schedule.days;
+                            inputs.hours.value = profile.schedule.hours;
+                        } else {
+                            // Defaults if new user
+                            inputs.weeks.value = 50;
+                            inputs.days.value = 5;
+                            inputs.hours.value = 8;
+                            profile.schedule = { weeks: 50, days: 5, hours: 8 }; // Save defaults to state
+                        }
 
-                    const currentNetInput = document.getElementById('in-current-net-income');
-                    if (currentNetInput) {
-                        currentNetInput.value = profile.currentNetIncome || 0;
-                        currentNetInput.addEventListener('input', (e) => {
-                            profile.currentNetIncome = parseFloat(e.target.value) || 0;
-                            Store.saveIndependentProfile(profile);
+                        if (profile.expenses.taxRate !== undefined) {
+                            inputs.taxRate.value = profile.expenses.taxRate;
+                        }
+
+                        const currentNetInput = document.getElementById('in-current-net-income');
+                        if (currentNetInput) {
+                            currentNetInput.value = profile.currentNetIncome || 0;
+                            currentNetInput.addEventListener('input', (e) => {
+                                profile.currentNetIncome = parseFloat(e.target.value) || 0;
+                                Store.saveIndependentProfile(profile);
+                            });
+                        }
+
+                        LineManager.render();
+                        ExpenseManager.render();
+                        logToScreen("Expenses Rendered. Count: " + (profile.expenses.items ? profile.expenses.items.length : 0));
+                        IncomeManager.render();
+                        BusinessProfileManager.render();
+                        calculateAndDisplay();
+                        logToScreen("Init Complete. UI should be ready.");
+
+                        ['weeks', 'days', 'hours'].forEach(key => {
+                            inputs[key].addEventListener('input', (e) => {
+                                profile.schedule[key] = parseFloat(e.target.value);
+                                Store.saveIndependentProfile(profile);
+                                calculateAndDisplay();
+                            });
                         });
-                    }
 
-                    LineManager.render();
-                    ExpenseManager.render();
-                    logToScreen("Expenses Rendered. Count: " + (profile.expenses.items ? profile.expenses.items.length : 0));
-                    IncomeManager.render();
-                    BusinessProfileManager.render();
-                    calculateAndDisplay();
-                    logToScreen("Init Complete. UI should be ready.");
-
-                    ['weeks', 'days', 'hours'].forEach(key => {
-                        inputs[key].addEventListener('input', (e) => {
-                            profile.schedule[key] = parseFloat(e.target.value);
+                        inputs.taxRate.addEventListener('input', (e) => {
+                            profile.expenses.taxRate = parseFloat(e.target.value);
                             Store.saveIndependentProfile(profile);
                             calculateAndDisplay();
                         });
-                    });
-
-                    inputs.taxRate.addEventListener('input', (e) => {
-                        profile.expenses.taxRate = parseFloat(e.target.value);
-                        Store.saveIndependentProfile(profile);
-                        calculateAndDisplay();
-                    });
-                } catch (e) {
-                    console.error("Critical Init Error:", e);
-                    logToScreen("CRITICAL ERROR: " + e.message);
+                    } catch (e) {
+                        console.error("Critical Init Error:", e);
+                        logToScreen("CRITICAL ERROR: " + e.message);
+                    }
                 }
-            }
 
         // Start
         init();
     </script>
     <script>
-            // Authentication Check
-            (async () => {
-                const user = await Store.checkSession();
-                if (!user) return;
-            })();
+                // Authentication Check
+                (async () => {
+                    const user = await Store.checkSession();
+                    if (!user) return;
+                })();
     </script>
 </body>
 
