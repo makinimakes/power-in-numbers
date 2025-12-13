@@ -1329,123 +1329,118 @@
                 setVal('out-now-weekly', currentGross / (weeks || 1));
                 setVal('out-now-monthly', currentGross / 12);
 
-                // --- SCENARIO ANALYSIS (New Feature) ---
-                window.calculateOverheadScenarios = () => {
-                    // 1. Get Base Personal Numbers
-                    const personalFixed = fixedSum; // Calculated in calculateAndDisplay (Personal Expense + Unearned)
-                    const personalPercent = percentSum; // Personal Percent Expense
-                    const taxRate = parseFloat(inputs.taxRate.value) || 0;
-                    const capacity = Utils.calculateBillableCapacity(profile);
-                    const billableHours = capacity.totalBillableHours;
+            });
+    // <-- Nested definition removed from here
+}
 
-                    const scenarios = [];
+            // --- SCENARIO ANALYSIS LOGIC (Decoupled & Global) ---
+            window.calculateOverheadScenarios = () => {
+                // Re-calculate Personal Baselines from Profile
+                let personalFixed = 0;
+                let personalPercent = 0;
 
-                    // Base Scenario (Personal Only)
-                    scenarios.push({
-                        name: "Personal Baseline (You)",
-                        fixed: personalFixed,
-                        percent: personalPercent,
-                        tax: taxRate,
-                        totalNet: profile.goals.net, // Already stored
-                        totalGross: profile.goals.gross // Already stored
+                // Personal Expenses
+                if (profile.expenses && profile.expenses.items) {
+                    profile.expenses.items.forEach(item => {
+                        const amount = parseFloat(item.amount) || 0;
+                        if (item.type === 'Monthly') personalFixed += amount * 12;
+                        else if (item.type === 'Periodic') personalFixed += amount * (parseFloat(item.frequency) || 1);
+                        else if (item.type === 'Percent') personalPercent += amount;
                     });
+                }
 
-                    // Business Scenarios
-                    overheadProjects.forEach(proj => {
-                        let bizFixed = 0;
-                        let bizPercent = 0;
+                const taxRate = (profile.expenses && profile.expenses.taxRate) ? parseFloat(profile.expenses.taxRate) : 30;
+                const capacity = Utils.calculateBillableCapacity(profile);
+                const billableHours = capacity.totalBillableHours;
 
-                        if (proj.expenses) {
-                            proj.expenses.forEach(item => {
-                                const amount = parseFloat(item.amount) || 0;
-                                if (item.type === 'Percent') {
-                                    bizPercent += (item.baseAmount || item.amount || 0);
-                                } else {
-                                    bizFixed += (item.amount || 0); // Annualized amount
-                                }
-                            });
-                        }
+                const scenarios = [];
 
-                        // Combined Calculation
-                        // Goal Net = (Personal Fixed + Biz Fixed) / (1 - (Personal % + Biz %))
-                        const combinedFixed = personalFixed + bizFixed;
-                        const combinedPercent = personalPercent + bizPercent;
+                // Base Scenario (Personal Only)
+                // Note: Goal Net in profile is pre-calculated, but we can re-derive for consistency
+                let personalNet = Infinity;
+                if (personalPercent < 100) {
+                    personalNet = personalFixed / (1 - (personalPercent / 100));
+                }
+                const personalGross = personalNet * (1 + (taxRate / 100));
 
-                        let combinedNet = Infinity;
-                        if (combinedPercent < 100) {
-                            combinedNet = combinedFixed / (1 - (combinedPercent / 100));
-                        }
+                scenarios.push({
+                    name: "Personal Baseline (You)",
+                    fixed: personalFixed,
+                    percent: personalPercent,
+                    tax: taxRate,
+                    totalNet: personalNet,
+                    totalGross: personalGross,
+                    hourly: (billableHours > 0) ? (personalGross / billableHours) : 0
+                });
 
-                        const combinedGross = combinedNet * (1 + (taxRate / 100));
+                // Business Scenarios
+                overheadProjects.forEach(proj => {
+                    let bizFixed = 0;
+                    let bizPercent = 0;
 
-                        scenarios.push({
-                            name: `+ ${proj.name}`,
-                            fixed: combinedFixed,
-                            percent: combinedPercent,
-                            totalNet: combinedNet,
-                            totalGross: combinedGross,
-                            hourly: (billableHours > 0) ? (combinedGross / billableHours) : 0
-                        });
-                    });
-
-                    // All Combined Scenario (if > 1 project)
-                    if (overheadProjects.length > 1) {
-                        let allBizFixed = 0;
-                        let allBizPercent = 0;
-                        overheadProjects.forEach(proj => {
-                            if (proj.expenses) {
-                                proj.expenses.forEach(item => {
-                                    if (item.type === 'Percent') allBizPercent += (item.baseAmount || item.amount || 0);
-                                    else allBizFixed += (item.amount || 0);
-                                });
+                    if (proj.expenses) {
+                        proj.expenses.forEach(item => {
+                            const amount = parseFloat(item.amount) || 0;
+                            if (item.type === 'Percent') {
+                                bizPercent += (item.baseAmount || item.amount || 0);
+                            } else {
+                                bizFixed += (item.amount || 0); // Annualized amount
                             }
                         });
-
-                        const totalFixed = personalFixed + allBizFixed;
-                        const totalPercent = personalPercent + allBizPercent;
-                        let totalNet = Infinity;
-                        if (totalPercent < 100) totalNet = totalFixed / (1 - (totalPercent / 100));
-                        const totalGross = totalNet * (1 + (taxRate / 100));
-
-                        scenarios.push({
-                            name: "+ All Business Overhead",
-                            fixed: totalFixed,
-                            percent: totalPercent,
-                            totalNet: totalNet,
-                            totalGross: totalGross,
-                            hourly: (billableHours > 0) ? (totalGross / billableHours) : 0
-                        });
                     }
 
-                    return scenarios;
-                };
+                    // Combined Calculation
+                    const combinedFixed = personalFixed + bizFixed;
+                    const combinedPercent = personalPercent + bizPercent;
 
-                const pBillable = totalWorkHours > 0 ? (totalBillableHours / totalWorkHours) : 0;
-                const weeksPerYear = weeks || 0;
-                const calculateFees = (grossAmount, isGoal = false) => {
-                    if (weeksPerYear <= 0 || pBillable <= 0) {
-                        return { hourly: 0, daily: 0, weekly: 0, monthly: 0 };
+                    let combinedNet = Infinity;
+                    if (combinedPercent < 100) {
+                        combinedNet = combinedFixed / (1 - (combinedPercent / 100));
                     }
-                    const adjustedGross = Math.max(0, grossAmount - unearnedSum);
-                    const weekly = adjustedGross / weeksPerYear / pBillable;
-                    const monthly = weekly * weeksPerYear / 12;
-                    const daily = days > 0 ? (weekly / days) : 0;
-                    const hourly = hours > 0 ? (daily / hours) : 0;
-                    return { hourly, daily, weekly, monthly };
-                };
 
-                const goalFees = calculateFees(goalGross, true);
-                setVal('out-goal-hourly', goalFees.hourly);
-                setVal('out-goal-daily', goalFees.daily);
-                setVal('out-goal-weekly', goalFees.weekly);
-                setVal('out-goal-monthly', goalFees.monthly);
+                    const combinedGross = combinedNet * (1 + (taxRate / 100));
 
-                const nowFees = calculateFees(currentGross, false);
-                setVal('out-now-hourly', nowFees.hourly);
-                setVal('out-now-daily', nowFees.daily);
-                setVal('out-now-weekly', nowFees.weekly);
-                setVal('out-now-monthly', nowFees.monthly);
-            }
+                    scenarios.push({
+                        name: `+ ${proj.name}`,
+                        fixed: combinedFixed,
+                        percent: combinedPercent,
+                        totalNet: combinedNet,
+                        totalGross: combinedGross,
+                        hourly: (billableHours > 0) ? (combinedGross / billableHours) : 0
+                    });
+                });
+
+                // All Combined Scenario
+                if (overheadProjects.length > 1) {
+                    let allBizFixed = 0;
+                    let allBizPercent = 0;
+                    overheadProjects.forEach(proj => {
+                        if (proj.expenses) {
+                            proj.expenses.forEach(item => {
+                                if (item.type === 'Percent') allBizPercent += (item.baseAmount || item.amount || 0);
+                                else allBizFixed += (item.amount || 0);
+                            });
+                        }
+                    });
+
+                    const totalFixed = personalFixed + allBizFixed;
+                    const totalPercent = personalPercent + allBizPercent;
+                    let totalNet = Infinity;
+                    if (totalPercent < 100) totalNet = totalFixed / (1 - (totalPercent / 100));
+                    const totalGross = totalNet * (1 + (taxRate / 100));
+
+                    scenarios.push({
+                        name: "+ All Business Overhead",
+                        fixed: totalFixed,
+                        percent: totalPercent,
+                        totalNet: totalNet,
+                        totalGross: totalGross,
+                        hourly: (billableHours > 0) ? (totalGross / billableHours) : 0
+                    });
+                }
+
+                return scenarios;
+            };
 
             // --- SCENARIO ANALYSIS UI (Global Scope) ---
             window.showOverheadScenarios = () => {
