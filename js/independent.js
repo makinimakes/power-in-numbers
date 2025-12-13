@@ -1026,7 +1026,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!profile.expenses) profile.expenses = {};
 
             // Ensure items array exists (even if taxRate exists)
-            if (!profile.expenses.items) {
+            // Fix: Treat empty array as missing to recover from potential data loss/corruption
+            if (!profile.expenses.items || profile.expenses.items.length === 0) {
                 profile.expenses.items = BASE_EXPENSE_CATEGORIES.map(item => ({
                     id: crypto.randomUUID(),
                     ...item,
