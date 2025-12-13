@@ -1449,7 +1449,12 @@
 
             // --- SCENARIO ANALYSIS UI (Global Scope) ---
             window.showOverheadScenarios = () => {
-                const scenarios = calculateOverheadScenarios();
+                if (typeof window.calculateOverheadScenarios !== 'function') {
+                    console.error("calculateOverheadScenarios is not ready.");
+                    alert("Please wait for calculations to initialize.");
+                    return;
+                }
+                const scenarios = window.calculateOverheadScenarios();
                 const tbody = document.getElementById('scenarios-table-body');
                 tbody.innerHTML = '';
 
