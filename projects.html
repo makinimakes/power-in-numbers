@@ -128,7 +128,15 @@
                     card.innerHTML = `
                         <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                             <h3>${p.name || 'Untitled Project'}</h3>
-                            ${deleteBtnHtml}
+                            <div>
+                                <button class="btn-delete" 
+                                    onclick="duplicateProject('${p.id}', event)"
+                                    style="background:none; border:none; color:var(--color-primary); cursor:pointer; font-size:1.2rem; padding:5px; margin-right:5px;"
+                                    title="Duplicate Project">
+                                    &#x2398;
+                                </button>
+                                ${deleteBtnHtml}
+                            </div>
                         </div>
                         <p style="margin-top:10px; color:var(--color-text-muted); font-size:0.9rem;">
                             Owner: ${ownerDisplay}<br>
@@ -147,6 +155,34 @@
                             window.location.reload();
                         } catch (e) {
                             alert("Failed to delete project: " + e.message);
+                        }
+                    }
+                };
+
+                // Global Duplicate Handler
+                window.duplicateProject = async (id, event) => {
+                    event.stopPropagation();
+                    const original = projects.find(p => p.id === id);
+                    if (!original) return;
+
+                    if (confirm(`Duplicate project "${original.name}"?`)) {
+                        try {
+                            // Deep Clone
+                            const clone = JSON.parse(JSON.stringify(original));
+                            // New ID
+                            clone.id = crypto.randomUUID();
+                            clone.name = "Copy of " + (clone.name || 'Untitled');
+                            clone.owner = userEmail; // Take ownership
+                            // Clear Supabase metadata if present
+                            delete clone.created_at;
+                            delete clone.uuid;
+
+                            // Save
+                            await Store.saveProject(clone);
+                            window.location.reload();
+                        } catch (e) {
+                            alert("Failed to duplicate project: " + e.message);
+                            console.error(e);
                         }
                     }
                 };

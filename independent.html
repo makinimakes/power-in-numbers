@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Independent Tool - Power in Numbers</title>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=FORCE_7">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         /* Extra grid specifics for this page */
@@ -23,25 +23,33 @@
         }
 
         .section-header {
-            background: #4E3629;
-            color: #ffffff;
+            /* Clean Style */
+            background: transparent;
+            color: #000;
             padding: var(--spacing-sm);
             text-transform: uppercase;
             font-weight: 700;
+            border-bottom: 2px solid #000;
+            margin-bottom: 10px;
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body>
+    <!-- <script>alert("DEBUG CHECK: If you see this, you are viewing the CORRECT LOCAL FILE (Independent Tool).");</script> -->
     <div class="container">
         <header
-            style="padding: var(--spacing-sm) 0; border-bottom: var(--border-std); display:flex; justify-content:space-between; align-items:center; margin-bottom: var(--spacing-md);">
+            style="padding: var(--spacing-md); background: var(--color-bg-inverse); color: var(--color-text-inverse); display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md);">
             <a href="index.html"
-                style="text-decoration:none; color:inherit; font-weight:bold; letter-spacing: -0.5px; font-size:1.1rem;">Power
+                style="text-decoration:none; color:var(--color-text-inverse); font-weight:bold; letter-spacing: -0.5px; font-size:1.1rem;">Power
                 in Numbers</a>
-            <a href="profile.html" id="user-display"
-                style="font-size:0.8rem; text-decoration:none; color:var(--color-text-muted);">Guest</a>
+            <div>
+                <a href="index.html"
+                    style="margin-right:15px; text-decoration:none; color:var(--color-text-inverse); font-weight:bold; font-size:0.9rem;">Home</a>
+                <a href="profile.html" id="user-display"
+                    style="font-size:0.8rem; text-decoration:none; color:var(--color-text-inverse); opacity: 0.8;">Guest</a>
+            </div>
         </header>
 
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
@@ -59,151 +67,149 @@
             <div class="ledger-sheet">
 
                 <!-- Section 1: Time Reclaimed (Schedule) -->
-                <div class="ledger-section">
-                    <div class="ledger-section-header">
-                        <span class="ledger-section-title">1. Time Reclaimed</span>
+                <div class="grid-header">
+                    <div style="display:flex; justify-content:space-between; width:100%; align-items:baseline;">
+                        <span style="font-weight:700; font-size:1rem;">1. Time Reclaimed</span>
                     </div>
+                </div>
 
-                    <!-- Schedule Inputs -->
-                    <div class="card-panel flex-gap">
-                        <div>
-                            <label class="input-label-sm">Weeks/Year</label>
-                            <input type="number" id="in-weeks-per-year" placeholder="50">
-                        </div>
-                        <div>
-                            <label class="input-label-sm">Days/Week</label>
-                            <input type="number" id="in-days-per-week" placeholder="5">
-                        </div>
-                        <div>
-                            <label class="input-label-sm">Hours/Day</label>
-                            <input type="number" id="in-hours-per-day" placeholder="8">
-                        </div>
+                <!-- Schedule Inputs -->
+                <div
+                    style="display: flex; gap: 10px; margin-bottom: 20px; padding: var(--spacing-sm); background: var(--color-bg-subtle);">
+                    <div style="flex: 1;">
+                        <label style="font-size: 0.7rem; color: var(--color-text-muted);">Weeks/Year</label>
+                        <input type="number" id="in-weeks-per-year" placeholder="50" style="width: 100%;">
                     </div>
+                    <div style="flex: 1;">
+                        <label style="font-size: 0.7rem; color: var(--color-text-muted);">Days/Week</label>
+                        <input type="number" id="in-days-per-week" placeholder="5" style="width: 100%;">
+                    </div>
+                    <div style="flex: 1;">
+                        <label style="font-size: 0.7rem; color: var(--color-text-muted);">Hours/Day</label>
+                        <input type="number" id="in-hours-per-day" placeholder="8" style="width: 100%;">
+                    </div>
+                </div>
 
-                    <!-- Lines of Work Calculator -->
+                <!-- Lines of Work Calculator -->
+                <div
+                    style="margin-top: var(--spacing-sm); border-top: 1px dotted var(--color-border); padding-top: var(--spacing-sm);">
                     <div
-                        style="margin-top: var(--spacing-sm); border-top: 1px dotted var(--color-border); padding-top: var(--spacing-sm);">
-                        <div
-                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-xs);">
-                            <button class="toggle-btn" onclick="toggleSection('lines-of-work-container', this)">
-                                <span class="toggle-icon">▼</span>
-                                <span
-                                    style="font-size: 0.8rem; font-weight:700; text-transform:uppercase; letter-spacing:1px;">Lines
-                                    of Work</span>
-                            </button>
-                            <button id="btn-add-line-of-work" class="btn" style="padding: 2px 8px; font-size: 0.7rem;">+
-                                New Line</button>
-                        </div>
-                        <div id="lines-of-work-container">
-                            <!-- JS injected Lines of Work cards -->
-                        </div>
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-xs);">
+                        <button class="toggle-btn collapsed" onclick="toggleSection('lines-of-work-container', this)">
+                            <span class="toggle-icon">▼</span>
+                            <label
+                                style="margin:0; font-size: 0.7rem; text-transform:uppercase; letter-spacing:1px; cursor:pointer;">Lines
+                                of Work</label>
+                        </button>
+                        <button id="btn-add-line-of-work"
+                            style="font-size: 0.7rem; padding: 2px 6px; cursor: pointer;">+
+                            New Line</button>
                     </div>
+                    <div id="lines-of-work-container" class="hidden" style="display:none;">
+                        <!-- JS injected Lines of Work cards -->
+                    </div>
+                </div>
 
-                    <!-- Hours Summary moved to Right Panel -->
+                <!-- Hours Summary moved to Right Panel -->
 
-                    <!-- Tax Rate Input (Retained) -->
+                <!-- Tax Rate Input (Retained) -->
 
-                    <!-- Tax Rate Input -->
-                    <div class="card-panel">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <label class="input-label-sm">Estimated Tax Rate (%)</label>
-                            <div style="width: 80px;">
-                                <input type="number" id="in-tax-rate" min="0" max="100" placeholder="30"
-                                    class="text-right">
-                            </div>
+                <div style="padding: var(--spacing-sm); border-bottom: var(--border-std);">
+                    <div class="ledger-row" style="flex-wrap: wrap;">
+                        <label>Estimated Tax Rate (%)</label>
+                        <div style="width: 80px;">
+                            <input type="number" id="in-tax-rate" min="0" max="100" placeholder="30">
                         </div>
                         <div
-                            style="font-size: 0.7rem; color: var(--color-text-muted); margin-top: 5px; font-style: italic;">
+                            style="width: 100%; font-size: 0.7rem; color: var(--color-text-muted); margin-top: 5px; font-style: italic;">
                             We suggest keeping this at 30% for self-employed folks
                         </div>
                     </div>
                 </div>
 
-
                 <!-- Section 2: Personal Expenses -->
-                <div class="ledger-section">
-                    <div class="ledger-section-header">
-                        <button class="toggle-btn" onclick="toggleSection('expenses-container', this)">
-                            <span class="toggle-icon">▼</span>
-                            <span style="font-weight:700;">2. Personal Survival Expenses</span>
-                        </button>
-                        <button id="btn-add-expense" class="btn" style="padding: 2px 8px; font-size: 0.7rem;">+ Add
-                            Expense</button>
-                    </div>
-                    <div id="expenses-container" style="padding-left: 10px;">
-                        <!-- JS injected Expense Rows -->
-                    </div>
+                <div class="section-header"
+                    style="margin-top: var(--spacing-md); display:flex; justify-content:space-between; align-items:center;">
+                    <button class="toggle-btn collapsed" onclick="toggleSection('expenses-container', this)">
+                        <span class="toggle-icon">▼</span>
+                        <span style="font-size: 0.9rem; font-weight:700;">2. Personal Survival Expenses</span>
+                    </button>
+                    <button id="btn-add-expense" style="font-size: 0.7rem; padding: 2px 6px; cursor: pointer;">+ Add
+                        Expense</button>
+                </div>
+                <div id="expenses-container" class="hidden" style="padding: var(--spacing-sm); display:none;">
+                    <!-- JS injected Expense Rows -->
                 </div>
 
                 <!-- Business Overhead Profiles -->
-                <div class="ledger-section">
-                    <div class="ledger-section-header">
-                        <button class="toggle-btn" onclick="toggleSection('overhead-profiles-container', this)">
-                            <span class="toggle-icon">▼</span>
-                            <span style="font-weight:700;">Business Infrastructures</span>
-                        </button>
-                        <button class="btn" id="btn-add-overhead-profile" style="padding: 2px 8px; font-size: 0.7rem;">+
-                            Create Profile</button>
-                    </div>
-                    <div id="overhead-profiles-container" style="padding-left: 10px;">
-                        <!-- JS Injected Overhead Profiles -->
-                        <div style="font-style:italic; color:#666; font-size:0.9rem;">No business profiles yet. Create
-                            one
-                            to
-                            account for overhead.</div>
-                    </div>
+                <div class="section-header"
+                    style="margin-top: var(--spacing-md); display:flex; justify-content:space-between; align-items:center;">
+                    <button class="toggle-btn collapsed" onclick="toggleSection('overhead-profiles-container', this)">
+                        <span class="toggle-icon">▼</span>
+                        <span style="font-size: 0.9rem; font-weight:700;">Business Infrastructures</span>
+                    </button>
+                    <button class="btn" id="btn-add-overhead-profile" style="padding: 2px 8px; font-size: 0.7rem;">+
+                        Create
+                        Profile</button>
+                </div>
+                <div id="overhead-profiles-container" class="hidden" style="padding: var(--spacing-sm); display:none;">
+                    <!-- JS Injected Overhead Profiles -->
+                    <div style="font-style:italic; color:#666; font-size:0.9rem;">No business profiles yet. Create one
+                        to
+                        account for overhead.</div>
                 </div>
 
-                <!-- Section 3: Unearned Income -->
-                <div class="ledger-section">
-                    <div class="ledger-section-header">
-                        <button class="toggle-btn" onclick="toggleSection('unearned-income-container', this)">
-                            <span class="toggle-icon">▼</span>
-                            <span style="font-weight:700;">3. Current Unearned Income Sources</span>
-                        </button>
-                        <button id="btn-add-income" class="btn" style="padding: 2px 8px; font-size: 0.7rem;">+ Add
-                            Source</button>
-                    </div>
 
-                    <div id="unearned-income-container" style="padding-left: 10px;">
-                        <!-- JS Injected Income Rows -->
-                    </div>
-                    <!-- Total Unearned Footer -->
-                    <div
-                        style="padding: 10px; background: var(--color-bg-subtle); display:flex; justify-content:space-between; align-items:center; margin-top:10px; border-radius:4px;">
-                        <span class="input-label-sm">Total Unearned Income</span>
-                        <span id="out-total-unearned-income" style="font-weight:bold; font-family:monospace;">$0</span>
-                    </div>
+
+                <!-- Section 3: Unearned Income -->
+                <div class="section-header"
+                    style="margin-top: var(--spacing-md); display:flex; justify-content:space-between; align-items:center;">
+                    <button class="toggle-btn collapsed" onclick="toggleSection('unearned-income-container', this)">
+                        <span class="toggle-icon">▼</span>
+                        <span style="font-size: 0.9rem; font-weight:700;">3. Current Unearned Income Sources</span>
+                    </button>
+                    <button id="btn-add-income" style="font-size: 0.7rem; padding: 2px 6px; cursor: pointer;">+ Add
+                        Income Source</button>
+                </div>
+
+                <div id="unearned-income-container" class="hidden" style="padding: var(--spacing-sm); display:none;">
+                    <!-- JS Injected Income Rows -->
+                </div>
+                <!-- Total Unearned Footer -->
+                <div
+                    style="padding: var(--spacing-sm); background: var(--color-bg-subtle); border-top: var(--border-std); display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-weight:bold; font-size:0.8rem; text-transform:uppercase;">Total Annual Unearned
+                        Income</span>
+                    <span id="out-total-unearned-income" style="font-weight:bold; font-family:monospace;">$0</span>
                 </div>
 
                 <!-- Section 4: Current Annual Income (Net) -->
-                <div class="ledger-section">
-                    <div class="ledger-section-header">
-                        <span class="ledger-section-title">4. Current Annual Income (Net)</span>
-                    </div>
+                <div class="section-header"
+                    style="margin-top: var(--spacing-md); display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size: 0.9rem;">4. Current Annual Income (Net)</span>
+                </div>
 
-                    <div class="card-panel">
-                        <div
-                            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                            <label class="input-label-sm">Current Net Income</label>
-                            <div style="width: 140px;">
-                                <input type="number" id="in-current-net-income" placeholder="0" class="text-right">
-                            </div>
+                <div style="padding: var(--spacing-sm); border-bottom: var(--border-std);">
+                    <div class="ledger-row">
+                        <label>Current Net Income</label>
+                        <div style="width: 120px; display:flex; align-items:center;">
+                            <span style="padding-right:5px; font-weight:bold; color:var(--color-text-muted);">$</span>
+                            <input type="text" id="in-current-net-income" placeholder="0" style="width:100%;">
                         </div>
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span class="text-muted input-label-sm">Implied Gross Income</span>
-                            <span>
-                                <strong id="out-current-gross">$0</strong>
-                                <button onclick="window.viewIndependentLog('currentGross')"
-                                    style="background:none; border:none; cursor:pointer; opacity:0.6; font-size:0.8rem;">ℹ️</button>
-                            </span>
-                        </div>
+                    </div>
+                    <div class="ledger-row" style="margin-top:5px; border-bottom:none;">
+                        <span class="text-muted" style="font-size:0.8rem; font-weight:bold;">Current Gross Income</span>
+                        <span>
+                            <strong id="out-current-gross">$0</strong>
+                            <button onclick="window.viewIndependentLog('currentGross')"
+                                style="background:none; border:none; cursor:pointer; opacity:0.6; font-size:0.8rem;">ℹ️</button>
+                        </span>
                     </div>
                 </div>
             </div> <!-- End Left Column -->
 
             <!-- Right Column: Results & Navigation -->
-            <div class="ledger-results" style="padding-left: var(--spacing-md); border-left: 1px solid #eee;">
+            <div class="ledger-results">
 
                 <!-- Results Dock -->
                 <aside class="result-dock">
@@ -462,8 +468,7 @@
 
                 <div
                     style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--color-border); padding-top:15px;">
-                    <div style="font-size:0.9rem;">Total Annual Overhead: <strong id="modal-biz-total">$0</strong>
-                    </div>
+                    <div style="font-size:0.9rem;">Total Annual Overhead: <strong id="modal-biz-total">$0</strong></div>
                     <div style="display:flex; gap:10px;">
                         <button onclick="document.getElementById('modal-business-expenses').close()"
                             style="padding:8px 16px; border:1px solid var(--color-border); background:none; cursor:pointer;">Cancel</button>
@@ -488,8 +493,18 @@
             window.toggleSection = (id, btn) => {
                 const el = document.getElementById(id);
                 if (el) {
-                    el.classList.toggle('hidden');
-                    btn.classList.toggle('collapsed');
+                    // Check actual display style to handle inline style="display:none"
+                    const isHidden = el.style.display === 'none' || el.classList.contains('hidden');
+
+                    if (isHidden) {
+                        el.style.display = 'block';
+                        el.classList.remove('hidden');
+                        btn.classList.remove('collapsed');
+                    } else {
+                        el.style.display = 'none';
+                        el.classList.add('hidden');
+                        btn.classList.add('collapsed');
+                    }
                 }
             };
 
@@ -519,6 +534,9 @@
                 totalNonBillable: document.getElementById('out-total-non-billable-hours'),
                 totalBillable: document.getElementById('out-total-billable-hours')
             };
+
+            // Add Net Income to inputs map
+            inputs.currentNetIncome = document.getElementById('in-current-net-income');
 
             // 2. State Management
             let profile = {};
@@ -1261,12 +1279,11 @@
                     const amount = parseFloat(item.amount) || 0;
                     if (item.type === 'Monthly') {
                         fixedSum += amount * 12;
-                        monthlySumEx += amount;
+                        monthlySumEx += amount * 12;
                     } else if (item.type === 'Periodic') {
                         const freq = parseFloat(item.frequency) || 1;
-                        const val = amount * freq;
-                        fixedSum += val;
-                        periodicSumEx += val;
+                        fixedSum += amount * freq;
+                        periodicSumEx += amount * freq;
                     } else if (item.type === 'Percent') {
                         percentSum += amount;
                     }
@@ -1324,7 +1341,13 @@
 
                 const outCurrentGross = document.getElementById('out-current-gross');
                 if (outCurrentGross) {
-                    outCurrentGross.textContent = Utils.formatCurrency(currentGross);
+                    outCurrentGross.innerText = Utils.formatCurrency(currentGross);
+                }
+
+                // Update Input Value with formatting (only if not focused to avoid cursor jumps)
+                const currentNetInputEl = document.getElementById('in-current-net-income');
+                if (currentNetInputEl && document.activeElement !== currentNetInputEl) {
+                    currentNetInputEl.value = (profile.currentNetIncome || 0).toLocaleString();
                 }
 
                 profile.goals = {
@@ -1335,114 +1358,110 @@
                 Store.saveIndependentProfile(profile);
 
                 // Populate GOAL Rates
-                const goalFees = {
-                    hourly: totalBillableHours > 0 ? goalGross / totalBillableHours : 0,
-                    daily: 0,
-                    weekly: goalGross / (weeks || 1),
-                    monthly: goalGross / 12
-                };
-                goalFees.daily = goalFees.hourly * hours;
-
-                setVal('out-goal-hourly', goalFees.hourly);
-                setVal('out-goal-daily', goalFees.daily);
-                setVal('out-goal-weekly', goalFees.weekly);
-                setVal('out-goal-monthly', goalFees.monthly);
+                setVal('out-goal-hourly', totalBillableHours > 0 ? goalGross / totalBillableHours : 0);
+                setVal('out-goal-daily', (totalBillableHours > 0 ? goalGross / totalBillableHours : 0) * (hours * (totalBillableHours / totalWorkHours * 100 / 100))); // Rough Approx?
+                // Actually, stick to standard: Annual / Weeks / Days?
+                // Better: Hourly * Hours/Day (Billable Only?)
+                // Let's use simple math:
+                const goalHourly = totalBillableHours > 0 ? goalGross / totalBillableHours : 0;
+                setVal('out-goal-daily', goalHourly * hours); // Assuming full day billing? Or adjusted?
+                // Let's stick to: Rates are usually based on "Billable Hour".
+                setVal('out-goal-weekly', goalGross / (weeks || 1));
+                setVal('out-goal-monthly', goalGross / 12);
 
                 // Populate NOW Rates
-                const nowFees = {
-                    hourly: totalBillableHours > 0 ? currentGross / totalBillableHours : 0,
-                    daily: 0,
-                    weekly: currentGross / (weeks || 1),
-                    monthly: currentGross / 12
-                };
-                nowFees.daily = nowFees.hourly * hours;
-
-                setVal('out-now-hourly', nowFees.hourly);
-                setVal('out-now-daily', nowFees.daily);
-                setVal('out-now-weekly', nowFees.weekly);
-                setVal('out-now-monthly', nowFees.monthly);
-
+                const currentHourly = totalBillableHours > 0 ? currentGross / totalBillableHours : 0;
+                setVal('out-now-hourly', currentHourly);
+                setVal('out-now-daily', currentHourly * hours);
+                setVal('out-now-weekly', currentGross / (weeks || 1));
+                setVal('out-now-monthly', currentGross / 12);
 
                 // --- MATH LOG GENERATION ---
                 try {
-                    const formatNumber = Utils.formatNumber;
-                    const formatCurrency = Utils.formatCurrency;
+                    // Goal Net Math
+                    const goalNetLog = [];
+                    goalNetLog.push(`Fixed Annual Expenses: ${Utils.formatCurrency(fixedSum)}`);
+                    goalNetLog.push(` (Monthly Items: ${Utils.formatCurrency(monthlySumEx)}/yr + Periodic: ${Utils.formatCurrency(periodicSumEx)}/yr)`);
+                    goalNetLog.push(`Percent-based Expenses: ${percentSum.toFixed(2)}% of Gross`);
+                    goalNetLog.push(`Goal Net = Fixed / (1 - Percent/100)`);
+                    goalNetLog.push(`${Utils.formatCurrency(fixedSum)} / (1 - ${percentSum.toFixed(2)}/100)`);
+                    goalNetLog.push(`= ${Utils.formatCurrency(goalNetTotal)}`);
 
-                    // Build Goal Net Log dynamically
-                    const goalNetLog = [
-                        { formula: "Sum of Expenses (Monthly Items)", value: monthlySumEx * 12 },
-                        { formula: "Sum of Expenses (Periodic Items)", value: periodicSumEx },
-                        { formula: "Total Fixed Expenses", value: fixedSum }
-                    ];
+                    // Current Gross Math
+                    const currentGrossLog = [];
+                    currentGrossLog.push(`Current Net Income (Input): ${Utils.formatCurrency(currentNet)}`);
+                    currentGrossLog.push(`Tax Rate: ${taxRate}%`);
+                    currentGrossLog.push(`Current Gross = Net * (1 + TaxRate/100)`);
+                    currentGrossLog.push(`${Utils.formatCurrency(currentNet)} * (1 + ${taxRate}/100)`);
+                    currentGrossLog.push(`= ${Utils.formatCurrency(currentGross)}`);
 
-                    if (percentSum > 0) {
-                        goalNetLog.push({ formula: `Plus Percent Adjustments (Savings/Profit)`, value: `${percentSum}%`, formatter: 'none' });
-                        goalNetLog.push({ formula: `Formula: Fixed Expenses / (1 - ${percentSum}%)`, value: `1 / ${formatNumber(1 - (percentSum / 100))}`, formatter: 'none' });
-                    }
+                    // Goal Gross Math
+                    const goalGrossLog = [];
+                    goalGrossLog.push(`Goal Net Income: ${Utils.formatCurrency(goalNetWork)}`);
+                    goalGrossLog.push(`Tax Rate: ${taxRate}%`);
+                    goalGrossLog.push(`Goal Gross = Net * (1 + TaxRate/100)`);
+                    goalGrossLog.push(`${Utils.formatCurrency(goalNetWork)} * (1 + ${taxRate}/100)`);
+                    goalGrossLog.push(`= ${Utils.formatCurrency(goalGross)}`);
 
-                    goalNetLog.push({ formula: "Goal Net Income", value: goalNetWork });
+                    // Helper for fee breakdown
+                    const genFeeLog = (label, gross, hoursStr, weeksStr) => {
+                        const l = [];
+                        l.push(`<strong>${label} Calculation</strong>`);
+                        l.push(`Total Annual Gross Needed: ${Utils.formatCurrency(gross)}`);
+                        l.push(`Total Billable Hours: ${Utils.formatNumber(totalBillableHours)}`);
+                        l.push(`Hours/Day: ${hours}, Weeks/Year: ${weeks}`);
+                        l.push(`---`);
+                        l.push(`Hourly Rate = Gross / BillableHours`);
+                        l.push(`${Utils.formatCurrency(gross)} / ${Utils.formatNumber(totalBillableHours)}`);
+                        const hourly = totalBillableHours > 0 ? gross / totalBillableHours : 0;
+                        l.push(`= ${Utils.formatCurrency(hourly)}/hr`);
+                        l.push(`---`);
+                        l.push(`Daily Rate = Hourly * Hours/Day`);
+                        l.push(`${Utils.formatCurrency(hourly)} * ${hours} = ${Utils.formatCurrency(hourly * hours)}/day`);
+                        l.push(`---`);
+                        l.push(`Weekly Rate = Gross / Weeks`);
+                        l.push(`${Utils.formatCurrency(gross)} / ${weeks} = ${Utils.formatCurrency(gross / (weeks || 1))}/week`);
+                        l.push(`---`);
+                        l.push(`Monthly Rate = Gross / 12`);
+                        l.push(`${Utils.formatCurrency(gross)} / 12 = ${Utils.formatCurrency(gross / 12)}/mo`);
+                        return l;
+                    };
+
+                    const nowFees = {
+                        hourly: [], daily: [], weekly: [], monthly: []
+                    };
+                    const goalFees = {
+                        hourly: [], daily: [], weekly: [], monthly: []
+                    };
+
+                    // Populate objects roughly
+                    const nowLogFull = genFeeLog("NOW Fees", currentGross, hours, weeks);
+                    const goalLogFull = genFeeLog("GOAL Fees", goalGross, hours, weeks);
+
+                    // Assign to keys
+                    nowFees.hourly = nowLogFull; nowFees.daily = nowLogFull; nowFees.weekly = nowLogFull; nowFees.monthly = nowLogFull;
+                    goalFees.hourly = goalLogFull; goalFees.daily = goalLogFull; goalFees.weekly = goalLogFull; goalFees.monthly = goalLogFull;
+
 
                     window._mathLogs = {
                         goalNet: goalNetLog,
-                        currentGross: [
-                            { formula: "Current Net Income (Input)", value: currentNet },
-                            { formula: `Gross Up Factor: 1 / (1 - ${formatNumber(taxRate)}%)`, value: 1 / ((100 - taxRate) / 100) },
-                            { formula: `Current Gross = ${formatCurrency(currentNet)} / ${formatNumber((100 - taxRate) / 100)}`, value: currentGross }
-                        ],
-                        goalGross: [
-                            { formula: "Goal Net Income (After Tax)", value: goalNetWork },
-                            { formula: `Gross Up Factor: 1 / (1 - ${formatNumber(taxRate)}%)`, value: 1 / ((100 - taxRate) / 100) },
-                            { formula: `Goal Gross = ${formatCurrency(goalNetWork)} / ${formatNumber((100 - taxRate) / 100)}`, value: goalGross }
-                        ],
-                        // NOW Fees
-                        nowHourly: [
-                            { formula: "Current Gross Income", value: currentGross },
-                            { formula: `Total Billable Hours (Total Capacity - Non-Billable)`, value: totalBillableHours, formatter: 'number' },
-                            { formula: "Hourly Rate = Gross / Total Billable Hours", value: nowFees.hourly }
-                        ],
-                        nowDaily: [
-                            { formula: "Hourly Rate", value: nowFees.hourly },
-                            { formula: `Hours per Day`, value: hours, formatter: 'number' },
-                            { formula: "Daily Rate = Hourly * Hours/Day", value: nowFees.daily }
-                        ],
-                        nowWeekly: [
-                            { formula: "Daily Rate", value: nowFees.daily },
-                            { formula: `Work Days per Week`, value: days, formatter: 'number' },
-                            { formula: "Weekly Rate = Daily * Days/Week", value: nowFees.weekly }
-                        ],
-                        nowMonthly: [
-                            { formula: "Weekly Rate", value: nowFees.weekly },
-                            { formula: "Weeks per Year", value: weeks, formatter: 'number' },
-                            { formula: "Monthly Rate = (Weekly * Weeks) / 12", value: nowFees.monthly }
-                        ],
-                        // GOAL Fees
-                        goalHourly: [
-                            { formula: "Goal Gross Income", value: goalGross },
-                            { formula: `Total Billable Hours (Total Capacity - Non-Billable)`, value: totalBillableHours, formatter: 'number' },
-                            { formula: "Hourly Rate = Gross / Total Billable Hours", value: goalFees.hourly }
-                        ],
-                        goalDaily: [
-                            { formula: "Hourly Rate", value: goalFees.hourly },
-                            { formula: `Hours per Day`, value: hours, formatter: 'number' },
-                            { formula: "Daily Rate = Hourly * Hours/Day", value: goalFees.daily }
-                        ],
-                        goalWeekly: [
-                            { formula: "Daily Rate", value: goalFees.daily },
-                            { formula: `Work Days per Week`, value: days, formatter: 'number' },
-                            { formula: "Weekly Rate = Daily * Days/Week", value: goalFees.weekly }
-                        ],
-                        goalMonthly: [
-                            { formula: "Weekly Rate", value: goalFees.weekly },
-                            { formula: "Weeks per Year", value: weeks, formatter: 'number' },
-                            { formula: "Monthly Rate = (Weekly * Weeks) / 12", value: goalFees.monthly }
-                        ]
+                        currentGross: currentGrossLog,
+                        goalGross: goalGrossLog,
+                        nowHourly: nowFees.hourly,
+                        nowDaily: nowFees.daily,
+                        nowWeekly: nowFees.weekly,
+                        nowMonthly: nowFees.monthly,
+                        goalHourly: goalFees.hourly,
+                        goalDaily: goalFees.daily,
+                        goalWeekly: goalFees.weekly,
+                        goalMonthly: goalFees.monthly
                     };
+
                 } catch (e) { console.error("Math Log Error", e); }
 
 
             }
 
-            // New Helper: View Math Log
             window.viewIndependentLog = (key) => {
                 const modal = document.getElementById('modal-math-log');
                 const content = document.getElementById('math-log-content');
@@ -1453,31 +1472,20 @@
                 content.innerHTML = '';
 
                 if (!logs || logs.length === 0) {
-                    let msg = '<p>No calculation details available.</p>';
+                    let msg = '<p>No calculation details available. Try updating an input to trigger logic.</p>';
+                    if (!window._mathLogs) msg += '<br><small>Debug: _mathLogs is undefined.</small>';
                     content.innerHTML = msg;
                 } else {
                     logs.forEach(log => {
-                        const div = document.createElement('div');
-                        div.style.marginBottom = '10px';
-                        div.style.borderBottom = '1px solid #eee';
-                        div.style.paddingBottom = '5px';
-
-                        let displayValue;
-                        if (log.formatter === 'number') {
-                            displayValue = Utils.formatNumber(log.value);
-                        } else if (log.formatter === 'none') {
-                            displayValue = log.value;
-                        } else {
-                            displayValue = Utils.formatCurrency(log.value);
-                        }
-
-                        div.innerHTML = `
-                                <div style="color:#555; font-size:0.85rem;">${log.formula}</div>
-                                <div style="font-weight:bold; text-align:right;">${displayValue}</div>
-                            `;
-                        content.appendChild(div);
+                        const p = document.createElement('p');
+                        p.style.margin = "5px 0";
+                        p.style.borderBottom = "1px solid #eee";
+                        p.style.paddingBottom = "5px";
+                        p.innerHTML = log;
+                        content.appendChild(p);
                     });
                 }
+
                 modal.style.display = 'flex';
             };
 
@@ -1503,7 +1511,7 @@
                 // "Current Net Income" acts as the "Fixed" amount we need to clear to maintain current lifestyle
                 // We fetch directly from input to ensure it matches the user's latest type
                 const currentNetInput = document.getElementById('in-current-net-income'); // Corrected ID
-                const nowFixedBase = currentNetInput ? (parseFloat(currentNetInput.value) || 0) : 0;
+                const nowFixedBase = currentNetInput ? (parseFloat(currentNetInput.value.replace(/,/g, '')) || 0) : 0;
 
                 // 4. Capacity Factors
                 const capacity = Utils.calculateBillableCapacity(profile);
@@ -1794,11 +1802,8 @@
 
                     const currentNetInput = document.getElementById('in-current-net-income');
                     if (currentNetInput) {
-                        currentNetInput.value = profile.currentNetIncome || 0;
-                        currentNetInput.addEventListener('input', (e) => {
-                            profile.currentNetIncome = parseFloat(e.target.value) || 0;
-                            Store.saveIndependentProfile(profile);
-                        });
+                        currentNetInput.value = (profile.currentNetIncome || 0).toLocaleString(); // Format on load
+                        // The original event listener was here, but we're moving it to a dedicated block below
                     }
 
                     LineManager.render();
@@ -1823,6 +1828,33 @@
                         Store.saveIndependentProfile(profile);
                         calculateAndDisplay();
                     });
+
+                    // Current Net Income Formatting Listener
+                    const currentNetInputEl = document.getElementById('in-current-net-income');
+                    if (currentNetInputEl) {
+                        currentNetInputEl.addEventListener('input', (e) => {
+                            // Remove commas for parsing
+                            let raw = e.target.value.replace(/,/g, '');
+                            // Allow only numbers and one dot
+                            raw = raw.replace(/[^0-9.]/g, '');
+
+                            // Update Data
+                            profile.currentNetIncome = parseFloat(raw) || 0;
+
+                            // Format Display (Cursor management is tricky, simple approach: format and set)
+                            // If user is typing decimals, don't break it. 
+                            // Only format if it doesn't end in dot or .0 etc? 
+                            // Simple: Format on blur? User asked for "into the number structure", usually implies live or blur.
+                            // Let's do simple formatting but careful not to kill decimals.
+
+                            const parts = raw.split('.');
+                            parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                            e.target.value = parts.join('.');
+
+                            Store.saveIndependentProfile(profile);
+                            calculateAndDisplay();
+                        });
+                    }
                 } catch (e) {
                     console.error("Critical Init Error:", e);
                     logToScreen("CRITICAL ERROR: " + e.message);

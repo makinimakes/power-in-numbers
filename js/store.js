@@ -256,6 +256,20 @@ const Store = {
         }
     },
 
+    getProjectInvites: async (projectId) => {
+        // V_FINAL: Removed .eq('status', 'pending') as column does not exist
+        const { data, error } = await window.supabaseClient
+            .from('project_invites')
+            .select('*')
+            .eq('project_id', projectId);
+
+        if (error) {
+            console.warn("Error fetching invites:", error);
+            return [];
+        }
+        return data || [];
+    },
+
     checkUser: async (email) => {
         const { data } = await window.supabaseClient
             .from('profiles')
@@ -266,22 +280,37 @@ const Store = {
     },
 
     getProject: async (id) => {
-        const { data, error } = await window.supabaseClient
-            .from('projects')
-            .select('*')
-            .eq('id', id)
-            .single();
+        // 1. Try Supabase
+        try {
+            const { data, error } = await window.supabaseClient
+                .from('projects')
+                .select('*')
+                .eq('id', id)
+                .single();
 
-        if (error) {
-            console.error("Store.getProject Error:", error);
-            // If it's a "Row not found" (PGRST116), return null gracefully.
-            if (error.code === 'PGRST116') return null;
-            // Otherwise throw
-            throw error;
+            if (data) {
+                return { ...data.data, id: data.id, name: data.name, owner_id: data.owner_id };
+            }
+        } catch (e) {
+            console.warn("Supabase getProject failed, falling back to local:", e);
         }
 
-        // Merge
-        return { ...data.data, id: data.id, name: data.name, owner_id: data.owner_id };
+        // 2. Fallback to LocalStorage
+        const localRaw = JSON.parse(localStorage.getItem('pin_projects') || '{}');
+        let localP = null;
+
+        if (Array.isArray(localRaw)) {
+            localP = localRaw.find(p => p.id === id);
+        } else {
+            localP = localRaw[id];
+        }
+
+        if (localP) {
+            console.log("Loaded Project from LocalStorage:", localP.name);
+            return localP;
+        }
+
+        throw new Error("Project not found in Cloud or Local storage.");
     },
 
     /**
@@ -371,6 +400,16 @@ const Store = {
             .single();
 
         if (error) {
+            console.error("SUPABASE SAVE ERROR:", error);
+            throw error;
+        }
+
+        console.log("Supabase Save Success:", data ? "Data Returned" : "No Data");
+
+        // Update Local Cache Immediately
+        // ... (rest of local cache logic)
+
+        if (error) {
             console.error("Save Project Error", error);
             throw error;
         }
@@ -432,22 +471,52 @@ const Store = {
     getUsersMap: async (emailsArray) => {
         if (!emailsArray || emailsArray.length === 0) return {};
 
-        const { data, error } = await window.supabaseClient
-            .from('profiles')
-            .select('*')
-            .in('email', emailsArray);
-
         const map = {};
-        if (data) {
-            data.forEach(p => {
-                map[p.email] = {
-                    username: p.email,
-                    email: p.email,
-                    fullName: p.full_name,
-                    independentProfile: p.independent_profile
-                };
-            });
+
+        // 1. Try Supabase
+        try {
+            const { data, error } = await window.supabaseClient
+                .from('profiles')
+                .select('*')
+                .in('email', emailsArray);
+
+            if (data) {
+                data.forEach(p => {
+                    map[p.email] = {
+                        username: p.email,
+                        email: p.email,
+                        fullName: p.full_name,
+                        independentProfile: p.independent_profile
+                    };
+                });
+            }
+        } catch (e) {
+            console.warn("Supabase getUsersMap failed, using local:", e);
         }
+
+        // 2. Merge/Fallback LocalStorage
+        // We use 'pin_users' which is { [username]: UserObject }
+        const localUsers = JSON.parse(localStorage.getItem('pin_users') || '{}');
+
+        emailsArray.forEach(email => {
+            // If missing from Supabase map, try local
+            if (!map[email]) {
+                // Check by email or username (legacy structure varies)
+                // pin_users keys are often usernames. 
+                // We naively iterate or check keys.
+                // Optimistic check:
+                if (localUsers[email]) {
+                    map[email] = localUsers[email];
+                } else {
+                    // Start digging
+                    const foundKey = Object.keys(localUsers).find(k => localUsers[k].email === email || k === email);
+                    if (foundKey) {
+                        map[email] = localUsers[foundKey];
+                    }
+                }
+            }
+        });
+
         return map;
     },
 

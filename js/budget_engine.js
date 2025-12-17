@@ -54,9 +54,25 @@ const BudgetEngine = {
         const rateNow = adjCurrent / (totalAnnualHours * pBillable);
         const rateGoal = adjGoal / (totalAnnualHours * pBillable);
 
+        // 6. Overhead Rate
+        // User Request: Pull directly from Profile ("Linked Overhead Rate")
+        // Calculation: Total Annual Overhead / Total Annual Billable Hours
+        let overheadSum = 0;
+        if (profile.overhead && Array.isArray(profile.overhead)) {
+            profile.overhead.forEach(oh => {
+                const amt = parseFloat(oh.amount) || 0;
+                // Overhead items in Profile are usually Annual, but check frequency just in case? 
+                // Legacy profile overheads might be simple objects.
+                // Assuming Annual for now as standard per Independent Tool specs.
+                overheadSum += amt;
+            });
+        }
+        const rateOverhead = overheadSum / (totalAnnualHours * pBillable);
+
         return {
             now: rateNow,
-            goal: rateGoal
+            goal: rateGoal,
+            overhead: rateOverhead // Exported for Project usage
         };
     },
 
@@ -95,8 +111,19 @@ const BudgetEngine = {
         // "minimum wage is a certain percentage of the highest ... NOW rate"
         const projectMin = maxNow * (minModifierPct / 100);
 
-        // "max is a certain percentage of the lowest ... GOAL rate"
-        let projectMaxBase = validGoalFound ? minGoal : 0;
+        // "max is a certain percentage of the lowest ... GOAL rate" -> CORRECTED to HIGHEST GOAL per user feedback (inferred)
+        // If we cap at lowest goal, we crush high earners.
+        // Logic: Ceiling should be based on Highest Goal.
+        let projectMaxBase = 0;
+        teamMembers.forEach(member => {
+            const user = userMap[member.username];
+            const profile = user ? user.independentProfile : null;
+            const rates = BudgetEngine.getWorkerRates(profile);
+            if (rates.goal > projectMaxBase) projectMaxBase = rates.goal;
+        });
+
+        if (projectMaxBase === 0 && validGoalFound) projectMaxBase = minGoal; // Fallback
+
         let projectMax = projectMaxBase * (maxModifierPct / 100);
 
         // Safety: Max shouldn't be less than Min (unless user explicitly pushes it down, but that breaks the 'range' concept)
@@ -148,6 +175,16 @@ const BudgetEngine = {
             value: gap * hours,
             gap: gap
         };
+    },
+
+    /**
+     * Safe Float Parser (handles commas)
+     */
+    safeFloat: (val) => {
+        if (typeof val === 'number') return val;
+        if (!val) return 0;
+        const str = String(val).replace(/,/g, '');
+        return parseFloat(str) || 0;
     }
 };
 

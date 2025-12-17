@@ -192,7 +192,7 @@
 
     <!-- Contract Modal -->
     <dialog id="modal-contract"
-        style="padding: 20px; border: 1px solid var(--color-border); background: var(--color-bg-base); color: var(--color-text-main); width: 100%; max-width: 500px; border-radius: 4px;">
+        style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; margin: 0; padding: 20px; border: 1px solid var(--color-border); background: var(--color-bg-base); color: var(--color-text-main); width: 100%; max-width: 500px; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
         <form method="dialog">
             <h3 style="margin-top:0; border-bottom: var(--border-std); padding-bottom: 10px;">Add Income Source</h3>
 
@@ -250,6 +250,14 @@
                     </select>
                 </div>
 
+                <!-- Occurrence / Frequency Detail -->
+                <div id="row-occurrence"
+                    style="display:none; align-items: center; gap:5px; margin-top:5px; background: #fff5e6; padding: 5px; border-radius: 4px;">
+                    <span style="font-size: 0.8rem;">Occurs</span>
+                    <input type="number" id="c-occurrence-value" placeholder="5" style="width: 50px;">
+                    <span id="c-occurrence-label" style="font-size: 0.8rem;">Days per Week</span>
+                </div>
+
                 <div style="margin-top:15px;">
                     <label>Contract Duration</label>
                     <div style="display:flex; gap:10px;">
@@ -264,10 +272,11 @@
             </div>
 
             <!-- Method B: Flat -->
-            <div id="method-flat" class="hidden" style="border: 1px dotted var(--color-border); padding: 10px;">
+            <div id="method-flat" style="display:none; border: 1px dotted var(--color-border); padding: 10px;">
                 <div class="input-group">
                     <label>Total Contract Value ($)</label>
-                    <input type="number" id="c-flat-amount" placeholder="5000">
+                    <input type="number" id="c-flat-amount" placeholder="5000"
+                        style="width: 100%; padding: 0.5rem; border: 1px solid var(--color-border); border-radius: 4px;">
                 </div>
                 <label>Period Covered</label>
                 <div style="display:flex; gap:10px;">
@@ -292,7 +301,7 @@
 
     <!-- Spectrum Modal -->
     <dialog id="modal-spectrum"
-        style="padding: 20px; border: 1px solid var(--color-border); background: var(--color-bg-base); color: var(--color-text-main); width: 100%; max-width: 800px; border-radius: 4px;">
+        style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; margin: 0; padding: 20px; border: 1px solid var(--color-border); background: var(--color-bg-base); color: var(--color-text-main); width: 100%; max-width: 800px; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
         <form method="dialog">
             <h3 style="margin-top:0; border-bottom: var(--border-std); padding-bottom: 10px;">Sliding Scale Spectrum
             </h3>
@@ -577,7 +586,7 @@
 
     <div
         style="text-align: center; color: green; font-weight: bold; padding: 10px; border-top: 1px solid #ccc; margin-top: 20px;">
-        System Ready v6 (Inlined)
+
     </div>
     <script src="js/calibrations.js"></script>
 </body>

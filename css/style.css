@@ -16,7 +16,8 @@
   --color-text-inverse: #ffffff;
   --color-text-muted: #555555;
 
-  --color-border: #4E3629;
+  --color-border: #e0e0e0;
+  /* Neutral Lines (was #4E3629 Brown) */
   /* Brown Lines */
 
   /* Accents - "Interaction Energy" */
@@ -137,7 +138,7 @@ a:hover {
 .ledger-section h3 {
   padding: var(--spacing-sm);
   border-bottom: var(--border-std);
-  background: #4E3629;
+  background: #000000;
   color: #ffffff;
 }
 
@@ -435,10 +436,86 @@ input:focus {
   box-shadow: 20px 20px 0px black;
 }
 
-.modal-header {
-  background: black;
-  color: white;
-  padding: var(--spacing-sm);
+
+/* UI Refinement Classes (Task: Cleanup Spacing/Typography) */
+
+/* 1. Balanced Grid (60/40 Split for Ledger/Results) */
+.grid-layout-balanced {
+  display: grid;
+  grid-template-columns: 1fr;
+  border-top: var(--border-std);
+}
+
+@media (min-width: 900px) {
+  .grid-layout-balanced {
+    grid-template-columns: 1.5fr 1fr;
+    /* 60/40 approx */
+  }
+}
+
+/* 2. Section Containers */
+.ledger-section {
+  padding: var(--spacing-md) var(--spacing-sm);
+  border-bottom: var(--border-std);
+}
+
+.ledger-section:last-child {
+  border-bottom: none;
+}
+
+.ledger-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-sm);
+}
+
+.ledger-section-title {
+  font-size: 1rem;
   font-weight: 700;
   text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-main);
+}
+
+/* 3. Input Styling */
+.input-label-sm {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  margin-bottom: 5px;
+  display: block;
+}
+
+.card-panel {
+  background: var(--color-bg-subtle, #f9f9f9);
+  padding: 15px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+}
+
+.card-panel:hover {
+  background: #f0f0f0;
+}
+
+.flex-gap {
+  display: flex;
+  gap: 10px;
+}
+
+.flex-gap>* {
+  flex: 1;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.text-muted {
+  color: var(--color-text-muted);
+}
+
+.text-bold {
+  font-weight: 700;
 }

@@ -1,1907 +1,2943 @@
+console.log("PROJECT.JS LOADED");
 /**
  * Power in Numbers - Project Dashboard Logic
- * Handles detailed project view, phases, and rate calculations.
+ * Robust Version (Refactored)
  */
+// alert("Project JS Loaded - Rebuilt"); // Debug Alert removed for Prod
 
-// DEBUG: Confirm file loaded
-// alert("Project.js Loaded"); 
+// --- 1. BudgetEngine is imported from budget_engine.js ---
 
-document.addEventListener('DOMContentLoaded', async () => {
-    // 1. Auth Check (MUST be first for RLS)
+// --- 1.5 Wizard UI Logic ---
+const Wizard = {
+    // V69: PRODUCTION MODE (Reloads Enabled)
+    DEBUG_NO_RELOAD: false,
+    project: null,
+    pendingConfirm: null,
+
+    init: async () => {
+        // ALERT TO CONFIRM VERSION
+        // alert("DEBUG: V68 SCRIPT LOADED. HTML Fixes Applied.");
+    },
+    state: { type: null, isTimeBased: false, fixedType: null },
+
+    open: (phaseId) => {
+        Wizard.state = { type: null, isTimeBased: false, fixedType: null };
+        const modal = document.getElementById('modal-line-item-wizard');
+        if (!modal) return;
+        modal.setAttribute('data-phase-id', phaseId);
+        modal.removeAttribute('data-edit-id'); // Clear edit mode
+        modal.style.display = 'block';
+
+        document.querySelectorAll('#modal-line-item-wizard input').forEach(i => i.value = '');
+        document.getElementById('wiz-assignee').value = '';
+        const overheadSel = document.getElementById('wiz-overhead-select');
+        if (overheadSel) overheadSel.innerHTML = '<option>Loading...</option>';
+
+        Wizard.showStep('wizard-step-1');
+        ['wizard-step-percent', 'wizard-step-flat-type', 'wizard-step-fixed-struct',
+            'wizard-step-lump', 'wizard-step-unit', 'wizard-step-time', 'wizard-step-overhead']
+            .forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = 'none';
+            });
+        document.getElementById('btn-wizard-finish').style.display = 'none';
+
+        Wizard.populateAssignees();
+    },
+
+    populateAssignees: () => {
+        const select = document.getElementById('wiz-assignee');
+        const project = Wizard.project || window._project;
+        if (!select || !project) return;
+        let html = '<option value="">(None / General Project)</option>';
+        if (project.teamMembers) {
+            project.teamMembers.forEach(m => {
+                const name = m.name || m.username || m.email;
+                html += `<option value="${m.email || m.username}">${name}</option>`;
+            });
+        }
+        select.innerHTML = html;
+    },
+
+    populateOverheads: async () => {
+        const select = document.getElementById('wiz-overhead-select');
+        if (!select) return;
+        try {
+            const projects = await Store.getOverheadProjects();
+            let html = '<option value="">-- Select Profile --</option>';
+            (projects || []).forEach(p => {
+                const total = (p.expenses || []).reduce((sum, e) => sum + BudgetEngine.safeFloat(e.amount), 0);
+
+                html += `<option value="${p.id}" data-total="${total}">${p.name} ($${total.toLocaleString()}/yr)</option>`;
+            });
+            select.innerHTML = html;
+        } catch (e) {
+            select.innerHTML = '<option>Error loading profiles</option>';
+        }
+    },
+
+    setImportMode: () => {
+        Wizard.state.type = 'Import';
+        Wizard.showStep('wizard-step-overhead');
+        Wizard.populateOverheads();
+        document.getElementById('btn-wizard-finish').style.display = 'inline-block';
+    },
+
+    setType: (t) => {
+        Wizard.state.type = t;
+        if (t === 'Percentage') {
+            Wizard.showStep('wizard-step-percent');
+            document.getElementById('btn-wizard-finish').style.display = 'inline-block';
+        } else {
+            Wizard.showStep('wizard-step-flat-type');
+        }
+    },
+
+    setTimeBased: (isTime) => {
+        Wizard.state.isTimeBased = isTime;
+        if (isTime) {
+            Wizard.showStep('wizard-step-time');
+            document.getElementById('btn-wizard-finish').style.display = 'inline-block';
+        } else {
+            Wizard.showStep('wizard-step-fixed-struct');
+        }
+    },
+
+    setFixedType: (ft) => {
+        Wizard.state.fixedType = ft;
+        if (ft === 'Lump') {
+            Wizard.showStep('wizard-step-lump');
+        } else {
+            const btnOverhead = document.getElementById('wizard-btn-add-overhead');
+            if (btnOverhead) btnOverhead.style.display = 'none'; // Hide Overhead button for Expenses
+            Wizard.showStep('wizard-step-unit');
+        }
+        document.getElementById('btn-wizard-finish').style.display = 'inline-block';
+    },
+
+    showStep: (id) => {
+        document.getElementById(id).style.display = 'block';
+    },
+
+    // V131: Detailed Schedule Calculator
+    toggleCalculator: (e) => {
+        if (e) e.preventDefault();
+        const el = document.getElementById('wiz-time-calc');
+        if (el) {
+            el.style.display = (el.style.display === 'none') ? 'block' : 'none';
+        }
+    },
+
+    calcDetailedSchedule: () => {
+        const hpd = parseFloat(document.getElementById('wiz-calc-hpd').value) || 0;
+        const dpw = parseFloat(document.getElementById('wiz-calc-dpw').value) || 0;
+        const wks = parseFloat(document.getElementById('wiz-calc-wks').value) || 0;
+
+        const totalHours = hpd * dpw * wks;
+
+        // Update UI
+        document.getElementById('wiz-calc-total').innerText = totalHours;
+
+        // Auto-fill Main Wizard Inputs
+        if (totalHours > 0) {
+            document.getElementById('wiz-time-duration').value = totalHours;
+            document.getElementById('wiz-time-unit').value = 'Hours'; // Force unit
+
+            // V132: Save Metadata for Display
+            Wizard.state.calcDetails = { hpd, dpw, wks };
+        } else {
+            Wizard.state.calcDetails = null;
+        }
+    },
+
+    // Updated: Inline Add (No Wizard)
+    openForMember: async (phaseId, memberId) => {
+        // 1. Get Project & Member Profile
+        const project = Wizard.project || window._project;
+        if (!project) return alert("Project data missing");
+        const phase = project.phases.find(p => p.id === phaseId);
+        if (!phase) return alert("Phase not found");
+
+        const usersMap = Wizard.usersMap || window._usersMap;
+        const user = usersMap ? usersMap[memberId] : null;
+        const profile = user ? user.independentProfile : {};
+        const userName = user ? (user.name || user.username) : 'Collaborator';
+
+        // 2. Calculate Defaults
+        // Rate: Use Goal Rate if available, else 50
+        const rates = window.BudgetEngine.getWorkerRates(profile);
+        const rate = rates.goal > 0 ? rates.goal.toFixed(2) : "50.00";
+
+        // Schedule: Use Profile Schedule if available
+        // logic: Count = Weeks, Duration = Hours/Week
+        let weeks = 1;
+        let hours = 40;
+        if (profile.schedule) {
+            let weeks = BudgetEngine.safeFloat(profile.schedule.weeks) || 50;
+            hours = BudgetEngine.safeFloat(profile.schedule.hours) || 40;
+
+        }
+
+        // 3. Create Item
+        const item = {
+            id: 'li-' + Date.now(),
+            name: user && user.role ? user.role : 'Collaborator',
+            assignee: memberId,
+            itemType: 'Labor',
+            method: 'Time',
+
+            // V87: Defaults
+            rateMode: 'phase', // Default to Conform to Phase Pay Rate
+            rate: rate, // Fallback value, but mode takes precedence
+
+            schedMode: 'curbed', // Default to Curb by Worker Capacity
+            unit: 'Hours',
+            duration: hours, // Fallback value
+            count: weeks // Fallback value
+        };
+
+        // 4. Save
+        if (!phase.lineItems) phase.lineItems = [];
+        phase.lineItems.push(item);
+        await Store.saveProject(project);
+
+        // Reload to show added item
+        location.reload();
+    },
+
+    edit: (itemId) => {
+        let phaseId = null;
+        let item = null;
+        if (window._project && window._project.phases) {
+            for (let p of window._project.phases) {
+                if (p.lineItems) {
+                    const found = p.lineItems.find(i => i.id === itemId);
+                    if (found) {
+                        item = found;
+                        phaseId = p.id;
+                        break;
+                    }
+                }
+            }
+        }
+        if (!item || !phaseId) return alert("Item not found");
+
+        Wizard.open(phaseId);
+        document.getElementById('modal-line-item-wizard').setAttribute('data-edit-id', itemId);
+
+        document.getElementById('wiz-name').value = item.name;
+        document.getElementById('wiz-assignee').value = item.assignee || '';
+
+        if (item.method === 'Percentage') {
+            Wizard.setType('Percentage');
+            document.getElementById('wiz-percent').value = item.percent;
+        } else if (item.name && item.name.startsWith('Overhead:')) {
+            Wizard.setType('Flat');
+            Wizard.setTimeBased(true);
+            Wizard.showStep('wizard-step-time');
+            document.getElementById('wiz-time-count').value = item.count;
+            document.getElementById('wiz-time-duration').value = item.duration;
+            document.getElementById('wiz-time-rate').value = item.rate;
+            document.getElementById('wiz-time-unit').value = item.unit;
+            document.getElementById('btn-wizard-finish').style.display = 'inline-block';
+        } else if (item.method === 'Time') {
+            Wizard.setType('Flat');
+            Wizard.setTimeBased(true);
+            document.getElementById('wiz-time-count').value = item.count;
+            document.getElementById('wiz-time-duration').value = item.duration;
+            document.getElementById('wiz-time-unit').value = item.unit || 'Hours';
+            document.getElementById('wiz-time-rate').value = item.rate;
+
+            // V133: Repopulate Calculator if data exists
+            if (item.schedDetails) {
+                const { hpd, dpw, wks } = item.schedDetails;
+                document.getElementById('wiz-calc-hpd').value = hpd;
+                document.getElementById('wiz-calc-dpw').value = dpw;
+                document.getElementById('wiz-calc-wks').value = wks;
+                document.getElementById('wiz-time-calc').style.display = 'block';
+                Wizard.calcDetailedSchedule(); // Update total display
+                Wizard.state.calcDetails = item.schedDetails; // Prime state
+            } else {
+                document.getElementById('wiz-time-calc').style.display = 'none';
+                Wizard.state.calcDetails = null;
+            }
+        } else {
+            Wizard.setType('Flat');
+            Wizard.setTimeBased(false);
+            if (item.method === 'LumpSum') {
+                Wizard.setFixedType('Lump');
+                document.getElementById('wiz-lump-amount').value = item.amount;
+            } else if (item.method === 'Unit') {
+                Wizard.setFixedType('Unit');
+                document.getElementById('wiz-unit-qty').value = item.count || 1;
+                document.getElementById('wiz-unit-cost').value = item.rate;
+            }
+        }
+    },
+
+    deleteLineItem: async (phaseId, itemId) => {
+        // Quick Delete without confirm for checkbox toggle experience?
+        // User asked for "Select/Deselect" experience.
+        if (!confirm("Remove this item from the phase?")) return;
+
+        console.log("Deleting Item:", phaseId, itemId);
+
+        const project = Wizard.project || window._project;
+        if (!project) return;
+        const phase = project.phases.find(p => p.id === phaseId);
+        if (phase) {
+            phase.lineItems = phase.lineItems.filter(i => i.id !== itemId);
+            console.log("Deleted. Saving...");
+            await Store.saveProject(project);
+            location.reload();
+        }
+    },
+
+    // Toggle All Helper
+    togglePhaseMembers: async (phaseId, selectAll) => {
+        const project = Wizard.project || window._project;
+        const phase = project.phases.find(p => p.id === phaseId);
+        if (!phase || !project.teamMembers) return;
+
+        // 1. If Select All: Add missing members
+        if (selectAll) {
+            let changed = false;
+            if (!phase.lineItems) phase.lineItems = [];
+
+            // Get Caps
+            const project = window.Wizard.project || window._project;
+            const minW = parseFloat(project.globalRates ? project.globalRates.minWage : 0) || 0;
+            const maxW = parseFloat(project.globalRates ? project.globalRates.maxWage : 9999) || 9999;
+
+            for (let m of project.teamMembers) {
+                // AUTO-ADD DISABLED:
+                // We should not force-add every team member to every phase automatically on render.
+                // This breaks the "Delete Item" feature.
+                // Instead, items should only be added if specifically requested or on initial setup.
+                // But for now, to fix the regression, we just comment out this loop's body or make it stricter?
+                // Strict fix: Do nothing here.
+            }
+            if (changed) {
+                await Store.saveProject(project);
+                location.reload();
+            }
+        } else {
+            // 2. Deselect All: Remove all assigned labor
+            if (!phase.lineItems) return;
+            if (!confirm("Remove ALL collaborators from this phase?")) return;
+
+            phase.lineItems = phase.lineItems.filter(i => !i.assignee); // Keep unassigned & expenses
+            await Store.saveProject(project);
+            location.reload();
+        }
+    },
+
+    finish: async () => {
+        console.log("--> Wizard.finish() CALLED");
+        const modal = document.getElementById('modal-line-item-wizard');
+        const phaseId = modal.getAttribute('data-phase-id');
+        const editId = modal.getAttribute('data-edit-id');
+        const name = document.getElementById('wiz-name').value;
+        const assignee = document.getElementById('wiz-assignee').value;
+
+        console.log("Wizard.finish for Phase:", phaseId, "Edit ID:", editId);
+        console.log("Inputs - Name:", name, "Assignee:", assignee);
+
+        let item = {
+            id: editId || ('li-' + Date.now()),
+            name: name,
+            assignee: assignee,
+            itemType: 'Expense'
+        };
+
+        if (assignee && !name.startsWith('Overhead:')) item.itemType = 'Labor';
+
+        if (Wizard.state.type === 'Percentage') {
+            item.method = 'Percentage';
+            item.percent = document.getElementById('wiz-percent').value;
+        } else if (Wizard.state.type === 'Import') {
+            const select = document.getElementById('wiz-overhead-select');
+            const option = select.options[select.selectedIndex];
+            const totalOverhead = BudgetEngine.safeFloat(option.getAttribute('data-total'));
+
+            const profileName = option.text.split(' ($')[0];
+
+            let currentUserEmail = null;
+            const { data: { user } } = await window.supabaseClient.auth.getUser();
+            if (user) currentUserEmail = user.email;
+
+            let capacity = 2000;
+            if (currentUserEmail && window._usersMap && window._usersMap[currentUserEmail]) {
+                const uProfile = window._usersMap[currentUserEmail].independentProfile;
+                if (uProfile && uProfile.schedule) {
+                    let weeks = BudgetEngine.safeFloat(uProfile.schedule.weeks) || 50;
+                    let hours = BudgetEngine.safeFloat(uProfile.schedule.hours) || 40;
+                    let ratio = BudgetEngine.safeFloat(uProfile.billableRatio) || 0.75;
+
+                    capacity = weeks * hours * ratio;
+                }
+            }
+            if (capacity <= 0) capacity = 1;
+            const calculatedRate = totalOverhead / capacity;
+
+            item.name = `Overhead: ${profileName}`;
+            item.method = 'Time';
+            item.rate = calculatedRate.toFixed(2);
+            item.count = 1;
+            item.duration = 40;
+            item.unit = 'Hours';
+            item.itemType = 'Expense';
+
+        } else {
+            if (Wizard.state.isTimeBased) {
+                item.method = 'Time';
+                item.count = document.getElementById('wiz-time-count').value;
+                item.duration = document.getElementById('wiz-time-duration').value;
+                item.unit = document.getElementById('wiz-time-unit').value;
+                item.rate = document.getElementById('wiz-time-rate').value;
+                if (assignee) {
+                    item.itemType = 'Labor';
+                    item.rateMode = 'phase'; // Default to Phase Rate
+                    item.rateMode = 'phase'; // Default to Phase Rate
+                    item.schedMode = 'curbed'; // Default to Curbed Schedule
+                } else {
+                    // V130: Explicitly set manual mode for unassigned items to prevent Phase default
+                    item.schedMode = 'manual';
+                }
+
+                // V132: Persist Calculator Details if available
+                if (Wizard.state.calcDetails) {
+                    item.schedDetails = Wizard.state.calcDetails;
+                }
+            } else {
+                if (Wizard.state.fixedType === 'Lump') {
+                    item.method = 'LumpSum';
+                    item.amount = document.getElementById('wiz-lump-amount').value;
+                    if (assignee) {
+                        item.itemType = 'Labor';
+                        // V107: Default to Phase Schedule
+                        item.schedMode = 'phase';
+                    }
+                } else {
+                    item.method = 'Unit';
+                    item.count = document.getElementById('wiz-unit-qty').value;
+                    item.rate = document.getElementById('wiz-unit-cost').value;
+                }
+            }
+        }
+
+        const project = Wizard.project || window._project;
+        if (project) {
+            const phase = project.phases.find(p => p.id === phaseId);
+            if (phase) {
+                console.log("Phase Found:", phase.name);
+                if (!phase.lineItems) phase.lineItems = [];
+                if (editId) {
+                    const idx = phase.lineItems.findIndex(i => i.id === editId);
+                    if (idx >= 0) phase.lineItems[idx] = { ...phase.lineItems[idx], ...item };
+                } else {
+                    console.log("Pushing New Item:", item);
+                    phase.lineItems.push(item);
+                }
+
+                try {
+                    console.log("Saving Project...");
+                    await Store.saveProject(project);
+                    console.log("Save Complete. Reloading...");
+                    modal.style.display = 'none';
+                    // alert("System says: Save Complete! Check Console logs now.");
+                    location.reload();
+                } catch (err) {
+                    console.error("SAVE ERROR:", err);
+                    alert("Failed to save item: " + err.message);
+                }
+            } else {
+                console.error("CRITICAL: Phase not found for ID:", phaseId);
+                alert(`Error: Phase not found (ID: ${phaseId}). Please reload and try again.`);
+            }
+        } else {
+            console.error("CRITICAL: Project object missing.");
+            alert("Error: Project data not loaded.");
+        }
+    },
+
+    // Unified Toggle
+    // Unified Toggle
+    toggleMember: async (phaseId, memberId, event) => {
+        // V61: Click Handler - PREVENT DEFAULT immediately to control flow
+        event.preventDefault();
+        event.stopPropagation();
+
+        const checkbox = event.target;
+        // Current state (because we prevented default) is the state BEFORE the click.
+        // So if it is Checked, user is trying to UNCHECK (Remove).
+        const isCurrentlyChecked = checkbox.checked;
+
+        window.logToUI(`Click intercepted. Current State: ${isCurrentlyChecked ? 'Checked (Removing)' : 'Unchecked (Adding)'}`);
+
+        if (!isCurrentlyChecked) {
+            // User wants to ADD (Turn ON)
+            window.logToUI("Adding Member...");
+            checkbox.checked = true; // Manually check it
+            await Wizard.openForMember(phaseId, memberId);
+        } else {
+            // User wants to REMOVE (Turn OFF)
+            // RESTORE CUSTOM MODAL (V67)
+            Wizard.pendingConfirm = {
+                type: 'single',
+                phaseId: phaseId,
+                memberId: memberId,
+                target: checkbox
+            };
+            const msgEl = document.getElementById('confirm-message');
+            const modalEl = document.getElementById('modal-confirm-action');
+            if (msgEl && modalEl) {
+                msgEl.innerText = `Remove ${memberId} from this phase?`;
+                modalEl.style.display = 'block';
+                window.logToUI("Confirm modal displayed (V67).");
+            } else {
+                alert("Error: Modal missing.");
+            }
+        }
+    },
+
+    // Master Toggle
+    toggleAll: async (phaseId, event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const checkbox = event.target;
+        const isCurrentlyChecked = checkbox.checked;
+        const shouldSelectAll = !isCurrentlyChecked; // Invert intent
+
+        window.logToUI(`Toggle All Clicked. Intent: ${shouldSelectAll ? 'Select All' : 'Deselect All'}`);
+
+        try {
+            if (shouldSelectAll) {
+                // Select All Logic
+                // FORCE FRESH PROJECT REF
+                const project = window._project;
+                const phase = project.phases.find(p => p.id === phaseId);
+
+                // ... logic proceeds ...
+                if (!phase) {
+                    window.logToUI("Error: Phase not found.");
+                    return;
+                }
+
+                // FIXED: Use heuristic matching renderTeamPool to identify assigned labor
+                // This ensures we catch legacy items that might lack itemType="Labor"
+                const isLaborItem = (i) => {
+                    if (i.itemType === 'Expense') return false;
+                    if (i.name && i.name.startsWith('Overhead:')) return false;
+                    // It is labor if it has assignee OR is Labor type OR is Time method
+                    return (i.itemType === 'Labor' || i.assignee || i.method === 'Time');
+                };
+
+                const currentAssignees = (phase.lineItems || [])
+                    .filter(isLaborItem)
+                    .map(i => i.assignee)
+                    .filter(Boolean);
+
+                window.logToUI(`Current Assigned IDs: ${JSON.stringify(currentAssignees)}`);
+
+                // Build complete list including Owner
+                let allMembers = [...(project.teamMembers || [])];
+                if (project.owner) {
+                    const ownerExists = allMembers.find(m => (m.email === project.owner || m.username === project.owner));
+                    if (!ownerExists) {
+                        allMembers.push({ email: project.owner, role: 'Owner' });
+                    }
+                }
+
+                const missing = allMembers.filter(m => !currentAssignees.includes(m.email || m.username));
+                window.logToUI(`Total Members Checked: ${allMembers.length}`);
+                window.logToUI(`Missing Count: ${missing.length}`);
+                if (missing.length > 0) {
+                    window.logToUI(`Missing IDs: ${JSON.stringify(missing.map(m => m.email || m.username))}`);
+                }
+
+                if (missing.length === 0) {
+                    // If nothing to add, ensure checkbox is checked
+                    checkbox.checked = true;
+                    return;
+                }
+
+                missing.forEach(m => {
+                    const mid = m.email || m.username;
+                    const user = (window._usersMap && window._usersMap[mid]) || {};
+                    const profile = user.independentProfile || {};
+
+                    let rate = "50.00";
+                    try {
+                        if (window.BudgetEngine) {
+                            const rates = window.BudgetEngine.getWorkerRates(profile);
+                            // Check if rates is valid object before accessing goal
+                            if (rates && typeof rates.goal === 'number' && rates.goal > 0) {
+                                rate = rates.goal.toFixed(2);
+                            }
+                        }
+                    } catch (err) {
+                        window.logToUI(`Rate Warn for ${mid}: ${err.message}`);
+                    }
+
+                    let hours = 40;
+                    if (profile.schedule) hours = parseFloat(profile.schedule.hours) || 40;
+
+                    const item = {
+                        id: 'li-' + Math.random().toString(36).substr(2, 9),
+                        name: m.role || 'Collaborator',
+                        assignee: mid,
+                        itemType: 'Labor',
+                        method: 'Time',
+                        rate: rate,
+                        unit: 'Hours',
+                        duration: hours,
+                        count: 1,
+                        rateMode: 'phase',
+                        schedMode: 'curbed'
+                    };
+                    if (!phase.lineItems) phase.lineItems = [];
+                    phase.lineItems.push(item);
+                });
+
+                await Store.saveProject(project);
+                if (!Wizard.DEBUG_NO_RELOAD) {
+                    location.reload();
+                } else {
+                    window.logToUI("SUCCESS: Added missing members. RELOAD SUPPRESSED.");
+                    alert("Success: Added Members. Page Reload Blocked by Debug Mode.");
+                }
+
+            } else {
+                // Deselect All (Remove) - Use Custom Modal
+                Wizard.pendingConfirm = {
+                    type: 'all',
+                    phaseId: phaseId,
+                    target: checkbox
+                };
+                const msgEl = document.getElementById('confirm-message');
+                const modalEl = document.getElementById('modal-confirm-action');
+                if (msgEl && modalEl) {
+                    msgEl.innerText = "Remove ALL collaborators from this phase?";
+                    modalEl.style.display = 'block';
+                }
+            }
+        } catch (e) {
+            window.logToUI(`CRITICAL ToggleAll Error: ${e.message}`);
+            console.error("ToggleAll Error:", e);
+        }
+    },
+
+    resolveConfirm: async (confirmed) => {
+        document.getElementById('modal-confirm-action').style.display = 'none';
+
+        if (!confirmed) {
+            // If checkbox toggle, revert it?
+            if (Wizard.pendingConfirm && Wizard.pendingConfirm.target) {
+                Wizard.pendingConfirm.target.checked = true; // Restore check
+            }
+            Wizard.pendingConfirm = null;
+            return;
+        }
+
+        // V91: Handle Phase Delete
+        if (Wizard.pendingConfirm && Wizard.pendingConfirm.type === 'deletePhase') {
+            const { phaseId } = Wizard.pendingConfirm;
+            console.log("Confirmed Delete Phase:", phaseId);
+            const project = Wizard.project || window._project;
+            project.phases = project.phases.filter(p => p.id !== phaseId);
+            await Store.saveProject(project);
+            location.reload();
+            Wizard.pendingConfirm = null;
+            return;
+        }
+
+        // Existing Logic (Toggle Member)
+        // FORCE FRESH PROJECT REF
+        const project = window._project;
+        if (!project) return;
+
+        const pending = Wizard.pendingConfirm; // Re-declare pending here for existing logic
+        if (!pending) return; // Should not happen
+
+        if (pending.type === 'removeMember') {
+            // CASCADE DELETE MEMBER
+            const mid = pending.memberId;
+            // 1. Remove from Team Members
+            if (project.teamMembers) {
+                project.teamMembers = project.teamMembers.filter(m => (m.email !== mid && m.username !== mid));
+            }
+            // 2. Remove from ALL Phases
+            if (project.phases) {
+                project.phases.forEach(p => {
+                    if (p.lineItems) {
+                        p.lineItems = p.lineItems.filter(i => i.assignee !== mid);
+                    }
+                });
+            }
+            await Store.saveProject(project);
+            location.reload();
+            Wizard.pendingConfirm = null; // Clear pending after execution
+            return;
+        }
+
+        const phase = project.phases.find(p => p.id === pending.phaseId);
+        if (!phase) return;
+
+        // HANDLE 'ALL' REMOVAL
+        if (pending.type === 'all') {
+            // Logic to remove all assigned labor
+            const isLaborItem = (i) => {
+                if (i.itemType === 'Expense') return false;
+                if (i.name && i.name.startsWith('Overhead:')) return false;
+                return (i.itemType === 'Labor' || i.assignee || i.method === 'Time');
+            };
+            const initialCount = phase.lineItems.length;
+            phase.lineItems = phase.lineItems.filter(i => !isLaborItem(i)); // Remove all labor
+            const removed = initialCount - phase.lineItems.length;
+
+            if (removed > 0) {
+                await Store.saveProject(project);
+                if (!Wizard.DEBUG_NO_RELOAD) location.reload();
+                else {
+                    alert(`Success: Removed ${removed} items. Reload Blocked.`);
+                    // Visual update? Hard to do for all rows.
+                }
+            }
+            Wizard.pendingConfirm = null; // Clear pending after execution
+            return;
+        }
+
+        if (pending.type === 'single') {
+            // FIXED: Match heuristic to find the item to remove
+            const isLaborItem = (i) => {
+                if (i.itemType === 'Expense') return false;
+                if (i.name && i.name.startsWith('Overhead:')) return false;
+                return (i.itemType === 'Labor' || i.assignee || i.method === 'Time');
+            };
+
+            // FIXED: DELETE ALL MATCHING ITEMS (Fixes duplicate persistence)
+            const initialCount = phase.lineItems.length;
+            phase.lineItems = phase.lineItems.filter(i => !(i.assignee === pending.memberId && isLaborItem(i)));
+            const finalCount = phase.lineItems.length;
+            const removed = initialCount - finalCount;
+            // RESTORE SAVE FOR FINAL FIX V61
+            if (removed > 0) {
+                await Store.saveProject(project);
+                if (!Wizard.DEBUG_NO_RELOAD) {
+                    location.reload();
+                } else {
+                    window.logToUI(`SUCCESS: Deleted ${removed} items in memory. RELOAD SUPPRESSED.`);
+                    alert(`Success: Removed ${removed} items. Page Reload Blocked by Debug Mode.`);
+                    // Visual Cleanup
+                    if (pending.target) {
+                        pending.target.closest('tr').style.opacity = '0.2';
+                    }
+                }
+            } else {
+                // Debug dump
+                const candidates = phase.lineItems.filter(i => i.assignee === pending.memberId);
+                const candidateLog = JSON.stringify(candidates.map(c => ({ id: c.id, type: c.itemType, name: c.name, method: c.method })));
+                alert(`DEBUG WARNING: Remove Failed. Found 0 items to delete.\nCandidates in Phase: ${candidateLog}\nPending ID: ${pending.memberId}`);
+                window.logToUI("REMOVE FAILED: 0 items found.");
+                // location.reload();
+            }
+        } else if (pending.type === 'all') { // This is a duplicate 'all' check, keeping for now as per original
+            // FIXED: Remove all matches
+            const isLaborItem = (i) => {
+                if (i.itemType === 'Expense') return false;
+                if (i.name && i.name.startsWith('Overhead:')) return false;
+                return (i.itemType === 'Labor' || i.assignee || i.method === 'Time');
+            };
+            phase.lineItems = phase.lineItems.filter(i => !(i.assignee && isLaborItem(i)));
+            await Store.saveProject(project);
+            location.reload();
+        }
+        Wizard.pendingConfirm = null;
+    },
+
+    // --- Member Managment ---
+    openEditMember: (memberId) => {
+        const project = Wizard.project || window._project;
+        const member = (project.teamMembers || []).find(m => (m.email === memberId || m.username === memberId));
+        if (!member) return;
+
+        const user = window._usersMap[memberId] || {};
+        const name = user.name || member.name || memberId;
+
+        document.getElementById('edit-member-id').value = memberId;
+        document.getElementById('edit-member-name').textContent = name;
+        document.getElementById('edit-member-role').value = member.role || '';
+        document.getElementById('modal-edit-member').style.display = 'block';
+    },
+
+    saveMemberEdit: async () => {
+        const mid = document.getElementById('edit-member-id').value;
+        const newRole = document.getElementById('edit-member-role').value;
+        const project = Wizard.project || window._project;
+
+        const member = (project.teamMembers || []).find(m => (m.email === mid || m.username === mid));
+        if (member) {
+            member.role = newRole;
+            await Store.saveProject(project);
+            location.reload();
+        }
+    },
+
+    removeMember: () => {
+        const mid = document.getElementById('edit-member-id').value;
+        // Close Edit Modal
+        document.getElementById('modal-edit-member').style.display = 'none';
+
+        // Open Confirm Modal
+        Wizard.pendingConfirm = {
+            type: 'removeMember',
+            memberId: mid
+        };
+        document.getElementById('confirm-message').innerText = `Permanently remove ${mid} and all their assignments from this project?`;
+        document.getElementById('modal-confirm-action').style.display = 'block';
+    },
+};
+window.Wizard = Wizard;
+
+
+// V82: New Phase Logic
+window.saveNewPhase = async () => {
+    const name = document.getElementById('new-phase-name').value;
+    if (!name || name.trim() === '') return alert("Please enter a phase name");
+
+    const newPhase = {
+        id: crypto.randomUUID(),
+        name: name.trim(),
+        weeks: 50,
+        hours: 40,
+        rateMode: 'project',
+        lineItems: []
+    };
+
+    if (!window._project.phases) window._project.phases = [];
+    window._project.phases.push(newPhase);
+
+    await Store.saveProject(window._project);
+    document.getElementById('modal-add-phase').style.display = 'none';
+    location.reload();
+};
+
+// --- App Logic ---
+async function initApp(retryCount = 0) {
+    const logDebug = (msg) => { if (window.debugLog) window.debugLog(msg); else console.log("[DEBUG]", msg); };
+
+    // Retry Logic for Store
     if (typeof Store === 'undefined') {
-        alert("Store is undefined. Check js/store.js");
+        if (retryCount < 5) {
+            logDebug(`Store undefined, retrying (${retryCount + 1}/5)...`);
+            setTimeout(() => initApp(retryCount + 1), 500);
+            return;
+        }
+        logDebug("CRITICAL: Store undefined after retries.");
         return;
     }
-    const currentUser = await Store.checkSession();
-    if (!currentUser) {
-        // Store.checkSession handles redirect, but just in case
-        return;
-    }
-    const userDisplay = document.getElementById('user-display');
-    if (userDisplay) userDisplay.textContent = 'User: ' + currentUser;
 
-    // 2. State & Init
+    try {
+        // Force init to ensure Supabase client is ready
+        if (!window.supabaseClient) await Store.init();
+        await Store.checkSession();
+    } catch (e) {
+        console.warn("Session check warning:", e);
+    }
+
+    // V82: Attach New Phase Listeners
+    const btnAddPhase = document.getElementById('btn-add-phase');
+    if (btnAddPhase) {
+        btnAddPhase.onclick = () => {
+            document.getElementById('new-phase-name').value = '';
+            document.getElementById('modal-add-phase').style.display = 'block';
+        };
+    }
+    const btnSaveNewPhase = document.getElementById('btn-save-new-phase');
+    if (btnSaveNewPhase) {
+        btnSaveNewPhase.onclick = window.saveNewPhase;
+    }
+
+    // UI Logger
+    window.logToUI = (msg) => {
+        const consoleEl = document.getElementById('debug-console');
+        if (consoleEl) {
+            consoleEl.style.display = 'block';
+            const line = document.createElement('div');
+            line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            consoleEl.appendChild(line);
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+        }
+        console.log("[UI LOG]", msg);
+    };
+
     const urlParams = new URLSearchParams(window.location.search);
     const projectId = urlParams.get('id');
-
     if (!projectId) {
-        window.location.href = 'projects.html';
+        logDebug("ERROR: No ID found in URL");
+        const listContainer = document.getElementById('collaborators-list');
+        if (listContainer) listContainer.innerHTML = '<p style="padding:10px; color:red;">No Project ID found. Please return to <a href="projects.html">My Projects</a> and select a project.</p>';
         return;
     }
 
-    // Async Fetch: Project
     let project = null;
     try {
         project = await Store.getProject(projectId);
     } catch (e) {
-        alert("Error loading project: " + e.message + " (" + e.code + ")");
-        window.location.href = 'projects.html';
+        console.error("Fetch Error:", e);
+        document.getElementById('phases-container').innerHTML = `<p style="color:red; padding:20px;">Error loading project: ${e.message}</p>`;
+        const listContainer = document.getElementById('collaborators-list');
+        if (listContainer) listContainer.innerHTML = '<p style="padding:10px; color:red;">Error loading project data.</p>';
         return;
     }
 
-    if (!project) {
-        alert('Project not found (or access denied). ID: ' + projectId);
-        window.location.href = 'projects.html';
-        return;
-    }
+    if (!project) return;
+    window._project = project; // Success!
 
-    // Make project global for render functions
-    window._project = project;
-    // Helper accessor for legacy code if needed, but better to pass it or rely on window._project
-    // We will update referencing code to use window._project or local variable if scope permits.
-    // Actually, `render()` relies on `project`. We need to make sure `project` var is accessible.
-    // In this file, `project` was top-level scope or module scope?
-    // It was execution scope inside listener. `render()` calls `project`.
-    // Wait, `render()` is defined globally? No, it's inside the listener? 
-    // Let's check the file structure.
-
-    // ... Checked: render() is likely defined inside or outside. 
-    // In original code, `let project = Store.getProject` was inside the listener. 
-    // `render()` closes over it? 
-    // If `render` is defined OUTSIDE, it won't see `project`.
-    // Let's assume `render` is INSIDE the listener OR uses a global.
-    // Looking at previous `view_file` (Step 11), `render()` accesses `project`.
-    // If I keep `project` inside the `async () =>`, `render` must be inside too.
-
-    // Async Fetch: Users (for collaboration names)
-    const memberEmails = project.teamMembers ? project.teamMembers.map(m => m.email || m.username) : [];
-    if (project.owner) memberEmails.push(project.owner);
-
-    let usersMap = {};
-    try {
-        if (Store.getUsersMap) {
-            usersMap = await Store.getUsersMap(memberEmails);
-        } else {
-            console.warn("Store.getUsersMap missing, skipping user details.");
-        }
-    } catch (err) {
-        console.error("Error fetching user map:", err);
-    }
-
-    // Wizard Logic
-    const Wizard = {
-        state: {},
-
-        loadForEdit: (phaseId, itemId) => {
-            const proj = window._project || project;
-            const phase = proj.phases.find(p => p.id === phaseId);
-            if (!phase) return;
-            const item = phase.lineItems.find(i => i.id === itemId);
-            if (!item) return;
-
-            // Reset UI first
-            document.querySelectorAll('[id^="wizard-step-"]').forEach(el => el.style.display = 'none');
-            document.getElementById('btn-wizard-finish').style.display = 'block'; // Direct to finish
-
-            // Populate State
-            Wizard.state = {
-                phaseId: phaseId,
-                itemId: itemId,
-                type: item.itemType,
-                isTime: item.method === 'Time',
-                fixedType: item.method === 'LumpSum' ? 'Lump' : 'Unit'
-            };
-
-            // Common
-            document.getElementById('wiz-name').value = item.name;
-
-            // Show Specifics
-            if (item.itemType === 'Percentage') {
-                document.getElementById('wizard-step-percent').style.display = 'block';
-                document.getElementById('wiz-percent').value = item.percentage;
-            } else {
-                if (item.method === 'Time') {
-                    document.getElementById('wizard-step-time').style.display = 'block';
-                    document.getElementById('wiz-time-count').value = item.count;
-                    document.getElementById('wiz-time-duration').value = item.duration;
-                    document.getElementById('wiz-time-unit').value = item.unit;
-                    document.getElementById('wiz-time-rate').value = item.rate;
-                } else if (item.method === 'LumpSum') {
-                    document.getElementById('wizard-step-lump').style.display = 'block';
-                    document.getElementById('wiz-lump-amount').value = item.amount;
-                } else {
-                    document.getElementById('wizard-step-unit').style.display = 'block';
-                    document.getElementById('wiz-unit-qty').value = item.count;
-                    document.getElementById('wiz-unit-cost').value = item.rate;
-                }
-            }
-
-            // Show Modal
-            document.getElementById('modal-line-item-wizard').style.display = 'flex';
-        },
-
-        reset: (phaseId) => {
-            Wizard.state = { phaseId: phaseId, type: null, subType: null };
-            // Reset UI
-            document.querySelectorAll('[id^="wizard-step-"]').forEach(el => el.style.display = 'none');
-            document.getElementById('wizard-step-1').style.display = 'block';
-            document.getElementById('btn-wizard-finish').style.display = 'none';
-            // Reset Inputs
-            document.querySelectorAll('#modal-line-item-wizard input').forEach(i => i.value = '');
-            document.getElementById('wiz-time-count').value = 1;
-        },
-
-        setType: (type) => {
-            Wizard.state.type = type;
-            document.getElementById('wizard-step-1').style.display = 'none';
-            if (type === 'Percentage') {
-                document.getElementById('wizard-step-percent').style.display = 'block';
-                Wizard.showFinish();
-            } else if (type === 'Import') {
-                document.getElementById('wizard-step-import').style.display = 'block';
-                Wizard.loadImportOptions();
-                Wizard.showFinish();
-            } else {
-                document.getElementById('wizard-step-flat-type').style.display = 'block';
-            }
-        },
-
-        loadImportOptions: async () => {
-            const select = document.getElementById('wiz-import-select');
-            if (!select) return;
-            select.innerHTML = '<option>Loading...</option>';
-
-            // Check cached overhead projects or fetch
-            // Since independent.js loads them into memory, but we are in project.js
-            // We need to fetch.
-            const projects = await Store.getOverheadProjects();
-
-            select.innerHTML = '<option value="">Select Provider...</option>';
-            projects.forEach(p => {
-                let costHint = '';
-                const phaseId = Wizard.state.phaseId;
-                const proj = window._project || project;
-                const phase = proj.phases.find(ph => ph.id === phaseId);
-                if (phase) {
-                    let weeks = parseFloat(phase.weeks) || 0;
-                    if (phase.durationUnit === 'Months') weeks *= 4.33; // Fallback if unit used? 
-                    // Phase object usually just has 'weeks' as canonical per schema (lines 1355)
-
-                    const totalAnnual = (p.expenses || []).reduce((s, i) => s + (parseFloat(i.amount) || 0), 0);
-                    const cost = (totalAnnual / 52) * weeks;
-                    costHint = ` (Est. $${Math.round(cost).toLocaleString()})`;
-                }
-                const opt = document.createElement('option');
-                opt.value = p.id;
-                opt.textContent = p.name + costHint;
-                const total = (p.expenses || []).reduce((s, i) => s + (parseFloat(i.amount) || 0), 0);
-                opt.dataset.annual = total;
-                select.appendChild(opt);
-            });
-        },
-
-        setTimeBased: (isTime) => {
-            Wizard.state.isTime = isTime;
-            document.getElementById('wizard-step-flat-type').style.display = 'none';
-            if (isTime) {
-                document.getElementById('wizard-step-time').style.display = 'block';
-                Wizard.showFinish();
-            } else {
-                document.getElementById('wizard-step-fixed-struct').style.display = 'block';
-            }
-        },
-
-        setFixedType: (fixedType) => {
-            Wizard.state.fixedType = fixedType;
-            document.getElementById('wizard-step-fixed-struct').style.display = 'none';
-            if (fixedType === 'Lump') {
-                document.getElementById('wizard-step-lump').style.display = 'block';
-            } else {
-                document.getElementById('wizard-step-unit').style.display = 'block';
-            }
-            Wizard.showFinish();
-        },
-
-        showFinish: () => {
-            document.getElementById('btn-wizard-finish').style.display = 'block';
-        },
-
-        finish: () => {
-            const name = document.getElementById('wiz-name').value;
-            if (!name) return alert('Name is required');
-
-            const s = Wizard.state;
-            let item = {
-                id: s.itemId || crypto.randomUUID(), // Preserve ID if editing
-                name: name,
-                itemType: (s.type === 'Import') ? 'Flat' : s.type // 'Percentage' or 'Flat'
-            };
-
-            if (s.type === 'Percentage') {
-                item.percentage = parseFloat(document.getElementById('wiz-percent').value);
-            } else if (s.type === 'Import') {
-                // Handle Import
-                const select = document.getElementById('wiz-import-select');
-                const pId = select.value;
-                if (!pId) return alert("Select a provider");
-
-                const annual = parseFloat(select.options[select.selectedIndex].dataset.annual) || 0;
-
-                // Calculate Cost
-                const proj = window._project || project;
-                const phase = proj.phases.find(p => p.id === s.phaseId);
-                const weeks = parseFloat(phase.weeks) || 0;
-                const cost = (annual / 52) * weeks;
-
-                item.method = 'LumpSum';
-                item.amount = cost;
-                // Tag it
-                item.sourceType = 'Overhead';
-                item.sourceId = pId;
-                item.name = name + ` (Admin Infrastructure)`; // Append context
-
-            } else {
-                // Flat
-                if (s.isTime) {
-                    item.method = 'Time';
-                    item.count = parseFloat(document.getElementById('wiz-time-count').value);
-                    item.duration = parseFloat(document.getElementById('wiz-time-duration').value);
-                    item.unit = document.getElementById('wiz-time-unit').value;
-                    item.rate = parseFloat(document.getElementById('wiz-time-rate').value);
-                } else {
-                    if (s.fixedType === 'Lump') {
-                        item.method = 'LumpSum';
-                        item.amount = parseFloat(document.getElementById('wiz-lump-amount').value);
-                    } else {
-                        item.method = 'Unit';
-                        item.count = parseFloat(document.getElementById('wiz-unit-qty').value);
-                        item.rate = parseFloat(document.getElementById('wiz-unit-cost').value); // Cost per item
-                    }
-                }
-            }
-
-            // Save
-            const phase = project.phases.find(p => p.id === s.phaseId);
-            if (phase) {
-                if (!phase.lineItems) phase.lineItems = [];
-
-                if (s.itemId) {
-                    // Update existing
-                    const idx = phase.lineItems.findIndex(i => i.id === s.itemId);
-                    if (idx !== -1) {
-                        phase.lineItems[idx] = { ...phase.lineItems[idx], ...item };
-                    }
-                } else {
-                    // Create new
-                    phase.lineItems.push(item);
-                }
-
-                Store.saveProject(project);
-                render();
-            }
-            document.getElementById('modal-line-item-wizard').style.display = 'none';
-        }
-    };
-    window.Wizard = Wizard;
-
-    // 1. Elements (Dynamic lookups within render/events)
-    const getElements = () => ({
-        summary: {
-            ideal: {
-                total: document.getElementById('dash-ideal-total'),
-                gross: document.getElementById('dash-ideal-gross'),
-                net: document.getElementById('dash-ideal-net')
-            },
-            possible: {
-                total: document.getElementById('dash-possible-total'),
-                gross: document.getElementById('dash-possible-gross'),
-                net: document.getElementById('dash-possible-net')
-            },
-            confirmed: {
-                total: document.getElementById('dash-confirmed-total'),
-                gross: document.getElementById('dash-confirmed-gross'),
-                net: document.getElementById('dash-confirmed-net')
-            }
-        },
-        pool: {
-            minWage: document.getElementById('pool-min-wage'),
-            maxWage: document.getElementById('pool-max-wage'),
-            list: document.getElementById('team-pool-list')
-        },
-        phases: {
-            container: document.getElementById('phases-container')
+    // DEBUG V101: Analyze Loaded Data
+    console.log("DEBUG V101: Project Loaded.", project.id);
+    (project.phases || []).forEach(p => {
+        console.log(`Phase [${p.name}]: ${p.lineItems ? p.lineItems.length : 0} items.`);
+        if (p.lineItems) {
+            p.lineItems.forEach(i => console.log(` - Item: ${i.name} (${i.itemType}) Assignee: ${i.assignee}`));
         }
     });
 
-    // Helper: View Math
-    window.viewMathLog = (memberId) => {
-        const entry = window._projectLedger[memberId];
-        const modal = document.getElementById('modal-math-log');
-        const title = document.getElementById('math-log-title');
-        const content = document.getElementById('math-log-content');
+    const title = document.getElementById('project-title');
+    if (title) title.textContent = project.name;
 
-        if (!modal || !title || !content) {
-            console.error("Math Log Modal elements not found");
-            return;
+    try {
+        const members = project.teamMembers || [];
+        const memberEmails = members.map(m => m.email || m.username);
+        if (project.owner) memberEmails.push(project.owner);
+
+        let usersMap = {};
+        if (Store.getUsersMap) usersMap = await Store.getUsersMap(memberEmails);
+        window._usersMap = usersMap; // FIX: Assign to global for modals to access
+
+        let invites = [];
+        if (Store.getProjectInvites) invites = await Store.getProjectInvites(projectId);
+
+        setupGlobalRates(); // Initialize inputs before rendering
+        renderDashboard(project, usersMap, invites);
+        assignGlobalHelpers();
+        setupInviteHandlers(projectId);
+
+        // V97: Removed programmatic onclick assignment for btn-wizard-finish
+        // It is now handled inline in HTML to ensure it works even if initApp fails partially.
+        // const btnFinish = document.getElementById('btn-wizard-finish');
+        // if (btnFinish) btnFinish.onclick = Wizard.finish;
+
+    } catch (e) {
+        console.error("CRITICAL RENDER ERROR:", e);
+        const container = document.getElementById('phases-container');
+        if (container) {
+            container.innerHTML = `<div style="padding:20px; color:white; background:red; border-radius:5px;">
+                <h3>Application Error</h3>
+                <p>${e.message}</p>
+                <small>Check console for stack trace.</small>
+                <br><br>
+                <button class="btn" onclick="location.reload()" style="background:white; color:red;">Reload</button>
+            </div>`;
         }
+        alert("Critical Error: " + e.message);
+    }
+}
 
-        if (!entry) {
-            title.textContent = 'Detail';
-            content.innerHTML = '<p>No data found.</p>';
-            modal.style.display = 'flex';
-            return;
-        }
 
-        title.textContent = entry.name;
-        content.innerHTML = '';
+function assignGlobalHelpers() {
+    window.openInviteModal = () => { document.getElementById('modal-invite-member').style.display = 'block'; };
 
-        if (!entry.mathLog || entry.mathLog.length === 0) {
-            content.innerHTML = '<p style="color:gray; font-style:italic;">No equity accumulated yet.</p>';
-        } else {
-            entry.mathLog.forEach(log => {
-                const div = document.createElement('div');
-                div.style.marginBottom = '10px';
-                div.style.borderBottom = '1px solid #eee';
-                div.style.paddingBottom = '10px';
-                div.innerHTML = `
-                    <div style="font-size:0.9rem; color:#555; margin-bottom:4px;">${log.formula}</div>
-                    <div style="font-weight:bold; color:var(--color-primary); text-align:right;">= ${Utils.formatCurrency(log.value)}</div>
-                `;
-                content.appendChild(div);
-            });
+    // V117: Income Modal Logic
+    const btnIncome = document.getElementById('btn-open-income-modal');
+    if (btnIncome) btnIncome.onclick = () => window.openIncomeModal();
 
-            const totalDiv = document.createElement('div');
-            totalDiv.style.marginTop = '15px';
-            totalDiv.style.textAlign = 'right';
-            totalDiv.style.fontSize = '1.1rem';
-            totalDiv.innerHTML = `Total Equity: <strong>${Utils.formatCurrency(entry.equity)}</strong>`;
-            content.appendChild(totalDiv);
-        }
+    window.openIncomeModal = () => {
+        window._editingSourceId = null; // Clear edit state
 
-        modal.style.display = 'flex';
+        // V121: Hide Delete Button on Create
+        const btnDel = document.getElementById('btn-delete-income');
+        if (btnDel) btnDel.style.display = 'none';
+
+        document.getElementById('income-source-name').value = '';
+        document.getElementById('income-source-amount').value = '';
+        document.getElementById('income-source-status').value = 'Confirmed';
+        document.getElementById('modal-manage-income').style.display = 'block';
     };
 
-    function renderShares() {
-        const pie = document.getElementById('shares-pie-chart');
-        const legend = document.getElementById('shares-legend');
-        const tbody = document.getElementById('shares-table-body');
-        const totalEl = document.getElementById('shares-total-equity');
+    window.editFundingSource = (id) => {
+        const project = window._project;
+        if (!project || !project.incomeSources) return;
+        const src = project.incomeSources.find(s => s.id === id);
+        if (!src) return;
 
-        if (!pie || !tbody) return;
+        window._editingSourceId = id; // Set edit state
 
-        tbody.innerHTML = '';
-        legend.innerHTML = '';
+        // V121: Show Delete Button on Edit
+        const btnDel = document.getElementById('btn-delete-income');
+        if (btnDel) btnDel.style.display = 'block';
 
-        let totalEquity = 0;
-        const entries = window._projectLedger ? Object.values(window._projectLedger) : [];
+        document.getElementById('income-source-name').value = src.name;
+        document.getElementById('income-source-amount').value = src.amount;
+        document.getElementById('income-source-status').value = src.status || 'Confirmed';
+        document.getElementById('modal-manage-income').style.display = 'block';
+    };
 
-        // Sort by Equity Descending
-        entries.sort((a, b) => b.equity - a.equity);
+    // V121: Delete Logic
+    window.deleteFundingSource = async () => {
+        if (!window._editingSourceId) return;
+        if (!confirm("Are you sure you want to delete this funding source?")) return;
 
-        entries.forEach(e => totalEquity += e.equity);
+        const project = window._project;
+        if (project.incomeSources) {
+            project.incomeSources = project.incomeSources.filter(s => s.id !== window._editingSourceId);
+            await Store.saveProject(project);
+        }
 
-        totalEl.textContent = Utils.formatCurrency(totalEquity);
+        document.getElementById('modal-manage-income').style.display = 'none';
+        window._editingSourceId = null;
+        renderDashboard(project, window._usersMap, []);
+    };
 
-        let conicGradient = [];
-        let currentDeg = 0;
-        const colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#8AC926', '#1982C4'];
+    window.saveFundingSource = async () => {
+        const name = document.getElementById('income-source-name').value;
+        const amount = parseFloat(document.getElementById('income-source-amount').value) || 0;
+        const status = document.getElementById('income-source-status').value;
 
-        entries.forEach((e, index) => {
-            // Find ID from ledger if not stored in entry (entry IS the value)
-            // We need the key (ID) but we flattened to array.
-            // Oh, entry does not have ID inside it currently in `calculateProjectTotal`.
-            // I need to add ID to the ledger value object.
+        if (!name || amount <= 0) {
+            alert("Please enter a valid name and amount.");
+            return;
+        }
 
-            const share = totalEquity > 0 ? (e.equity / totalEquity) : 0;
-            const pct = (share * 100).toFixed(1);
-            const color = colors[index % colors.length];
+        const project = window._project;
+        if (!project.incomeSources) project.incomeSources = [];
 
-            // Table Row
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>
-                    <span style="display:inline-block; width:10px; height:10px; background:${color}; margin-right:5px; border-radius:50%;"></span>
-                    ${e.name}
-                </td>
-                <td>Collaborator</td> <!-- Dynamic role? -->
-                <td>
-                    ${Utils.formatCurrency(e.equity)}
-                    <button onclick="window.viewMathLog('${e.id}')" style="background:none; border:none; cursor:pointer; font-size:0.8rem; opacity:0.6;" title="See Calculations">ℹ️</button>
-                </td>
-                <td style="font-weight:bold;">${pct}%</td>
-            `;
-            tbody.appendChild(tr);
-
-            // Chart Segment
-            const deg = share * 360;
-            // CSS conic-gradient syntax: color startDeg endDeg
-            // We must track cumulative start/end
-            // But we do that in the second loop. This loop here defines colors.
-            // Actually the conicGradient usage below is wrong (it pushes strings but doesn't track relative/absolute correctly in first loop).
-            // The second loop handles it.
-        });
-
-        // Re-loop for correct gradient Syntax
-        let gradientStr = '';
-        let degCursor = 0;
-        entries.forEach((e, index) => {
-            const share = totalEquity > 0 ? (e.equity / totalEquity) : 0;
-            const deg = share * 360;
-            const color = colors[index % colors.length];
-            const start = degCursor;
-            const end = degCursor + deg;
-            gradientStr += `${color} ${start}deg ${end}deg, `;
-            degCursor = end;
-
-            // Legend
-            const pct = (share * 100).toFixed(1);
-            const item = document.createElement('div');
-            item.style.marginBottom = '5px';
-            item.innerHTML = `<span style="color:${color}; font-weight:bold;">● ${pct}%</span> ${e.name}`;
-            legend.appendChild(item);
-        });
-
-        // Remove trailing comma
-        if (gradientStr.length > 2) gradientStr = gradientStr.slice(0, -2);
-
-        if (totalEquity === 0) {
-            pie.style.background = '#eee';
+        if (window._editingSourceId) {
+            // Update Existing
+            const idx = project.incomeSources.findIndex(s => s.id === window._editingSourceId);
+            if (idx >= 0) {
+                project.incomeSources[idx].name = name;
+                project.incomeSources[idx].amount = amount;
+                project.incomeSources[idx].status = status;
+            }
         } else {
-            pie.style.background = `conic-gradient(${gradientStr})`;
+            // Create New
+            project.incomeSources.push({
+                id: 'src_' + Date.now(),
+                name: name,
+                amount: amount,
+                status: status
+            });
+        }
+
+        await Store.saveProject(project);
+        document.getElementById('modal-manage-income').style.display = 'none';
+        window._editingSourceId = null;
+
+        // Re-render
+        renderDashboard(project, window._usersMap, []);
+    };
+}
+
+function setupInviteHandlers(currentProjectId) {
+    const btnSend = document.getElementById('btn-send-invite');
+    if (btnSend) {
+        btnSend.addEventListener('click', () => {
+            const emailInput = document.getElementById('invite-email');
+            if (emailInput && emailInput.value) {
+                btnSend.textContent = "Sending...";
+                Store.inviteUser(window._project.id, emailInput.value)
+                    .then(() => {
+                        alert('Invite sent successfully!');
+                        document.getElementById('modal-invite-member').style.display = 'none';
+                        emailInput.value = '';
+                        initApp();
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        alert('Error sending invite: ' + err.message);
+                    })
+                    .finally(() => { btnSend.textContent = "Send Invite"; });
+            } else {
+                alert('Please enter an email address.');
+            }
+        });
+    }
+    const btnAddPool = document.getElementById('btn-add-member');
+    if (btnAddPool) {
+        btnAddPool.addEventListener('click', () => { window.openInviteModal(); });
+    }
+}
+
+function renderDashboard(project, usersMap, invites = []) {
+    // Pass data to Wizard directly to ensure availability
+    if (window.Wizard) {
+        window.Wizard.project = project;
+        window.Wizard.usersMap = usersMap;
+    }
+
+    try { renderCollaborators(project, usersMap, invites); } catch (e) { console.error("Error rendering Collaborators:", e); }
+    try { renderPhases(project, usersMap); } catch (e) {
+        // Error handling moved inside renderPhases for on-screen reporting
+        console.error("Error calling renderPhases:", e);
+    }
+    try { renderTeamPool(project, usersMap); } catch (e) { console.error("Error rendering Team Pool:", e); }
+    try { calculateAndRenderTotals(project, usersMap); } catch (e) { console.error("Error rendering Totals:", e); }
+
+    // On-Screen Data Debug
+    const title = document.querySelector('.app-header h1');
+    if (title) {
+        // V138: Removed Debug String from Header
+    }
+}
+
+function renderCollaborators(project, usersMap, invites = []) {
+    const list = document.getElementById('collaborators-list');
+    if (!list) return;
+    list.innerHTML = '';
+
+    const ownerDiv = document.createElement('div');
+    ownerDiv.className = 'summary-card';
+    ownerDiv.style.padding = '10px';
+
+    // Fetch Owner Details
+    let ownerStats = '';
+    if (project.owner) {
+        if (window.BudgetEngine) {
+            const ownerUser = usersMap[project.owner] || {};
+            const ownerProfile = ownerUser.independentProfile || {};
+            const ownerRates = window.BudgetEngine.getWorkerRates(ownerProfile);
+            ownerStats = ownerRates.goal > 0 ? `<br>Goal: $${ownerRates.goal.toFixed(2)}/hr` : `<br><span style="color:red">Incomplete</span>`;
         }
     }
 
-    // Set Title
-    document.getElementById('project-title').textContent = project.name || 'Untitled Project';
+    ownerDiv.innerHTML = `<strong>Owner</strong><br>${project.owner || 'Unknown'}${ownerStats}`;
+    list.appendChild(ownerDiv);
 
-    // 3. Render Functions
-    // Main Render Loop
-    function render() {
-        if (!project) return;
+    // V137: Aggressive Deduplication for Collaborators UI
+    const seenIds = new Set();
+    const normalize = (s) => (s || '').trim().toLowerCase();
 
-        // Render Title
-        document.getElementById('project-title').textContent = project.name;
+    // 1. Render Members (deduplicated)
+    (project.teamMembers || []).forEach(m => {
+        // Skip Owner
+        if (project.owner && (normalize(m.email) === normalize(project.owner) || normalize(m.username) === normalize(project.owner))) return;
 
-        // 1. Phases (Calc cost, populates _projectLedger via calculateProjectTotal implicit/explicit?)
-        // Wait, calculateProjectTotal() runs the logic to populate _projectLedger.
-        // renderSummary calls calculateProjectTotal.
-        // renderPhases does not populate ledger, it reads from project data but the ledger is global?
-        // Actually, calculateProjectTotal RE-RUNS the whole calc traversal.
+        // Dedup Check
+        const id = normalize(m.email || m.username);
+        const canonId = usersMap[id] ? normalize(usersMap[id].email || usersMap[id].username) : id;
 
-        // So we must call calculateProjectTotal FIRST to populate global state before rendering shares.
-        calculateProjectTotal();
+        if (seenIds.has(canonId)) return;
+        seenIds.add(canonId);
 
-        renderPool();
-        renderPhases();
-        renderSummary(); // Updates Scenarios
-        renderShares(); // NEW
-        renderGlobalRates(); // Populate Inputs
+        const d = document.createElement('div');
+        d.className = 'summary-card';
+        d.style.padding = '10px';
+
+        // Lookup User
+        // Try all keys
+        let user = usersMap[m.username] || usersMap[m.email] || usersMap[canonId] || {};
+        const profile = user.independentProfile || {};
+
+        let stats = '';
+        if (window.BudgetEngine) {
+            const rates = window.BudgetEngine.getWorkerRates(profile);
+            stats = rates.goal > 0 ? `Goal: $${rates.goal.toFixed(2)}/hr` : `<span style="color:red">Incomplete</span>`;
+        } else {
+            stats = '<span style="color:orange">Calc Unavailable</span>';
+        }
+
+        d.innerHTML = `<strong>${m.name || m.username}</strong><br>${m.email || m.username}<br>${stats}`;
+        list.appendChild(d);
+
+        // Also add email to seen if available, to block pending invites
+        if (m.email) seenIds.add(normalize(m.email));
+        if (user.email) seenIds.add(normalize(user.email));
+    });
+
+    // 2. Render Invites (Filtered)
+    invites.forEach(inv => {
+        // Skip if already in members (Seen IDs)
+        if (seenIds.has(normalize(inv.email))) return;
+
+        const d = document.createElement('div');
+        d.className = 'summary-card';
+        d.style.padding = '10px';
+        d.style.border = '1px dashed #ccc';
+        d.style.opacity = '0.7';
+        d.innerHTML = `<strong>${inv.email}</strong><br><span style="color:#666;">(Pending)</span>`;
+        list.appendChild(d);
+    });
+}
+
+function renderPhases(project, usersMap = {}) {
+    const container = document.getElementById('phases-container');
+    if (!container) return;
+    container.innerHTML = '';
+
+    if (!project.phases || project.phases.length === 0) {
+        container.innerHTML = '<p style="padding:20px; color:#999;">No phases yet. Click "Add Phase" above.</p>';
+        return;
     }
 
-    function renderGlobalRates() {
-        document.getElementById('project-global-pay-rate').value = project.payRate || 100;
-        document.getElementById('project-global-expense-rate').value = project.expenseRate || 100;
-    }
+    try {
+        window.openAddLineItem = (pid) => { Wizard.open(pid); };
+        /* 
+           getProjectCapsRender defined inside loop to access local state if needed,
+           but better to defined global or outside.
+           Wait, previous version had it outside loop? No, inside.
+           Moving helper to TOP of renderPhases (outside loop) for efficiency and hoisting safety.
+        */
+        const getProjectCapsRender = () => {
+            const p = window._project;
+            const min = parseFloat(p.globalRates ? p.globalRates.minWage : 0) || 0;
+            const max = parseFloat(p.globalRates ? p.globalRates.maxWage : 9999) || 9999;
+            return { min, max };
+        };
 
+        // Helper to Get Caps (Scoped here or global)
+        // (Old getProjectCapsRender was here, removed)
 
-    // New Helper to sum up ALL costs for the Summary and Calculate Equity Shares
-    function calculateProjectTotal() {
-        let total = 0;
-
-        // Reset Ledger for Equity Calculation
-        const ledger = {}; // { memberId: { name, cash: 0, equity: 0, totalValue: 0, mathLog: [] } }
-        project.teamMembers.forEach(m => {
-            // Use local usersMap instead of deprecated Store.getUsers()
-            const user = usersMap[m.username] || (Store.getUsers ? Store.getUsers()[m.username] : {}) || {};
-            const profile = user.independentProfile || {}; // Handle missing profile
-            const rates = BudgetEngine.getWorkerRates(profile); // Full precision
-            ledger[m.id] = {
-                id: m.id,
-                name: m.name,
-                cash: 0,
-                equity: 0,
-                goalRate: rates.goal,
-                mathLog: [] // Store derivation steps
-            };
-        });
-
-        // Loop Phases
         project.phases.forEach(phase => {
-            // Skip Inactive Phases
-            if (phase.isActive === false) return;
+            const pDiv = document.createElement('div');
+            pDiv.className = 'phase-block';
+            pDiv.style.border = '1px solid #ddd';
+            pDiv.style.borderRadius = '5px';
+            pDiv.style.background = '#fff';
+            pDiv.style.marginBottom = '20px';
+            pDiv.style.overflow = 'hidden';
 
-            // 1. Labor
-            let laborTotal = 0;
-            project.teamMembers.forEach(member => {
-                const workerState = (phase.workers && phase.workers[member.id]) || { isPresent: false };
-                if (workerState.isPresent) {
-                    const costData = calculateWorkerCost(member, phase, workerState);
-                    laborTotal += costData.total;
+            // 1. HEADER
+            const isActive = phase.active !== false; // Default True
+            pDiv.style.opacity = isActive ? '1' : '0.6';
+            if (!isActive) pDiv.style.filter = 'grayscale(100%)';
 
-                    // Update Ledger
-                    if (ledger[member.id]) {
-                        ledger[member.id].cash += costData.total;
+            pDiv.innerHTML = `<div style="background:#000; color:#fff; padding:15px; display:flex; justify-content:space-between; align-items:center;">
+                <div style="display:flex; align-items:center; gap:15px;">
+                     <label class="switch">
+                          <input type="checkbox" ${isActive ? 'checked' : ''} onchange="window.togglePhaseActive('${phase.id}', this.checked)">
+                          <span class="slider"></span>
+                      </label>
+                     <h3 style="margin:0; font-size:1.2rem;">${phase.name} ${!isActive ? '(Inactive)' : ''}</h3>
+                </div>
+                <div style="display:flex; gap:15px; align-items:center;">
+                    <button class="btn btn-sm" style="background:#fff; color:#000; padding:5px 10px; border:none;" onclick="window.openAddLineItem('${phase.id}')">+ Add Item</button>
+                    <button class="btn btn-sm" style="background:transparent; color:#3498db; padding:5px 10px; border:1px solid #3498db;" onclick="window.duplicatePhase('${phase.id}')" title="Duplicate Phase"><i class="fa fa-copy"></i> Duplicate</button>
+                    <button class="btn btn-sm" style="background:transparent; color:#ffaabb; padding:5px 10px; border:1px solid #ffaabb;" onclick="window.deletePhase('${phase.id}')" title="Delete Phase"><i class="fa fa-trash"></i></button>
+                </div>
+            </div>
+            
+            <!-- 2. PHASE DETAILS INPUTS -->
+            <div style="padding:10px 15px; background:#f5f5f5; border-bottom:1px solid #ddd; display:flex; gap:20px; font-size:0.9rem; align-items:center;">
+                <div>
+                    <label style="font-weight:bold; margin-right:5px;">Est. Weeks:</label>
+                    <input type="number" value="${phase.weeks || ''}" style="width:50px; padding:3px;" onchange="window.updatePhaseDetail('${phase.id}', 'weeks', this.value)" placeholder="50">
+                </div>
+                <div>
+                    <label style="font-weight:bold; margin-right:5px;">Hrs/Wk:</label>
+                    <input type="number" value="${phase.hours || ''}" style="width:50px; padding:3px;" onchange="window.updatePhaseDetail('${phase.id}', 'hours', this.value)" placeholder="40">
+                </div>
+                <div style="border-left:1px solid #ccc; padding-left:15px; margin-left:5px;">
+                     <label style="font-weight:bold; margin-right:5px;">Rates:</label>
+                     ${(() => {
+                    let ratesUI = `<div style="display:flex; gap:10px; align-items:center;">
+                        <select onchange="window.updatePhaseDetail('${phase.id}', 'rateMode', this.value)" style="padding:3px;">
+                            <option value="project" ${(!phase.rateMode || phase.rateMode === 'project') ? 'selected' : ''}>Use Project Rates</option>
+                            <option value="override" ${phase.rateMode === 'override' ? 'selected' : ''}>Override Rates</option>
+                        </select>`;
 
-                        // Equity Calc
-                        const eqCalc = BudgetEngine.calculateEquity(ledger[member.id].goalRate, costData.rate, costData.hours);
-                        ledger[member.id].equity += eqCalc.value;
+                    if (phase.rateMode === 'override') {
+                        const payVal = phase.payRate || 100;
+                        const expVal = phase.expenseRate || 100;
+                        ratesUI += `<div style="display:flex; flex-direction:column;">
+                                     <span style="font-size:0.7rem; color:#666;">Pay Rate %</span>
+                                     <input type="number" placeholder="100" value="${payVal}" style="width:60px; padding:3px;" 
+                                         onchange="window.updatePhaseDetail('${phase.id}', 'payRate', this.value)">
+                                 </div>
+                                 <div style="display:flex; flex-direction:column;">
+                                     <span style="font-size:0.7rem; color:#666;">Exp Rate %</span>
+                                     <input type="number" placeholder="100" value="${expVal}" style="width:60px; padding:3px;" 
+                                         onchange="window.updatePhaseDetail('${phase.id}', 'expenseRate', this.value)">
+                                 </div>`;
+                    }
+                    ratesUI += `</div>`;
+                    return ratesUI;
+                })()}
+                </div>
+            </div>`;
 
-                        // Capture Math Log
-                        if (eqCalc.value > 0) {
-                            ledger[member.id].mathLog.push({
-                                phase: phase.name,
-                                formula: `Phase: ${phase.name}<br>(${Utils.formatNumber(ledger[member.id].goalRate)} [Goal] - ${Utils.formatNumber(costData.rate)} [Pay]) * ${Utils.formatNumber(costData.hours)} hrs`,
-                                value: eqCalc.value
-                            });
+            // 3. WAGES HEADER
+            pDiv.innerHTML += `<div style="padding:15px; border-bottom:1px solid #eee;">
+                <h4 style="font-size:0.9rem; text-transform:uppercase; color:#666; margin:0;">Worker Wages</h4>
+            </div>`;
+
+            // V86: ALWAYS render table structure, even if no line items yet.
+            // This ensures Ghost Rows (Owner/Members) appear so they can be added.
+            const assignedLabor = [];
+            const unassignedLabor = [];
+            const expenseItems = [];
+            let phaseFixedSubtotal = 0;
+            let phaseTotalPct = 0; // V125: Track total percentage for gross up
+
+            // Safety Check for null lineItems
+            const calculateItemCost = (item) => {
+                let cost = 0;
+                if (item.method === 'LumpSum') {
+                    cost = parseFloat(item.amount) || 0;
+                } else if (item.method === 'Unit') {
+                    cost = (parseFloat(item.rate) || 0) * (parseFloat(item.count) || 0);
+                } else if (item.method === 'Time') {
+                    // 1. Rate
+                    let effectiveRate = parseFloat(item.rate) || 0;
+                    if (item.rateMode === 'phase') {
+                        let payMod = 100;
+                        if (phase.rateMode === 'override') payMod = parseFloat(phase.payRate) || 100;
+                        const baseRate = parseFloat(item.rate) || 0;
+                        let calcRate = baseRate * (payMod / 100);
+
+                        const caps = getProjectCapsRender();
+                        if (calcRate < caps.min) calcRate = caps.min;
+                        if (calcRate > caps.max) calcRate = caps.max;
+                        if (calcRate > baseRate) calcRate = baseRate; // Goal Cap
+                        effectiveRate = calcRate;
+                    }
+
+                    // 2. Schedule
+                    let effWeeks = parseFloat(item.count) || 0; // standard
+                    let effHours = parseFloat(item.duration) || 0; // standard
+
+                    if (item.schedMode === 'phase') {
+                        effWeeks = parseFloat(phase.weeks) || 50;
+                        effHours = parseFloat(phase.hours) || 40;
+                    } else if (item.schedMode === 'curbed') {
+                        const pWeeks = parseFloat(phase.weeks) || 50;
+                        const pHours = parseFloat(phase.hours) || 40;
+                        if (effWeeks > pWeeks) effWeeks = pWeeks;
+                        if (effHours > pHours) effHours = pHours;
+                    }
+
+                    cost = effectiveRate * effWeeks * effHours;
+
+                    // 3. Overhead Add-on?
+                    let ohRate = parseFloat(item.overheadRate) || 0;
+                    if (ohRate === 0 && (!item.overheadSelections || item.overheadSelections.length === 0)) {
+                        if (item.assignee && usersMap[item.assignee]) {
+                            const up = usersMap[item.assignee].independentProfile;
+                            if (up) {
+                                const r = window.BudgetEngine.getWorkerRates(up);
+                                if (r.overhead > 0) ohRate = r.overhead;
+                            }
+                        }
+                    }
+                    const ohCost = ohRate * effWeeks * effHours;
+                    cost += ohCost;
+                } else if (item.method === 'Percentage') {
+                    // V129: Add missing Percentage Logic to Helper
+                    const pct = parseFloat(item.percent) || 0;
+                    let grossUpFactor = 1;
+                    if (phaseTotalPct < 100) {
+                        grossUpFactor = 1 / (1 - (phaseTotalPct / 100));
+                    }
+                    const totalPhaseCost = phaseFixedSubtotal * grossUpFactor;
+                    cost = totalPhaseCost * (pct / 100);
+                }
+                return cost;
+            };
+
+            // Safety Check for null lineItems
+            if (phase.lineItems) {
+                console.log(`RenderPhases [${phase.name}] - Processing ${phase.lineItems.length} raw items.`);
+                phase.lineItems.forEach(i => {
+
+                    // Check if Labor
+                    let isLabor = false;
+                    const isOverhead = i.name && i.name.startsWith('Overhead:');
+                    if (i.itemType === 'Labor') isLabor = true;
+                    else if (i.assignee && !isOverhead) isLabor = true; // Implicit assignment
+                    else if (i.method === 'Time' && !isOverhead) isLabor = true; // Fallback heuristic
+
+                    // Override: If explicitly Expense type
+                    if (i.itemType === 'Expense') isLabor = false;
+
+                    // Calculate Cost for Subtotal (Fixed only)
+                    // V126: Use helper to ensure Overhead is included
+                    let cost = 0;
+                    if (i.method !== 'Percentage') {
+                        cost = calculateItemCost(i);
+                        phaseFixedSubtotal += cost;
+                    } else {
+                        // V125: Accumulate Percentage for Gross Up
+                        phaseTotalPct += (parseFloat(i.percent) || 0);
+                    }
+
+                    if (isLabor) {
+                        if (i.assignee) assignedLabor.push({ ...i });
+                        else unassignedLabor.push({ ...i });
+                    } else {
+                        expenseItems.push({ ...i });
+                    }
+                });
+            } // Close safety check block from V86
+
+            // (getProjectCapsRender moved up)
+
+            // CALCULATE TOTALS
+            // (calculateItemCost moved up)
+
+            // CALCULATE TOTALS
+            let totalLaborCost = 0;
+            let totalExpenseCost = 0;
+
+            assignedLabor.forEach(i => totalLaborCost += calculateItemCost(i));
+            unassignedLabor.forEach(i => totalLaborCost += calculateItemCost(i));
+            expenseItems.forEach(i => totalExpenseCost += calculateItemCost(i));
+
+            const phaseTotalCost = totalLaborCost + totalExpenseCost;
+
+
+            // RENDER PREP: Define Row Renderer Helper
+            // Uses 'phase' from closure
+            const renderRow = (item, isAssigned = true, user = null) => {
+                let cost = 0;
+                let descRate = '-';
+                let descSched = '-';
+                let descOverhead = '-';
+                // V72: Lift scope
+                let effectiveWeeks = 0;
+                let effectiveHours = 0;
+                // V105: Lift scope for Equity Calc
+                let effectiveRate = 0;
+
+                // V107: Refactored Schedule Logic (Shared for Time & LumpSum)
+                if (item.method === 'Time' || (item.method === 'LumpSum' && item.itemType === 'Labor')) {
+                    // 1. Determine Schedule Values
+                    let effWeeks = parseFloat(item.count) || 0;
+                    let effHours = parseFloat(item.duration) || 0;
+
+                    if (item.schedMode === 'phase' || !item.schedMode) { // Default to phase if undefined
+                        effWeeks = parseFloat(phase.weeks) || 50;
+                        effHours = parseFloat(phase.hours) || 40;
+                    } else if (item.schedMode === 'curbed') {
+                        const pWeeks = parseFloat(phase.weeks) || 50;
+                        const pHours = parseFloat(phase.hours) || 40;
+                        if (effWeeks > pWeeks) effWeeks = pWeeks;
+                        if (effHours > pHours) effHours = pHours;
+                    }
+
+                    effectiveWeeks = effWeeks;
+                    effectiveHours = effHours;
+                    effectiveWeeks = effWeeks;
+                    effectiveHours = effHours;
+
+                    // V130: Dynamic Label based on Unit
+                    // V132: Detailed Schedule Override
+                    if (item.schedDetails) {
+                        const { hpd, dpw, wks } = item.schedDetails;
+                        const labelCount = effWeeks > 1 ? `${effWeeks} people` : '1 person'; // 'effWeeks' is actually 'count' here due to logic mapping
+                        descSched = `${labelCount} x ${wks} wks @ ${dpw} d/wk (${hpd} hrs/d)`;
+                    } else if (item.unit === 'Days') {
+                        descSched = `${effWeeks} items x ${effHours} days`;
+                    } else if (item.unit === 'Hours') {
+                        descSched = `${effWeeks} items x ${effHours} hrs`;
+                    } else if (item.unit === 'Weeks') {
+                        descSched = `${effWeeks} people x ${effHours} wks`;
+                    } else {
+                        // Default Fallback
+                        descSched = `${effectiveWeeks} wks x ${effectiveHours} hrs`;
+                    }
+                }
+
+                // Calc Cost & Rate Description
+                if (item.method === 'LumpSum') {
+                    cost = parseFloat(item.amount) || 0;
+                    descRate = `$${cost.toLocaleString()} (Flat)`;
+                    // Schedule already calc'd above if Labor
+                } else if (item.method === 'Time') {
+                    // Rate Logic
+                    effectiveRate = parseFloat(item.rate) || 0;
+                    if (item.rateMode === 'phase') {
+                        let payMod = 100;
+                        if (phase.rateMode === 'override') payMod = parseFloat(phase.payRate) || 100;
+                        const baseRate = parseFloat(item.rate) || 0;
+                        let calcRate = baseRate * (payMod / 100);
+                        const caps = getProjectCapsRender();
+                        if (calcRate < caps.min) calcRate = caps.min;
+                        if (calcRate > caps.max) calcRate = caps.max;
+                        if (calcRate > baseRate) calcRate = baseRate; // Goal Cap
+                        effectiveRate = calcRate;
+                    }
+
+                    // Desc Rate
+                    descRate = `$${effectiveRate.toFixed(2)} /hr`;
+                    if (item.rateMode === 'phase') {
+                        let payMod = parseFloat(phase.payRate) || 100;
+                        if (phase.rateMode === 'override') descRate += ` (Phase ${parseFloat(phase.payRate)}%)`;
+                    }
+                    else if (item.rateMode === 'goal') descRate += ' (Goal)';
+
+                    // V109: Handle Flat Rate Mode for Time Items
+                    if (item.rateMode === 'flat') {
+                        cost = parseFloat(item.flatFee) || 0;
+                        descRate = `$${cost.toLocaleString()} (Flat)`;
+
+                        // Recalc effectiveRate for Equity logic below
+                        const totalHours = effectiveWeeks * effectiveHours;
+                        if (totalHours > 0) effectiveRate = cost / totalHours;
+                        else effectiveRate = 0;
+                    } else {
+                        // Standard Hourly Cost Logic
+                        cost = effectiveRate * effectiveWeeks * effectiveHours;
+                    }
+
+                    // Overhead Logic
+                    let ohRate = parseFloat(item.overheadRate) || 0;
+                    if (ohRate === 0 && (!item.overheadSelections || item.overheadSelections.length === 0)) {
+                        if (item.assignee && usersMap[item.assignee]) {
+                            const up = usersMap[item.assignee].independentProfile;
+                            if (up) {
+                                const r = window.BudgetEngine.getWorkerRates(up);
+                                if (r.overhead > 0) ohRate = r.overhead;
+                            }
+                        }
+                    }
+                    const ohCost = ohRate * effectiveWeeks * effectiveHours;
+                    cost += ohCost;
+                    if (ohCost > 0) descOverhead = `$${ohCost.toFixed(2)}`;
+
+                } else if (item.method === 'Unit') {
+                    cost = (parseFloat(item.rate) || 0) * (parseFloat(item.count) || 0);
+                    descRate = `$${parseFloat(item.rate).toFixed(2)} / unit`;
+                    descSched = `${item.count} units`;
+                } else if (item.method === 'Percentage') {
+                    const pct = parseFloat(item.percent) || 0;
+
+                    // V125: Gross Up Calculation
+                    // If multiple percentage items exist, they share the gross-up based on total %
+                    let grossUpFactor = 1;
+                    if (phaseTotalPct < 100) {
+                        grossUpFactor = 1 / (1 - (phaseTotalPct / 100));
+                    }
+
+                    const totalPhaseCost = phaseFixedSubtotal * grossUpFactor;
+                    cost = totalPhaseCost * (pct / 100);
+
+                    descRate = `${pct}%`;
+                    descSched = `of $${totalPhaseCost.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+                }
+
+
+                let displayEquity = '-';
+
+                // Logic for Time-Based Items
+                if (item.method === 'Time' && item.itemType !== 'Expense') {
+                    // Try to get Profile Goal Rate first (Source of Truth)
+                    let baseRate = parseFloat(item.rate) || 0;
+                    if (user && user.independentProfile) {
+                        const r = window.BudgetEngine.getWorkerRates(user.independentProfile);
+                        if (r.goal > 0) baseRate = r.goal;
+                    }
+
+                    const gap = Math.max(0, baseRate - effectiveRate);
+                    const eqVal = gap * effectiveWeeks * effectiveHours;
+
+                    if (eqVal > 0) {
+                        displayEquity = `$${eqVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                    } else if (gap <= 0 && baseRate > 0) {
+                        displayEquity = `<span style="color:#ccc;">$0.00</span>`;
+                    }
+                }
+                // V106: Logic for LumpSum Items (Flat Fee)
+                else if (item.method === 'LumpSum' && item.itemType !== 'Expense') {
+                    // Check if workload is defined
+                    const lWeeks = parseFloat(item.count) || 0;
+                    const lHours = parseFloat(item.duration) || 0;
+
+                    if (lWeeks > 0 && lHours > 0) {
+                        const totalHours = lWeeks * lHours;
+                        const effectiveHourly = cost / totalHours; // Cost is Total Amount here
+
+                        // Find Goal Rate from Profile
+                        let goalRate = 0;
+                        if (user && user.independentProfile) {
+                            const r = window.BudgetEngine.getWorkerRates(user.independentProfile);
+                            goalRate = r.goal;
+                        }
+
+                        if (goalRate > 0) {
+                            const gap = Math.max(0, goalRate - effectiveHourly);
+                            const eqVal = gap * totalHours;
+
+                            if (eqVal > 0) {
+                                displayEquity = `$${eqVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                                // Optional: Tooltip showing math?
+                            } else {
+                                displayEquity = `<span style="color:#ccc;">$0.00</span>`;
+                            }
                         }
                     }
                 }
-            });
 
-            // 2. Expenses (Line Items)
-            // Resolve Expense Rate
-            let expRateVal = 100;
-            if (phase.expenseRate !== null && phase.expenseRate !== undefined && phase.expenseRate !== "") {
-                expRateVal = parseFloat(phase.expenseRate);
-            } else {
-                expRateVal = parseFloat(project.expenseRate) || 100;
+                if (isAssigned) {
+                    const memberName = user ? (user.name || user.username) : (item.name || 'Member');
+
+                    // TOGGLE SWITCH (CHECKED)
+                    return `<tr>
+                                    <td>
+                                        <label class="switch">
+                                        <label class="switch">
+                                          <input type="checkbox" checked 
+                                            class="action-toggle-member"
+                                            data-phase-id="${phase.id}"
+                                            data-member-id="${item.assignee}">
+                                          <span class="slider"></span>
+                                        </label>
+                                        <strong style="margin-left:10px;">${memberName}</strong>
+                                        <div style="font-size:0.75rem; color:#666; margin-left:50px;">${item.name}</div>
+                                    </td>
+                                    <td class="clickable-cell" onclick="window.openRateModal('${phase.id}', '${item.id}')" title="Adjust Pay Rate">
+                                        ${descRate} <i class="fa fa-pencil" style="font-size:0.8rem; opacity:0.3;"></i>
+                                    </td>
+                                    <td class="clickable-cell" onclick="window.openScheduleModal('${phase.id}', '${item.id}')" title="Adjust Schedule">
+                                        ${descSched} <i class="fa fa-pencil" style="font-size:0.8rem; opacity:0.3;"></i>
+                                    </td>
+                                    <td class="clickable-cell" onclick="window.openOverheadModal('${phase.id}', '${item.id}', '${user ? (user.email || user.username) : ''}')" title="Select Overhead Businesses">
+                                        ${descOverhead} <i class="fa fa-pencil" style="font-size:0.8rem; opacity:0.3;"></i>
+                                    </td>
+                                    <td style="text-align:right; font-weight:bold;">$${cost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                    <td style="text-align:right; color:#27ae60; font-weight:bold;">${displayEquity}</td>
+                                </tr>`;
+                } else {
+                    // Unassigned (Labor) or Expense
+                    const displayName = item.name || '(Unassigned)';
+                    return `<tr>
+                                    <td>${displayName}</td>
+                                    <td>${descRate}</td>
+                                    <td>${descSched}</td>
+                                    <td>-</td>
+                                    <td style="text-align:right; font-weight:bold;">$${cost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                    <td style="text-align:right; color:#999;">${displayEquity}</td>
+                                    <td style="text-align:right;">
+                                        <button class="btn-text-action" onclick="Wizard.edit('${item.id}')">Edit</button>
+                                        <button class="btn-text-action" style="color:red; margin-left:5px;" onclick="Wizard.deleteLineItem('${phase.id}', '${item.id}')">Del</button>
+                                    </td>
+                                </tr>`;
+                }
+            };
+
+            // GENERATE ROWS
+            let teamRows = '';
+            let allSelected = false;
+
+            // V83: Ensure Owner is included in the list of members to render
+            const renderMembers = [...(window._project.teamMembers || [])];
+            const ownerEmail = window._project.owner;
+
+            // If owner exists and not already in list, add them
+            if (ownerEmail && !renderMembers.find(m => (m.email === ownerEmail || m.username === ownerEmail))) {
+                renderMembers.push({ email: ownerEmail, role: 'Owner' });
             }
-            const expFactor = expRateVal / 100;
 
-            let flatTotal = 0;
-            const flats = (phase.lineItems || []).filter(i => i.itemType !== 'Percentage');
-            const percents = (phase.lineItems || []).filter(i => i.itemType === 'Percentage');
+            if (renderMembers.length > 0) {
+                const totalMembers = renderMembers.length;
+                let assignedCount = 0;
 
-            flats.forEach(i => {
-                const raw = calculateItemCost(i);
-                flatTotal += (raw.cost * expFactor);
-            });
+                teamRows = renderMembers.map(member => {
+                    const mid = member.email || member.username;
+                    // V102: Filter for ALL items assigned to this member
+                    const memberItems = assignedLabor.filter(i => i.assignee === mid);
+                    const user = usersMap[mid] || {};
+                    const displayName = (user.name || user.username) || (member.email || member.role || 'Member');
 
-            const subTotal = flatTotal + laborTotal;
+                    if (memberItems.length > 0) {
+                        assignedCount++; // Count member as "active" in phase
+                        // Render a row for EACH item
+                        return memberItems.map((item, idx) => {
+                            // If we want the toggle on every row or just the first?
+                            // For now, let's put toggle on every row to allow granular control (delete single item by toggling off?)
+                            // Wait, toggle off triggers "deleteLineItem"? 
+                            // RenderRow logic (line 1300) implements the toggle.
+                            return renderRow(item, true, { ...member, ...user });
+                        }).join('');
+                    } else {
+                        // Inactive Row (Ghost Row) - No items for this member
+                        const defWeeks = phase.weeks || 50;
+                        const defHours = phase.hours || 40;
+                        return `<tr style="opacity:0.5; background:#f0f0f0;">
+                                <td>
+                                    <label class="switch">
+                                          <input type="checkbox" 
+                                            class="action-toggle-member" 
+                                            data-phase-id="${phase.id}" 
+                                            data-member-id="${mid}">
+                                          <span class="slider"></span>
+                                    </label>
+                                    <strong style="margin-left:10px;">${displayName}</strong>
+                                    <span style="font-size:0.7rem; color:#666; margin-left:5px;">(Not Assigned)</span>
+                                </td>
+                                        <td>-</td>
+                                        <td>${defWeeks} wks x ${defHours} hrs (Est)</td>
+                                        <td>-</td>
+                                        <td>-</td>
+                                    </tr>`;
+                    }
+                }).join('');
 
-            // 3. Percentage Calculations (Gross Up)
-            let totalPct = 0;
-            percents.forEach(i => totalPct += (parseFloat(i.percentage) || 0));
+                if (totalMembers > 0 && assignedCount === totalMembers) allSelected = true;
+            } else {
+                teamRows = '<tr><td colspan="6" style="padding:10px;">No team members found.</td></tr>';
+            }
 
-            // Safety Cap
-            if (totalPct > 99) totalPct = 99;
+            let unassignedRows = '';
+            if (unassignedLabor.length > 0) {
+                unassignedRows = unassignedLabor.map(item => renderRow(item, false)).join('');
+            }
 
-            const grossTotal = subTotal / (1 - (totalPct / 100)); // The theoretical Total
+            pDiv.innerHTML += `<table class="ledger-table">
+                    <thead>
+                        <tr>
+                            <th style="width:30%;">
+                                  <label class="switch" style="transform:scale(0.8); margin-right:5px; vertical-align:middle;">
+                                  <label class="switch" style="transform:scale(0.8); margin-right:5px; vertical-align:middle;">
+                                      <input type="checkbox" 
+                                        class="action-toggle-all" 
+                                        data-phase-id="${phase.id}" 
+                                        ${allSelected ? 'checked' : ''}>
+                                      <span class="slider"></span>
+                                </label>
+                                Collaborator
+                            </th>
+                            <th style="width:15%;">Rate</th>
+                            <th style="width:25%;">Schedule</th>
+                            <th style="width:10%;">Overhead</th>
+                            <th style="text-align:right;">Cost</th>
+                            <th style="text-align:right;">Equity</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${teamRows}
+                        ${unassignedRows.length > 0 ? `<tr style="background:#eee;"><td colspan="6" style="font-weight:bold; font-size:0.8rem;">Unassigned Labor</td></tr>${unassignedRows}` : ''}
+                    </tbody>
+                </table>`;
 
-            let percentTotal = 0;
-            percents.forEach(i => {
-                // Cost is % of the GROSS Total
-                const amount = grossTotal * (i.percentage / 100);
-                percentTotal += amount;
-            });
+            // 4. EXPENSES HEADER & TABLE
+            pDiv.innerHTML += `<div style="padding:15px 15px 5px 15px; border-bottom:1px solid #eee; margin-top:0;">
+                    <h4 style="font-size:0.9rem; text-transform:uppercase; color:#666; margin-bottom:10px;">Project Expenses</h4>
+                </div>`;
 
-            total += (subTotal + percentTotal);
+            if (expenseItems.length > 0) {
+                const expRows = expenseItems.map(item => renderRow(item, false)).join('');
+                pDiv.innerHTML += `<table class="ledger-table">
+                        <thead>
+                            <tr>
+                                <th style="width:30%;">Item</th>
+                                <th style="width:15%;">Rate/Type</th>
+                                <th style="width:25%;">Details</th>
+                                <th style="width:10%;"></th>
+                                <th style="text-align:right;">Cost</th>
+                                <th style="width:10%;"></th>
+                            </tr>
+                        </thead>
+                        <tbody>${expRows}</tbody>
+                    </table>`;
+            } else {
+                pDiv.innerHTML += `<div style="padding:20px; color:#999; font-style:italic;">No expenses added.</div>`;
+            }
+
+            // 5. PHASE TOTALS FOOTER
+            pDiv.innerHTML += `<div style="padding:15px; background:#fafafa; border-top:1px solid #ddd; margin-top:20px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                    <span style="color:#666;">Labor Subtotal:</span>
+                    <span style="font-weight:bold;">$${totalLaborCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+                ${totalExpenseCost > 0 ? `
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                    <span style="color:#666;">Expenses Subtotal:</span>
+                    <span style="font-weight:bold;">$${totalExpenseCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>` : ''}
+                 <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #ccc; padding-top:10px; margin-top:5px; font-size:1.1rem;">
+                    <span style="font-weight:bold;">PHASE TOTAL:</span>
+                    <span style="font-weight:bold; color:#2c3e50;">$${phaseTotalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+            </div>`;
+            // (End of Table Generaton)
+            // Removed erroneous closing brace for the deleted IF block
+
+            container.appendChild(pDiv);
+
+            console.log("DEBUG: Rendered Phase", phase.name);
         });
 
-        // Store Ledger globally for rendering
-        window._projectLedger = ledger;
-
-        return total;
+    } catch (e) {
+        console.error("RENDER ERROR:", e);
+        container.innerHTML += `<div style="color:red; padding:20px; border:1px solid red; background:#ffe;">
+            <strong>Rendering Error:</strong> ${e.message}<br>
+            <small>${e.stack}</small>
+        </div>`;
     }
+}
 
-    // Helper: Calculate Scenario Distribution (Waterfall)
-    function calculateDistribution(incomeTotal, cashCosts, liabilityTotal) {
-        let distributable = incomeTotal - cashCosts;
+function calculateAndRenderTotals(project, usersMap) {
+    let totalIdeal = 0;
+    let totalConfirmed = 0;
+    let equityTotal = 0;
+    let equityByMember = {};
+    window._mathLogs = {};
 
-        // Logic: Payout is capped at LiabilityTotal.
-        // If Distributable < 0, Payout = 0.
-        // If Distributable < Liability, Payout = Distributable.
-        // If Distributable > Liability, Payout = Liability.
-        // (Remainder is Net Profit / pure profit)
+    (project.phases || []).forEach(p => {
+        if (p.active === false) return; // V89: Skip Inactive Phases
+        (p.lineItems || []).forEach(i => {
+            let actualCost = 0;
+            // Calculate Actual Cost (Confirmed)
+            if (i.method === 'LumpSum') actualCost = BudgetEngine.safeFloat(i.amount);
+            else if (i.method === 'Time') actualCost = BudgetEngine.safeFloat(i.count) * BudgetEngine.safeFloat(i.duration) * BudgetEngine.safeFloat(i.rate);
+            else actualCost = BudgetEngine.safeFloat(i.count) * BudgetEngine.safeFloat(i.rate);
 
-        let payout = 0;
-        if (distributable > 0) {
-            if (distributable >= liabilityTotal) {
-                payout = liabilityTotal;
-            } else {
-                payout = distributable;
+            totalConfirmed += actualCost;
+
+            // Start Ideal with Actual, then override if Labor
+            let idealCost = actualCost;
+
+            if (i.assignee) {
+                const user = usersMap[i.assignee];
+                if (user && user.independentProfile) {
+                    let goalRate = 0;
+                    if (window.BudgetEngine) {
+                        const rates = window.BudgetEngine.getWorkerRates(user.independentProfile);
+                        goalRate = rates.goal || 0;
+                    }
+
+                    let actualRate = 0;
+                    let hours = 0;
+
+                    // V111: Consolidated Hours & Rate Logic for Time AND LumpSum
+                    if (i.method === 'Time' || i.method === 'LumpSum') {
+
+                        // 1. Calculate HOURS
+                        if (i.method === 'Time') {
+                            const unit = i.unit || 'Hours';
+                            const dur = BudgetEngine.safeFloat(i.duration);
+                            const count = BudgetEngine.safeFloat(i.count) || 1;
+                            if (unit === 'Hours') hours = dur * count;
+                            else if (unit === 'Days') hours = dur * 8 * count;
+                            else if (unit === 'Weeks') hours = dur * 40 * count;
+
+                            // Actual Rate Logic (Time)
+                            if (i.rateMode === 'flat') {
+                                // Imputed Rate
+                                if (hours > 0) actualRate = actualCost / hours;
+                            } else {
+                                actualRate = BudgetEngine.safeFloat(i.rate);
+                            }
+
+                        } else if (i.method === 'LumpSum') {
+                            // LumpSum Logic (using V107 Schedule Columns)
+                            const lWeeks = BudgetEngine.safeFloat(i.count); // stored as count
+                            const lHours = BudgetEngine.safeFloat(i.duration); // stored as duration
+                            if (lWeeks > 0 && lHours > 0) {
+                                hours = lWeeks * lHours;
+                                actualRate = actualCost / hours; // Imputed Rate
+                            }
+                        }
+                    }
+
+                    // Ideal = Hours * Goal Rate
+                    if (hours > 0 && goalRate > 0) {
+                        idealCost = hours * goalRate;
+                    }
+
+                    totalIdeal += idealCost;
+
+                    if (hours > 0 && goalRate > actualRate) {
+                        const gap = goalRate - actualRate;
+                        const equityValue = gap * hours;
+                        equityTotal += equityValue;
+                        const logKey = `equity_${i.assignee}`;
+                        if (!window._mathLogs[logKey]) {
+                            window._mathLogs[logKey] = [
+                                `<strong>Calculation Log for ${user.name || i.assignee}</strong>`,
+                                `Role: ${user.role || 'Collaborator'}`,
+                                `Goal Rate: $${goalRate.toFixed(2)}/hr (Source: Independent Profile)`,
+                                `----------------------------------------`
+                            ];
+                        }
+                        window._mathLogs[logKey].push(
+                            `<strong>Line Item: ${i.name}</strong><br>` +
+                            `Hours: ${hours.toFixed(1)} hrs | Pay Rate: $${actualRate.toFixed(2)}/hr<br>` +
+                            `Gap: $${gap.toFixed(2)}/hr (Goal - Pay)<br>` +
+                            `Equity: $${gap.toFixed(2)} x ${hours.toFixed(1)} = <strong>$${equityValue.toFixed(2)}</strong>`
+                        );
+                        if (!equityByMember[i.assignee]) equityByMember[i.assignee] = 0;
+                        equityByMember[i.assignee] += equityValue;
+                    }
+                }
             }
-        } else {
-            // Deficit
-            distributable = 0;
-        }
+        });
+    });
 
-        const netProfit = (incomeTotal - cashCosts) - payout;
+    // V112: Tiered Income Calculation
+    let incConfirmed = 0;
+    let incLikely = 0;
+    let incNotLikely = 0;
 
-        return {
-            grossProfit: (incomeTotal - cashCosts),
-            distributable: Math.max(0, incomeTotal - cashCosts),
-            payout: payout,
-            netProfit: netProfit
-        };
-    }
+    const fundList = document.getElementById('funding-list');
+    if (fundList) fundList.innerHTML = '';
 
-    function updateScenarioCard(el, funding, cost, liability) {
-        if (!el.total) return;
+    if (project.incomeSources && project.incomeSources.length > 0) {
+        project.incomeSources.forEach(src => {
+            let val = BudgetEngine.safeFloat(src.amount);
+            const status = src.status || 'Not Likely'; // Default
 
-        // Legacy Display (Deficit check)
-        el.total.textContent = Utils.formatCurrency(funding);
+            if (status === 'Confirmed') incConfirmed += val;
+            else if (status === 'Likely') incLikely += val;
+            else incNotLikely += val;
 
-        // New Detailed Display
-        const dist = calculateDistribution(funding, cost, liability);
-
-        if (el.gross) el.gross.textContent = Utils.formatCurrency(dist.grossProfit);
-
-        if (el.net) {
-            el.net.textContent = Utils.formatCurrency(dist.netProfit);
-            if (dist.netProfit >= 0) {
-                el.net.style.color = 'var(--color-primary)';
-            } else {
-                el.net.style.color = 'red';
-            }
-        }
-    }
-
-    function renderSummary() {
-        const els = getElements();
-
-        // Dynamic Cost Calculation
-        const totalCost = calculateProjectTotal(); // Populates window._projectLedger
-
-        // Calculate Total Liability from Ledger
-        let totalLiability = 0;
-        if (window._projectLedger) {
-            Object.values(window._projectLedger).forEach(e => totalLiability += e.equity);
-        }
-
-        // Income Aggregates
-        const income = project.incomeSources || [];
-        const sumConfirmed = income.filter(i => i.status === 'Confirmed').reduce((s, i) => s + i.amount, 0);
-        const sumLikely = income.filter(i => i.status === 'Likely').reduce((s, i) => s + i.amount, 0);
-        const sumUnconfirmed = income.filter(i => i.status === 'Unconfirmed').reduce((s, i) => s + i.amount, 0);
-
-        const possibleTotal = sumConfirmed + sumLikely;
-        const idealTotal = sumConfirmed + sumLikely + sumUnconfirmed;
-
-        // Render Cards
-        updateScenarioCard(els.summary.confirmed, sumConfirmed, totalCost, totalLiability);
-        updateScenarioCard(els.summary.possible, possibleTotal, totalCost, totalLiability);
-        updateScenarioCard(els.summary.ideal, idealTotal, totalCost, totalLiability);
-
-        // Render Funding List
-        const fundingList = document.getElementById('funding-list');
-        if (fundingList) {
-            fundingList.innerHTML = '';
-            project.incomeSources.forEach(source => {
+            if (fundList) {
                 const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${source.name}</td>
-                    <td><span class="status-badge status-${source.status.toLowerCase()}">${source.status}</span></td>
-                    <td>${Utils.formatCurrency(source.amount)}</td>
-                    <td>
-                        <button class="btn-edit-funding" data-id="${source.id}" style="color:var(--color-primary); background:none; border:none; cursor:pointer; margin-right:10px;">✎</button>
-                        <button class="btn-delete-funding" data-id="${source.id}" style="color:red; background:none; border:none; cursor:pointer;">&times;</button>
-                    </td>
-                `;
-                fundingList.appendChild(tr);
-            });
+                tr.innerHTML = `<td>${src.name}</td><td>${status}</td><td>$${val.toLocaleString()}</td><td><button class="btn-text-action" onclick="window.editFundingSource('${src.id}')">Edit</button></td>`;
+                fundList.appendChild(tr);
+            }
+        });
+    } else if (fundList) {
+        fundList.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#999;">No funding sources added.</td></tr>';
+    }
+
+    // V115: Global Expenses Display
+    const elGlobalExp = document.getElementById('dash-global-expenses');
+    if (elGlobalExp) {
+        elGlobalExp.textContent = '$' + totalConfirmed.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    }
+
+    // Define Scenario Totals
+    // 1. Confirmed
+    const totalIncConfirmed = incConfirmed;
+    updateScenario('confirmed', totalConfirmed, totalIncConfirmed, equityTotal);
+
+    // 2. Possible
+    const totalIncPossible = incConfirmed + incLikely;
+    updateScenario('possible', totalConfirmed, totalIncPossible, equityTotal);
+
+    // 3. Ideal
+    const totalIncIdeal = incConfirmed + incLikely + incNotLikely;
+    updateScenario('ideal', totalConfirmed, totalIncIdeal, equityTotal);
+
+    // ... (Pie Chart Logic untouched) ... 
+    // Wait, need to check if updateScenario definition is below. Yes it is closure scope.
+
+    // ...
+
+    function updateScenario(type, cost, income, equityLiability) {
+        const netProfit = income - cost;
+        const netAfterDist = Math.max(0, netProfit - equityLiability);
+
+        // 1. Main Number: Net Profit
+        const elNet = document.getElementById(`dash-${type}-net`);
+        if (elNet) {
+            elNet.textContent = '$' + netProfit.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+            elNet.style.color = netProfit >= 0 ? '#28a745' : '#dc3545'; // Green vs Red
+        }
+
+        // 2. Total Income (Renamed from Gross Profit)
+        const elIncome = document.getElementById(`dash-${type}-income`);
+        if (elIncome) {
+            elIncome.textContent = '$' + income.toLocaleString(undefined, { minimumFractionDigits: 0 });
+        }
+
+        // 3. Net After Distributions (New Metric)
+        const elDistNet = document.getElementById(`dash-${type}-dist-net`);
+        if (elDistNet) {
+            elDistNet.textContent = '$' + netAfterDist.toLocaleString(undefined, { minimumFractionDigits: 0 });
+            elDistNet.style.color = netAfterDist >= 0 ? '#28a745' : '#dc3545';
+
+            // Append Info Icon
+            const infoBtn = document.createElement('span');
+            infoBtn.innerHTML = ' ℹ️';
+            infoBtn.style.cursor = 'pointer';
+            infoBtn.title = 'View Distribution Details';
+            infoBtn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                window.renderDistributionModal(type, netProfit, income);
+            };
+            elDistNet.appendChild(infoBtn);
         }
     }
 
-    // Helper: Delete Funding (Global delegated now)
-    // removed window.removeFunding ...
+    const shareBody = document.getElementById('shares-table-body');
+    const pieChart = document.getElementById('shares-pie-chart');
+    if (shareBody && project.teamMembers && project.teamMembers.length > 0) {
+        shareBody.innerHTML = '';
+        let pool = equityTotal;
+        if (pool <= 0) pool = 1;
+        let segments = [];
+        let startDeg = 0;
+        project.teamMembers.forEach((m, idx) => {
+            const name = m.name || m.username || m.email;
+            const identifier = m.email || m.username;
+            const earnedEquity = equityByMember[identifier] || 0;
+            const pct = pool > 0 ? ((earnedEquity / pool) * 100).toFixed(1) : 0;
+            const logKey = `equity_${identifier}`;
+            const hasLog = window._mathLogs && window._mathLogs[logKey] && window._mathLogs[logKey].length > 0;
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+            <td>${name}</td>
+            <td>${m.role || 'Collaborator'}</td>
+            <td style="font-weight:bold;">$${earnedEquity.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+            <td>${pct}%</td>
+            <td style="text-align:center;">
+                ${hasLog ? `<button class="btn-text-action btn-math-log" data-key="${logKey}" style="font-size:1.2rem; cursor:pointer;">ℹ️</button>` : '-'}
+            </td>`;
+            shareBody.appendChild(tr);
+            const slice = earnedEquity / pool;
+            const deg = slice * 360;
+            const color = getColor(idx);
+            segments.push(`${color} ${startDeg}deg ${startDeg + deg}deg`);
+            startDeg += deg;
+        });
+        if (pieChart) pieChart.style.background = `conic-gradient(${segments.join(', ')})`;
 
-    function renderPool() {
-        const els = getElements();
+    } else if (shareBody) {
+        shareBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No team members found.</td></tr>';
+        if (pieChart) pieChart.style.background = '#eee';
+    }
 
-        // Get Modifiers (default 100 if new)
-        const minMod = parseFloat(project.minModifier) || 100;
-        const maxMod = parseFloat(project.maxModifier) || 100;
+    // Update Footer Total logic
+    const elEquityTotal = document.getElementById('shares-total-equity');
+    if (elEquityTotal) {
+        elEquityTotal.textContent = '$' + equityTotal.toLocaleString(undefined, { minimumFractionDigits: 2 });
+    }
+    // V116: Expose Equity Data Global for Distribution Modal
+    window._equityByMember = equityByMember;
+    window._totalEquityLiability = equityTotal;
+    window._lastEquityTotal = equityTotal;
 
-        // Calculate Min/Max Rates with modifiers
-        const params = BudgetEngine.calculateProjectParams(project.teamMembers, usersMap, minMod, maxMod);
 
-        // Update UI Stats
-        els.pool.minWage.textContent = Utils.formatCurrency(params.projectMinWage) + '/hr';
-        els.pool.maxWage.textContent = Utils.formatCurrency(params.projectMaxWage) + '/hr';
+}
 
-        // Update UI Inputs (avoid overwriting if focused? Simple render re-sets values)
-        const inputMin = document.getElementById('project-min-mod');
-        const inputMax = document.getElementById('project-max-mod');
+// V116: Distribution Modal Logic
+// V116: Distribution Modal Logic
+window.renderDistributionModal = (scenarioType, netProfit, income) => {
+    const modal = document.getElementById('modal-distribution');
+    if (!modal) return;
 
-        if (document.activeElement !== inputMin) inputMin.value = minMod;
-        if (document.activeElement !== inputMax) inputMax.value = maxMod;
+    const equityTotal = window._totalEquityLiability || 0;
+    const equityByMember = window._equityByMember || {};
+    const project = window._project;
 
-        els.pool.list.innerHTML = '';
-        project.teamMembers.forEach(member => {
-            const user = usersMap[member.username];
-            const profile = user ? user.independentProfile : null;
-            const rates = BudgetEngine.getWorkerRates(profile);
+    // Logic:
+    // Distributable Profit is capped at Total Liability
+    // If NetProfit < 0, Distributable is 0.
+    // If NetProfit > Liability, Distributable is Liability. (Surplus goes to Net After Dist).
+
+    let distributable = 0;
+    if (netProfit > 0) {
+        distributable = Math.min(netProfit, equityTotal);
+    }
+
+    // Render Modal Header/Summary
+    // V119: Show Actual Total Income
+    const incomeVal = income !== undefined ? income : 0;
+    document.getElementById('dist-income').textContent = '$' + incomeVal.toLocaleString(undefined, { minimumFractionDigits: 0 });
+    // User interface has: Income | Expenses | Liability | Distributable
+    // I need to populate these.
+    // For now, let's focus on the Table as requested.
+
+    document.getElementById('dist-liability').textContent = '$' + equityTotal.toLocaleString();
+    document.getElementById('dist-distributable').textContent = '$' + distributable.toLocaleString();
+    document.getElementById('dist-actual-profit').textContent = '$' + Math.max(0, netProfit - equityTotal).toLocaleString(); // Remaining Surplus
+
+    const tbody = document.getElementById('dist-list');
+    tbody.innerHTML = '';
+
+    if (project.teamMembers) {
+        project.teamMembers.forEach(m => {
+            const id = m.email || m.username;
+            const owed = equityByMember[id] || 0;
+
+            // Share % of Total Liability
+            let sharePct = 0;
+            if (equityTotal > 0) sharePct = owed / equityTotal;
+
+            // Payout Calculation
+            const payout = distributable * sharePct;
+
+            // Remaining Due
+            const remaining = Math.max(0, owed - payout);
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td>
-                    <div style="font-weight:bold;">${member.name}</div>
-                    <div style="font-size:0.8rem; color:gray;">${member.email || ''}</div>
-                </td>
-                <td>${member.username || 'Invited'}</td>
-                <td>
-                    <div style="display:flex; gap:10px;">
-                        <span style="color:var(--color-text-muted);">Now: <strong>${Utils.formatCurrency(rates.now)}/hr</strong></span>
-                        <span style="color:var(--color-primary);">Goal: <strong>${Utils.formatCurrency(rates.goal)}/hr</strong></span>
-                    </div>
-                </td>
-                <td>
-                    <button class="btn-remove-pool" data-id="${member.id}" style="color:red; border:none; background:none; cursor:pointer; font-size:1.2rem;">&times;</button>
-                </td>
+                <td>${m.name || m.username}</td>
+                <td>${(sharePct * 100).toFixed(1)}%</td>
+                <td>$${owed.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                <td style="color:green; font-weight:bold;">$${payout.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                <td style="color:#666;">$${remaining.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
             `;
-            els.pool.list.appendChild(tr);
+            tbody.appendChild(tr);
         });
     }
 
-    function renderPhases() {
-        const els = getElements();
-        els.phases.container.innerHTML = '';
-        project.phases.forEach((phase, index) => {
+    modal.style.display = 'flex';
+};
+// Global Math Log Helper (Moved out)
+window.openMathLog = (key) => {
+    console.log("Opening log for:", key);
+    const modal = document.getElementById('math-log-modal');
+    const body = document.getElementById('math-log-body');
+    if (!modal || !body) { console.error("Modal not found"); return; }
 
-            // --- 1. Labor Calculations ---
-            phase.labor = phase.labor || {}; // Store results
-            let laborTotal = 0;
-            const activeWorkers = [];
+    const logs = window._mathLogs ? window._mathLogs[key] : [];
+    if (!logs || logs.length === 0) {
+        body.innerHTML = '<p>No calculation details available.</p>';
+    } else {
+        body.innerHTML = logs.map(line => `<div style="margin-bottom:5px; border-bottom:1px dashed #eee; padding-bottom:2px;">${line}</div>`).join('');
+    }
+    modal.style.display = 'flex';
+};
 
-            // Ensure all team members have an entry in phase logic
-            project.teamMembers.forEach(member => {
-                // Default state if not present
-                const workerState = (phase.workers && phase.workers[member.id]) || { isPresent: false };
+function getColor(idx) {
+    const colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'];
+    return colors[idx % colors.length];
+}
 
-                if (workerState.isPresent) {
-                    const costData = calculateWorkerCost(member, phase, workerState);
-                    activeWorkers.push({ member, state: workerState, cost: costData });
-                    laborTotal += costData.total;
+function setupGlobalRates() {
+    const project = window._project;
+    if (!project) return;
+    if (!project.settings) project.settings = {};
+
+    const payInput = document.getElementById('project-global-pay-rate');
+    const expInput = document.getElementById('project-global-expense-rate');
+    const minModInput = document.getElementById('project-min-mod');
+    const maxModInput = document.getElementById('project-max-mod');
+
+    if (payInput) payInput.value = project.settings.globalPayRate || 100;
+    if (expInput) expInput.value = project.settings.globalExpenseRate || 100;
+    if (minModInput) minModInput.value = project.settings.minMod || 100;
+    if (maxModInput) maxModInput.value = project.settings.maxMod || 100;
+
+    const saveSettings = async () => {
+        if (!project.settings) project.settings = {};
+        if (payInput) project.settings.globalPayRate = parseFloat(payInput.value) || 100;
+        if (expInput) project.settings.globalExpenseRate = parseFloat(expInput.value) || 100;
+        if (minModInput) project.settings.minMod = parseFloat(minModInput.value) || 100;
+        if (maxModInput) project.settings.maxMod = parseFloat(maxModInput.value) || 100;
+
+        await Store.saveProject(project);
+        console.log("Settings Saved");
+        renderTeamPool(project, window._usersMap || {});
+    };
+
+    [payInput, expInput, minModInput, maxModInput].forEach(el => {
+        if (el) el.addEventListener('change', saveSettings);
+    });
+}
+
+function renderTeamPool(project, usersMap) {
+    const tbody = document.getElementById('team-pool-list');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    let highNow = 0;
+    let lowGoal = Infinity;
+
+    const members = project.teamMembers || [];
+    let allMembers = [...members];
+    if (project.owner) {
+        if (!allMembers.find(m => (m.email || m.username) === project.owner)) {
+            allMembers.push({ email: project.owner, role: 'Owner' });
+        }
+    }
+
+    // V136: Aggressive Deduplication & Auto-Cleanup
+    const seenIds = new Set();
+    const uniqueMembers = [];
+    let duplicatesFound = false;
+
+    // Helper to resolve canonical ID
+    const resolveCanonicalId = (rawId) => {
+        if (!rawId) return null;
+        let id = rawId.trim().toLowerCase();
+        // Try to resolve via map (handle alias vs email)
+        const user = usersMap[rawId] || usersMap[id];
+        if (user) {
+            // Prefer email if available, else username
+            return (user.email || user.username || id).toLowerCase();
+        }
+        return id;
+    };
+
+    // 1. Dedupe Local List (allMembers includes Owner)
+    // We actually want to clean project.teamMembers first
+    const cleanTeamMembers = [];
+    const teamSeen = new Set();
+
+    (project.teamMembers || []).forEach(m => {
+        const rawId = m.email || m.username;
+        const canonId = resolveCanonicalId(rawId);
+        if (canonId && !teamSeen.has(canonId)) {
+            teamSeen.add(canonId);
+            cleanTeamMembers.push(m);
+        } else {
+            console.warn(`Duplicate Member in Data: ${rawId} (Canon: ${canonId})`);
+            duplicatesFound = true;
+        }
+    });
+
+    if (duplicatesFound) {
+        console.log("Auto-Fixing Project Data: Removing duplicates...");
+        project.teamMembers = cleanTeamMembers;
+        Store.saveProject(project).then(() => console.log("Project Cleaned Saved"));
+    }
+
+    // 2. Rebuild Display List
+    allMembers = [...cleanTeamMembers];
+    if (project.owner) {
+        const ownerCanon = resolveCanonicalId(project.owner);
+        if (!teamSeen.has(ownerCanon)) {
+            allMembers.push({ email: project.owner, role: 'Owner' });
+        }
+    }
+
+    allMembers.forEach(m => {
+        const id = m.email || m.username;
+        const user = usersMap[id];
+        if (user && user.independentProfile) {
+            const rates = BudgetEngine.getWorkerRates(user.independentProfile);
+            if (rates.now > highNow) highNow = rates.now;
+            if (rates.goal > 0 && rates.goal < lowGoal) lowGoal = rates.goal;
+        }
+    });
+    if (lowGoal === Infinity) lowGoal = 0;
+
+    const inpMin = document.getElementById('project-min-mod');
+    const inpMax = document.getElementById('project-max-mod');
+    const minMod = parseFloat(inpMin?.value) || 100;
+    const maxMod = parseFloat(inpMax?.value) || 100;
+
+    let projectMin = highNow * (minMod / 100);
+    let rawMax = lowGoal * (maxMod / 100);
+
+    // CONSTRAINT: Final Max cannot be lower than Final Min OR Base Min (High Now)
+    // "whichever is higher"
+    const floor = Math.max(projectMin, highNow);
+    let projectMax = Math.max(rawMax, floor);
+
+    const elMin = document.getElementById('pool-min-wage');
+    const elMax = document.getElementById('pool-max-wage');
+    if (elMin) elMin.textContent = `$${projectMin.toFixed(2)}/hr`;
+    if (elMax) elMax.textContent = `$${projectMax.toFixed(2)}/hr`;
+
+    // PERSISTENCE CHECK:
+    // Ensure these calculated values are stored in project.globalRates if not already
+    // This runs on every render, but we only want to save if inputs change.
+    // So we attach listeners below.
+    // Event Listeners attached if needed
+    if (inpMin && !inpMin.onchange) {
+        inpMin.onchange = async () => {
+            // Recalc and Save
+            await window.saveGlobalCaps();
+        }
+    }
+    if (inpMax && !inpMax.onchange) {
+        inpMax.onchange = async () => {
+            await window.saveGlobalCaps();
+        }
+    }
+
+    if (allMembers.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No members in pool.</td></tr>';
+        return;
+    }
+
+    allMembers.forEach(m => {
+        const id = m.email || m.username;
+        const user = usersMap[id] || {};
+        const name = user.name || m.name || id;
+        const role = m.role || user.role || 'Collaborator';
+
+        let ratesStr = '-';
+        if (user.independentProfile) {
+            const r = BudgetEngine.getWorkerRates(user.independentProfile);
+            ratesStr = `$${r.now.toFixed(2)} / $${r.goal.toFixed(2)}`;
+        } else {
+            ratesStr = '<span style="color:red">Profile Missing</span>';
+        }
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${name}</td>
+            <td>${role}</td>
+            <td>${ratesStr}</td>
+            <td>${ratesStr}</td>
+            <td><button class="btn-text-action" onclick="Wizard.openEditMember('${id}')">Edit</button></td>
+         `;
+        tbody.appendChild(tr);
+    });
+}
+
+// --- Helper for Phase Details ---
+window.updatePhaseDetail = async (phaseId, field, value) => {
+    const project = window.Wizard.project || window._project;
+    if (!project) return;
+    const phase = project.phases.find(p => p.id === phaseId);
+    if (!phase) return;
+
+    if (field === 'rateMode') {
+        phase[field] = value; // String
+    } else {
+        phase[field] = parseFloat(value) || 0;
+    }
+
+    await Store.saveProject(project);
+    console.log(`Phase ${phase.name} updated: ${field} = ${value} `);
+    // Re-render dashboard to reflect changes, especially if rateMode changed
+    renderDashboard(project, window._usersMap || {}, []);
+    renderDashboard(project, window._usersMap || {}, []);
+};
+
+// V91: Use Custom Modal for Phase Delete
+window.deletePhase = async (phaseId) => {
+    // 1. Setup Pending Action
+    Wizard.pendingConfirm = {
+        type: 'deletePhase',
+        phaseId: phaseId
+    };
+
+    // 2. Update Modal UI
+    const msgEl = document.getElementById('confirm-message');
+    const modalEl = document.getElementById('modal-confirm-action');
+    if (msgEl && modalEl) {
+        msgEl.innerText = "Delete this phase? This cannot be undone.";
+        modalEl.style.display = 'block';
+    }
+};
+
+// V123: Duplicate Phase Logic
+window.duplicatePhase = async (phaseId) => {
+    const project = window.Wizard.project || window._project;
+    if (!project) return;
+
+    // 1. Find Original
+    const originalPhase = project.phases.find(p => p.id === phaseId);
+    if (!originalPhase) return;
+
+    if (!confirm(`Duplicate phase "${originalPhase.name}"?`)) return;
+
+    // 2. Deep Copy
+    const newPhase = JSON.parse(JSON.stringify(originalPhase));
+
+    // 3. Update Phase Metadata
+    newPhase.id = 'ph_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+    newPhase.name = "Copy of " + originalPhase.name;
+
+    // 4. Regenerate Item IDs
+    // Labor Items
+    if (newPhase.items && newPhase.items.length > 0) {
+        newPhase.items.forEach(item => {
+            item.id = 'li_' + Math.random().toString(36).substr(2, 9);
+        });
+    }
+    // Expense Items
+    if (newPhase.expenseItems && newPhase.expenseItems.length > 0) {
+        newPhase.expenseItems.forEach(item => {
+            item.id = 'exp_' + Math.random().toString(36).substr(2, 9);
+        });
+    }
+
+    // 5. Append
+    project.phases.push(newPhase);
+
+    // 6. Save & Render
+    await Store.saveProject(project);
+    console.log(`Phase Duplicated: ${newPhase.name}`);
+    renderDashboard(project, window._usersMap || {}, []);
+};
+
+window.togglePhaseActive = async (phaseId, isActive) => {
+    const project = window.Wizard.project || window._project;
+    if (!project) return;
+    const phase = project.phases.find(p => p.id === phaseId);
+    if (!phase) return;
+
+    phase.active = isActive;
+    console.log(`Phase '${phase.name}' set to ${isActive ? 'Active' : 'Inactive'}`);
+
+    await Store.saveProject(project);
+    location.reload();
+};
+
+
+// Global Exports verification
+window.Wizard = Wizard;
+
+// --- 4. Micro-Modal Logic (Schedule, Rate, Overhead) ---
+
+window.openScheduleModal = (phaseId, itemId) => {
+    console.log("Opening Schedule Modal", phaseId, itemId);
+    const p = window._project.phases.find(ph => ph.id === phaseId);
+    if (!p) return;
+    const item = p.lineItems.find(i => i.id === itemId);
+    if (!item) return;
+
+    document.getElementById('sched-phase-id').value = phaseId;
+    document.getElementById('sched-item-id').value = itemId;
+
+    // Determine current mode
+    let mode = item.schedMode || 'custom';
+    if (!item.schedMode) mode = 'custom'; // Default legacy
+
+    // Update labels
+    // Determine user cap for display
+    let userCap = p.hours || 40; // fallback
+    let debugStr = '';
+    const user = window._usersMap ? window._usersMap[item.assignee] : null;
+    if (user && user.independentProfile) {
+        const capData = window.Utils.calculateBillableCapacity(user.independentProfile);
+        const ratio = capData.billableRatio || 1.0;
+        const s = user.independentProfile.schedule || {};
+        const totalWeekly = (parseFloat(s.hours) || 0) * (parseFloat(s.days) || 0);
+        userCap = (totalWeekly * ratio).toFixed(1);
+        debugStr = ` [${totalWeekly} hr * ${(ratio * 100).toFixed(0)}%]`;
+        console.log("DEBUG SCHEDULE:", { user: user.username, totalWeekly, ratio, userCap, debugStr });
+    } else {
+        console.log("DEBUG SCHEDULE: No profile found for", item.assignee);
+    }
+
+    const phWeeks = p.weeks || 50;
+    const phHours = p.hours || 40;
+    document.getElementById('lbl-phase-sched').textContent = `${phWeeks} wks x ${phHours} hrs`;
+    document.getElementById('lbl-curbed-sched').textContent = `Max Cap. (${userCap} hrs / wk)${debugStr} `;
+
+    // Set Radio
+    const radios = document.getElementsByName('sched_mode');
+    radios.forEach(r => {
+        r.checked = (r.value === mode);
+        r.onclick = () => {
+            document.getElementById('sched-custom-inputs').style.display = (r.value === 'custom') ? 'block' : 'none';
+            document.getElementById('sched-total-inputs').style.display = (r.value === 'total') ? 'block' : 'none';
+        }
+    });
+
+    // Inputs
+    document.getElementById('sched-custom-weeks').value = item.count || phWeeks;
+    document.getElementById('sched-custom-hours').value = item.duration || phHours;
+    document.getElementById('sched-custom-inputs').style.display = (mode === 'custom') ? 'block' : 'none';
+
+    document.getElementById('sched-total-hours').value = (mode === 'total') ? item.duration : (phWeeks * phHours);
+    document.getElementById('sched-total-inputs').style.display = (mode === 'total') ? 'block' : 'none';
+
+    document.getElementById('modal-edit-schedule').style.display = 'block';
+};
+
+window.saveScheduleEdit = async () => {
+    const phaseId = document.getElementById('sched-phase-id').value;
+    const itemId = document.getElementById('sched-item-id').value;
+    const mode = document.querySelector('input[name="sched_mode"]:checked').value;
+
+    const p = window._project.phases.find(ph => ph.id === phaseId);
+    const item = p.lineItems.find(i => i.id === itemId);
+
+    item.schedMode = mode;
+
+    if (mode === 'phase') {
+        item.count = p.weeks || 50;
+        item.duration = p.hours || 40;
+    } else if (mode === 'curbed') {
+        const phWeeks = p.weeks || 50;
+        const phHours = p.hours || 40;
+
+        item.count = phWeeks;
+
+        // Recalculate Curbed Value
+        let userCap = phHours;
+        const user = window._usersMap ? window._usersMap[item.assignee] : null;
+        if (user && user.independentProfile) {
+            const capData = window.Utils.calculateBillableCapacity(user.independentProfile);
+            const ratio = capData.billableRatio || 1.0;
+            const s = user.independentProfile.schedule || {};
+            const totalWeekly = (parseFloat(s.hours) || 0) * (parseFloat(s.days) || 0);
+            userCap = totalWeekly * ratio;
+        }
+        item.duration = Math.min(phHours, userCap).toFixed(1);
+
+    } else if (mode === 'total') {
+        const total = parseFloat(document.getElementById('sched-total-hours').value) || 0;
+        const max = (p.weeks || 50) * (p.hours || 40);
+
+        // Strict Validation: Capacity
+        if (total > max) {
+            alert(`Total Hours cannot exceed Phase capacity (${max} hrs).`);
+            return; // Block Save
+        }
+
+        item.duration = total;
+        item.count = p.weeks || 50; // Reference weeks for calculation, though largely symbolic in Total mode
+
+    } else {
+        const valWeeks = parseFloat(document.getElementById('sched-custom-weeks').value) || 0;
+        const valHours = parseFloat(document.getElementById('sched-custom-hours').value) || 0;
+
+        // Strict Validation: Phase Weeks
+        const maxWeeks = parseFloat(p.weeks) || 50;
+        if (valWeeks > maxWeeks) {
+            alert(`Custom Weeks (${valWeeks}) cannot exceed Phase duration (${maxWeeks} weeks).`);
+            return; // Block Save
+        }
+
+        // Strict Validation: Phase Hours (Per Week)
+        const maxHoursPerWeek = parseFloat(p.hours) || 40;
+        if (valHours > maxHoursPerWeek) {
+            alert(`Custom Hours (${valHours}) cannot exceed Phase Hours (${maxHoursPerWeek} hrs/wk).`);
+            return; // Block Save
+        }
+
+        item.count = valWeeks;
+        item.duration = valHours;
+    }
+
+    await Store.saveProject(window._project);
+    document.getElementById('modal-edit-schedule').style.display = 'none';
+    location.reload();
+};
+
+window.openRateModal = (phaseId, itemId) => {
+    console.log("Opening Rate Modal", phaseId, itemId);
+    const p = window._project.phases.find(ph => ph.id === phaseId);
+    if (!p) return;
+    const item = p.lineItems.find(i => i.id === itemId);
+    if (!item) return;
+
+    document.getElementById('rate-phase-id').value = phaseId;
+    document.getElementById('rate-item-id').value = itemId;
+
+    // Determine current mode
+    let mode = item.rateMode || 'custom';
+
+    // Labels
+    const phRate = 50; // Placeholder or Default?
+    const user = window._usersMap ? window._usersMap[item.assignee] : null;
+    let goalRate = 0;
+    if (user && user.independentProfile) {
+        const rates = window.BudgetEngine.getWorkerRates(user.independentProfile);
+        goalRate = rates.goal;
+    }
+    document.getElementById('lbl-phase-rate').textContent = 'Default';
+    document.getElementById('lbl-goal-rate').textContent = `$${goalRate.toFixed(2)} `;
+
+    // Set Radio
+    const radios = document.getElementsByName('rate_mode');
+    radios.forEach(r => {
+        r.checked = (r.value === mode);
+        r.onchange = () => {
+            document.getElementById('rate-custom-inputs').style.display = (r.value === 'custom') ? 'block' : 'none';
+            document.getElementById('rate-flat-inputs').style.display = (r.value === 'flat') ? 'block' : 'none';
+        }
+    });
+
+    document.getElementById('rate-custom-val').value = item.rate;
+    document.getElementById('rate-flat-val').value = item.flatFee || ''; // Store flat fee separately if possible or derive
+
+    document.getElementById('rate-custom-inputs').style.display = (mode === 'custom') ? 'block' : 'none';
+    document.getElementById('rate-flat-inputs').style.display = (mode === 'flat') ? 'block' : 'none';
+
+    document.getElementById('modal-edit-rate').style.display = 'block';
+};
+
+window.saveRateEdit = async () => {
+    const phaseId = document.getElementById('rate-phase-id').value;
+    const itemId = document.getElementById('rate-item-id').value;
+    const mode = document.querySelector('input[name="rate_mode"]:checked').value;
+
+    const p = window._project.phases.find(ph => ph.id === phaseId);
+    const item = p.lineItems.find(i => i.id === itemId);
+
+    item.rateMode = mode;
+
+    // Helper to get Project Caps
+    const getProjectCaps = () => {
+        const project = window.Wizard.project || window._project;
+        // Check multiple paths for settings
+        let minW = 0, maxW = 9999;
+        if (project.globalRates) {
+            minW = parseFloat(project.globalRates.minWage) || 0;
+            maxW = parseFloat(project.globalRates.maxWage) || 9999;
+        } else if (project.settings) {
+            minW = parseFloat(project.settings.projectMin) || 0;
+            maxW = parseFloat(project.settings.projectMax) || 9999;
+        }
+        return { min: minW, max: maxW };
+    };
+
+    if (mode === 'goal') {
+        // Re-fetch goal
+        const user = window._usersMap ? window._usersMap[item.assignee] : null;
+        if (user) {
+            const rates = window.BudgetEngine.getWorkerRates(user.independentProfile);
+            let goal = rates.goal;
+            const caps = getProjectCaps();
+            if (goal < caps.min) goal = caps.min;
+            if (goal > caps.max) goal = caps.max;
+            item.rate = goal.toFixed(2);
+        }
+    } else if (mode === 'phase') {
+        // Enforce Caps on Phase Rate too? 
+        // If Phase Rate is overridden, it's specific. But if it's "Default Phase Rate", it comes from Project.
+        // User said: "phase rates ... should be limited by the project min and max"
+        // Assuming current stored rate IS the phase rate.
+        const caps = getProjectCaps();
+        let r = parseFloat(item.rate);
+        if (r < caps.min) r = caps.min;
+        if (r > caps.max) r = caps.max;
+        item.rate = r.toFixed(2);
+    } else if (mode === 'custom') {
+        item.rate = document.getElementById('rate-custom-val').value;
+    } else if (mode === 'flat') {
+        // Calculate effective hourly
+        const totalFee = parseFloat(document.getElementById('rate-flat-val').value) || 0;
+        item.flatFee = totalFee;
+        const weeks = parseFloat(item.count) || p.weeks || 50;
+        const hours = parseFloat(item.duration) || p.hours || 40;
+        const totalHours = weeks * hours;
+        item.rate = totalHours > 0 ? (totalFee / totalHours).toFixed(2) : 0;
+    }
+
+    await Store.saveProject(window._project);
+    document.getElementById('modal-edit-rate').style.display = 'none';
+    location.reload();
+};
+
+window.openOverheadModal = async (phaseId, itemId, assigneeId) => {
+    try {
+        console.log("Opening Overhead Modal", phaseId, itemId, assigneeId);
+        document.getElementById('oh-phase-id').value = phaseId;
+        document.getElementById('oh-item-id').value = itemId;
+
+        const list = document.getElementById('oh-business-list');
+        list.innerHTML = 'Loading overheads...';
+
+        // 1. Get User
+        const currentUser = await Store.getCurrentUser();
+        const user = window._usersMap ? window._usersMap[assigneeId] : null;
+
+        // V79: FETCH FULL PROFILE!
+        // currentUser only has Auth info. We need the actual profile blob for LinesOfWork.
+        let fullProfile = null;
+        if (currentUser) {
+            try {
+                // If I am the assignee, fetch *my* profile from DB
+                // Or if we are viewing someone else, we rely on _usersMap (which might be incomplete?)
+                // For "Me", always fetch fresh.
+                const isMe = (currentUser.email === assigneeId || currentUser.id === assigneeId);
+                if (isMe) {
+                    fullProfile = await Store.getIndependentProfile();
+                    // console.log("Fetched Full Profile for Overhead:", fullProfile);
+                } else if (user && user.independentProfile) {
+                    fullProfile = user.independentProfile;
                 }
-            });
+            } catch (err) { console.error("Profile Fetch Error", err); }
+        }
 
+        let availableOverheads = [];
 
-            // --- 2. Expense Calculations (Line Items) ---
+        // 2. If Assignee is Me, fetch my Overhead Projects
+        const isMe = (currentUser && (currentUser.email === assigneeId || currentUser.id === assigneeId || (user && user.email === currentUser.email)));
 
-            // Resolve Expense Rate Factor
-            let expRateVal = 100;
-            if (phase.expenseRate !== null && phase.expenseRate !== undefined && phase.expenseRate !== "") {
-                expRateVal = parseFloat(phase.expenseRate);
-            } else {
-                expRateVal = parseFloat(project.expenseRate) || 100;
+        if (isMe) {
+            try {
+                const projects = await Store.getOverheadProjects();
+                console.log("Fetched Overhead Projects:", projects);
+                projects.forEach(p => {
+                    // Sum expenses
+                    const total = (p.expenses || []).reduce((sum, exp) => sum + (parseFloat(exp.amount) || 0), 0);
+                    availableOverheads.push({
+                        id: p.id,
+                        name: p.name, // Business Name
+                        amount: total.toFixed(2),
+                        frequency: 'yr' // Projects are usually Annual budgets
+                    });
+                });
+            } catch (err) {
+                console.error("Error fetching overhead projects:", err);
             }
-            const expFactor = expRateVal / 100;
+        }
 
-            let flatTotal = 0;
-            const flats = (phase.lineItems || []).filter(i => i.itemType !== 'Percentage');
-            const percents = (phase.lineItems || []).filter(i => i.itemType === 'Percentage');
-
-            flats.forEach(i => {
-                const raw = calculateItemCost(i);
-                // Apply Factor
-                i._calc = {
-                    cost: raw.cost * expFactor,
-                    desc: raw.desc + (expFactor !== 1 ? ` <span style="color:blue">(@${expRateVal}%)</span>` : '')
-                };
-                flatTotal += i._calc.cost;
+        // 3. Also check Profile (Legacy or Manual)
+        if (user && user.independentProfile && Array.isArray(user.independentProfile.overhead)) {
+            user.independentProfile.overhead.forEach(oh => {
+                // Avoid duplicates if possible?
+                availableOverheads.push(oh);
             });
+        }
 
-            // Calc Percents (based on flatTotal + laborTotal ? Usually % is on Phase Total... 
-            // The requirement says "percentage of the total phase expenses". 
-            // Usually this includes Labor? Let's assume Yes for "Total Phase Cost".
-            // However, typical line items might depend on sub-totals. 
-            // For now, let's treat "Percentage" items as % of (Labor + Other Expenses).
+        // Render
+        list.innerHTML = '';
+        if (availableOverheads.length === 0) {
+            list.innerHTML = '<p style="color:#666; font-style:italic;">No overhead businesses found. Go to Dashboard > Overhead to create one.</p>';
+        }
 
-            const subTotal = flatTotal + laborTotal;
+        // Get Current Line Item to check boxes
+        let currentSelections = [];
+        const p = window._project.phases.find(ph => ph.id === phaseId);
+        if (p) {
+            const item = p.lineItems.find(i => i.id === itemId);
+            if (item && item.overheadSelections) currentSelections = item.overheadSelections;
+        }
 
-            // 3. Percentage Calculations (Gross Up)
-            // Requirement: "10% of Total Phase Expenses" implies the Fee is included in the Total.
-            // Formula: Total = SubTotal / (1 - TotalPercentageRate)
+        // 3.5 Calculate Defaults (Total Capacity)
+        let totalBillableHours = 2000;
+        // Move profile definition UP
+        const profile = currentUser ? currentUser.independentProfile : null;
 
-            // percents is already defined above
-            let totalPct = 0;
-            percents.forEach(i => totalPct += (parseFloat(i.percentage) || 0));
+        if (currentUser && currentUser.independentProfile && window.Utils && window.Utils.calculateBillableCapacity) {
+            const capData = window.Utils.calculateBillableCapacity(currentUser.independentProfile);
+            totalBillableHours = capData.totalBillableHours || 2000;
+        }
 
-            // Safety Cap: Don't allow 100% or more (infinite cost)
-            if (totalPct > 99) totalPct = 99;
+        // USE fullProfile for matching
+        const matchingProfile = fullProfile;
 
-            const grossTotal = subTotal / (1 - (totalPct / 100)); // The theoretical Total
-
-            let percentTotal = 0;
-            percents.forEach(i => {
-                // Cost is % of the GROSS Total
-                const amount = grossTotal * (i.percentage / 100);
-                i._calc = { cost: amount, desc: `${i.percentage}% of Phase Total` };
-                percentTotal += amount;
-            });
-
-            const phaseTotal = subTotal + percentTotal;
-            const weeks = parseFloat(phase.weeks) || 0;
-            const hoursPerWeek = parseFloat(phase.hours) || 0;
-            const weeklyCost = weeks > 0 ? phaseTotal / weeks : 0;
-
-            // Hourly Calc
-            const totalHours = weeks * hoursPerWeek;
-            const hourlyCost = totalHours > 0 ? phaseTotal / totalHours : 0;
-
-            // --- Render ---
+        availableOverheads.forEach((biz, idx) => {
             const div = document.createElement('div');
-            div.className = 'summary-card';
-            div.style.marginBottom = '20px';
-            if (phase.isActive === false) {
-                div.style.opacity = '0.5';
-                div.style.borderLeft = '4px solid #ccc';
-            } else {
-                div.style.borderLeft = '4px solid var(--color-primary)';
+            const bizId = biz.id || biz.name;
+
+            // MATCHING LOGIC
+            let linkedRate = 0;
+            if (matchingProfile && matchingProfile.linesOfWork) {
+                const linkedLine = matchingProfile.linesOfWork.find(l => String(l.overheadProjectId) === String(bizId)); // String cast for safety
+                if (linkedLine && linkedLine.derivedOverheadRate) {
+                    linkedRate = parseFloat(linkedLine.derivedOverheadRate);
+                }
             }
+
+            div.style.marginBottom = '5px';
+            const isChecked = currentSelections.includes(bizId) ? 'checked' : '';
+
+            // V75: DEBUG PROFILE STRUCTURE
+            // console.log("Debug Profile for " + biz.name, profile);
+            if (idx === 0) {
+                window.logToUI("DEBUG: Checking Profile for Linked Rates...");
+                if (profile && profile.linesOfWork) window.logToUI("Lines Found: " + profile.linesOfWork.length);
+                if (profile && profile.overhead) window.logToUI("Overhead Found: " + profile.overhead.length);
+            }
+
+            // V77: Find "Linked Overhead Rate" from Profile's Line of Work
+            // The Independent Tool stores the rate as 'derivedOverheadRate' on the Line of Work that owns this overhead project.
+            // let linkedRate = 0; // This is now declared and potentially set in the debug block above
+            if (profile && profile.linesOfWork) {
+                // Find the line that uses this overhead project
+                const linkedLine = profile.linesOfWork.find(l => l.overheadProjectId === bizId);
+                if (linkedLine && linkedLine.derivedOverheadRate) {
+                    linkedRate = parseFloat(linkedLine.derivedOverheadRate);
+                    // console.log(`DEBUG: Found Linked Rate for ${biz.name}: $${linkedRate}`);
+                }
+            }
+
+            // Fallback Calculation (if not linked)
+            const annualCost = parseFloat(biz.amount) || 0;
+            // Use Total Billable for fallback calculation if no specific line linked
+            let fallbackRate = (totalBillableHours > 0) ? (annualCost / totalBillableHours) : 0;
+
+            let hourlyRate = (linkedRate > 0) ? linkedRate : fallbackRate;
 
             div.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:1px solid #eee; padding-bottom:15px; margin-bottom:15px;">
-                    <div>
-                        <div style="display:flex; align-items:center; gap:10px;">
-                            <h2 style="margin:0;">${phase.name}</h2>
-                            <!-- Active Toggle -->
-                            <label class="switch" style="font-size:0.8rem; display:flex; align-items:center; gap:5px; cursor:pointer;">
-                                <input type="checkbox" class="cb-phase-active" data-phase="${phase.id}" ${phase.isActive !== false ? 'checked' : ''}>
-                                <span>${phase.isActive !== false ? 'Active' : 'Inactive'}</span>
-                            </label>
-                            <button class="btn-phase-settings" data-phase="${phase.id}" style="font-size:0.8rem;">⚙️ Settings</button>
-                        </div>
-                        <div style="margin-top:5px; color:#666; font-size:0.9rem;">
-                            ${phase.weeks || 0} wks @ ${phase.hours || 0} hrs/wk 
-                            | Pay Rate: ${phase.payRate || 'Default'}% 
-                            | Exp Rate: ${phase.expenseRate || 'Default'}%
-                        </div>
-                    </div>
-                    <div style="text-align:right;">
-                        <div style="font-size:1.2rem; font-weight:bold; color:var(--color-primary);">${Utils.formatCurrency(phaseTotal)}</div>
-                        <div style="font-size:0.8rem; color:#666;">
-                            ${Utils.formatCurrency(weeklyCost)} / week &bull; ${Utils.formatCurrency(hourlyCost)} / hr
-                        </div>
-                    </div>
-                </div>
-
-                <!-- LABOR SECTION -->
-                <div style="margin-bottom:20px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
-                        <h4 style="margin:0;">Worker Wages</h4>
-                        <div style="font-size:0.8rem; color:#666;">
-                            Total: <strong>${Utils.formatCurrency(laborTotal)}</strong>
-                        </div>
-                    </div>
-                    ${renderLaborTable(phase, project.teamMembers)}
-                </div>
-                
-                <!-- EXPENSES SECTION -->
-                <div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
-                        <h4 style="margin:0;">Expenses</h4>
-                        <button class="btn-add-line" data-phase="${phase.id}" style="font-size:0.8rem;">+ Add Expense</button>
-                    </div>
-                    <table class="ledger-table" style="font-size:0.9rem;">
-                        <tbody>
-                            ${renderLineItems(phase)}
-                        </tbody>
-                    </table>
-                     <div style="text-align:right; margin-top:5px; font-weight:bold; font-size:0.9rem;">
-                         Expenses Total: ${Utils.formatCurrency(flatTotal + percentTotal)}
-                     </div>
-                </div>
-                
-                <div style="text-align:right; margin-top:20px; border-top:1px solid #eee; padding-top:10px;">
-                     <button class="btn-delete-phase" data-phase="${phase.id}" style="color:red; background:none; border:none; cursor:pointer;">Delete Phase</button>
-                </div>
-            `;
-            els.phases.container.appendChild(div);
-        });
-    }
-
-    // Helper: Labor Calculation Logic
-    function calculateWorkerCost(member, phase, state) {
-        // 1. Get Base Rates
-        const user = usersMap[member.username] || {};
-        const profile = user.independentProfile;
-        const baseRates = BudgetEngine.getWorkerRates(profile); // { now, goal }
-
-        // 2. Determine Hourly Rate
-        let appliedRate = 0;
-
-        // Get Modifiers
-        const minMod = parseFloat(project.minModifier) || 100;
-        const maxMod = parseFloat(project.maxModifier) || 100;
-
-        const projectParams = BudgetEngine.calculateProjectParams(project.teamMembers, usersMap, minMod, maxMod);
-
-        if (state.overrideRateMethod === 'custom') {
-            appliedRate = parseFloat(state.overrideRateVal) || 0;
-        } else if (state.overrideRateMethod === 'min') {
-            appliedRate = projectParams.projectMinWage;
-        } else if (state.overrideRateMethod === 'max') {
-            appliedRate = projectParams.projectMaxWage;
-        } else {
-            // Auto: Goal * Pay Rate
-            // Cap at Goal (unless override? Request says "no worker... higher than GOAL unless override")
-            // Floor at MinWage
-
-            // Priority: Phase Override -> Project Global -> Default (100)
-            let payFactorVal = 100;
-            if (phase.payRate !== null && phase.payRate !== undefined && phase.payRate !== "") {
-                payFactorVal = parseFloat(phase.payRate);
-            } else {
-                payFactorVal = parseFloat(project.payRate) || 100;
-            }
-
-            const payFactor = payFactorVal / 100;
-
-            let calc = baseRates.goal * payFactor;
-
-            // Floor / Ceiling
-            calc = Math.max(calc, projectParams.projectMinWage);
-
-            // Cap at Project Max Wage (if valid positive number)
-            if (projectParams.projectMaxWage > 0) {
-                calc = Math.min(calc, projectParams.projectMaxWage);
-            }
-
-            // Also never exceed their own Goal (redundant if Max Wage < Goal, but safe)
-            calc = Math.min(calc, baseRates.goal);
-
-            appliedRate = calc;
-        }
-
-        // 3. Determine Hours
-        let totalHours = 0;
-        let scheduleDesc = "";
-
-        if (state.overrideSchedMethod === 'lump') {
-            totalHours = parseFloat(state.overrideSchedLumpVal) || 0;
-            scheduleDesc = `${totalHours} hrs (Lump)`;
-        } else if (state.overrideSchedMethod === 'custom-weekly') {
-            const wks = parseFloat(phase.weeks) || 0;
-            const hrs = parseFloat(state.overrideSchedWeeklyVal) || 0;
-            totalHours = wks * hrs;
-            scheduleDesc = `${hrs} hrs/wk`;
-        } else if (state.overrideSchedMethod === 'project') {
-            // Conform to Project Schedule (Full Hours, Ignore Capacity)
-            const phaseWks = parseFloat(phase.weeks) || 0;
-            const phaseHrs = parseFloat(phase.hours) || 0;
-            totalHours = phaseWks * phaseHrs;
-            scheduleDesc = `${phaseWks} wks @ ${phaseHrs} hrs/wk (Project)`;
-        } else {
-            // Auto: "Stated amount of phase hours OR max amount... considering billable time"
-            const phaseWks = parseFloat(phase.weeks) || 0;
-            const phaseHrs = parseFloat(phase.hours) || 0;
-
-            // Capacity Check
-            // Simulating capacity check: Profile -> Schedule -> Total Annual Hours / 52? 
-            // "weekly billable time established from their ... profile"
-            const profileWs = parseFloat(profile?.schedule?.weeks) || 0;
-            const profileHs = parseFloat(profile?.schedule?.hours) || 0;
-            const profileDs = parseFloat(profile?.schedule?.days) || 0;
-
-            // Annual hours = W * D * H. Weekly capacity = (W*D*H)/52 ? Or just D*H if they work every week? 
-            // Let's assume implicit weekly capacity = Days * Hours (from profile).
-            const rawWeekly = (profileDs * profileHs) || 168;
-
-            // Apply Billable Ratio
-            const capData = Utils.calculateBillableCapacity(profile);
-            const ratio = capData.billableRatio || 1.0;
-
-            const weeklyCap = Math.floor(rawWeekly * ratio); // Round DOWN to whole number
-
-            const actualHrs = Math.min(phaseHrs, weeklyCap);
-            totalHours = phaseWks * actualHrs;
-            scheduleDesc = `${phaseWks} wks @ ${actualHrs} hrs/wk`;
-        }
-
-        return {
-            rate: appliedRate,
-            hours: totalHours,
-            total: appliedRate * totalHours,
-            desc: scheduleDesc
-        };
-    }
-
-    function renderLaborTable(phase, members) {
-        // Determine if all are selected
-        const allSelected = members.length > 0 && members.every(m => {
-            const s = (phase.workers && phase.workers[m.id]);
-            return s && s.isPresent;
+            <label style="cursor:pointer; display:flex; justify-content:space-between; align-items:center; padding:5px; border-bottom:1px solid #eee;">
+                <span>
+                    <input type="checkbox" class="oh-biz-check" value="${bizId}" data-rate="${hourlyRate.toFixed(2)}" onchange="window.recalcOverheadTotal()" ${isChecked}>
+                    <span style="font-weight:500;">${biz.name}</span>
+                </span>
+                <span>$${hourlyRate.toFixed(2)}/hr <span style="font-size:0.8em; color:#888;">($${annualCost.toLocaleString()}/yr)</span></span>
+            </label>`;
+            list.appendChild(div);
         });
 
-        let html = `<table class="ledger-table" style="font-size:0.85rem; background:#fff; margin-bottom:10px;">
-            <thead>
-                <tr style="background:#f5f5f5;">
-                    <th style="width:30px;"><input type="checkbox" class="cb-toggle-all-labor" data-phase="${phase.id}" ${allSelected ? 'checked' : ''}></th>
-                    <th>Worker</th>
-                    <th>Rate ($/hr)</th>
-                    <th>Schedule</th>
-                    <th style="text-align:right;">Total</th>
-                </tr>
-            </thead>
-            <tbody>`;
+        // list.appendChild(debugPanel); // Removed erroneous debug leftover
+        // debugPanel.innerHTML = debugHTML; // Removed erroneous debug leftover
 
-        members.forEach(m => {
-            const state = (phase.workers && phase.workers[m.id]) || { isPresent: false };
 
-            // Visual State: Active vs Inactive
-            let rowStyle = state.isPresent
-                ? 'background-color: #f0f7ff; color: #000; font-weight:500;'
-                : 'background-color: #fff; color: #666;';
+        // Trigger Calc to set initial total based on checked boxes
+        // Only if selections exist. If new, sum is 0.
+        document.getElementById('modal-edit-overhead').style.display = 'block';
+        window.recalcOverheadTotal(); // Update display immediately
 
-            let calc = { rate: 0, hours: 0, total: 0, desc: '-' };
-            if (state.isPresent) {
-                calc = calculateWorkerCost(m, phase, state);
-            }
-
-            html += `
-                <tr style="${rowStyle}">
-                    <td><input type="checkbox" class="cb-worker-present" data-phase="${phase.id}" data-worker="${m.id}" ${state.isPresent ? 'checked' : ''}></td>
-                    <td>${m.name}</td>
-                    <td>
-                        ${state.isPresent ?
-                    `<button class="btn-worker-override" data-phase="${phase.id}" data-worker="${m.id}" data-mode="rate"
-                      style="border:1px solid var(--color-primary); border-radius:4px; background:#fff; color:var(--color-primary); cursor:pointer; padding:2px 6px; font-weight:bold;">
-                      ${Utils.formatCurrency(calc.rate)}/hr
-                    </button>`
-                    : '-'}
-                    </td>
-                    <td>
-                        ${state.isPresent ?
-                    `<button class="btn-worker-override" data-phase="${phase.id}" data-worker="${m.id}" data-mode="schedule"
-                      style="border:none; background:none; color:#000; text-decoration:underline; cursor:pointer; font-size:0.85rem; padding:0;">
-                      ${calc.desc}
-                    </button>`
-                    : '-'}
-                    </td>
-                    <td style="text-align:right;">${state.isPresent ? Utils.formatCurrency(calc.total) : '-'}</td>
-                </tr>
-            `;
-        });
-
-        html += `</tbody></table>`;
-        return html;
+    } catch (e) {
+        console.error("OVERHEAD MODAL ERROR:", e);
+        alert("Error opening overhead settings: " + e.message);
     }
+};
 
-    function calculateItemCost(item) {
-        if (item.itemType === 'Percentage') return { cost: 0, desc: '' }; // handled above
+window.saveGlobalCaps = async () => {
+    console.log("Saving Global Caps...");
+    const minMod = parseFloat(document.getElementById('project-min-mod')?.value) || 100;
+    const maxMod = parseFloat(document.getElementById('project-max-mod')?.value) || 100;
 
-        if (item.method === 'LumpSum') {
-            return { cost: item.amount || 0, desc: 'Flat Sum' };
-        }
-        if (item.method === 'Unit') {
-            const cost = (item.count || 0) * (item.rate || 0);
-            return { cost: cost, desc: `${item.count} items x ${Utils.formatCurrency(item.rate)}` };
-        }
-        if (item.method === 'Time') {
-            const cost = (item.count || 1) * (item.duration || 0) * (item.rate || 0);
-            return { cost: cost, desc: `${item.count} people x ${item.duration} ${item.unit} @ ${Utils.formatCurrency(item.rate)}/${item.unit.slice(0, -1)}` };
-        }
-        // Fallback for old items
-        if (item.rate && item.units) {
-            return { cost: item.rate * item.units, desc: `${item.units} units @ ${Utils.formatCurrency(item.rate)}` };
-        }
-        return { cost: 0, desc: 'Invalid Data' };
+    // We must recalculate the High Now / Low Goal from the pool to get the $ amount
+    // Re-use logic from renderTeamPool logic if possible, or duplicate simplified logic
+    let highNow = 0;
+    let lowGoal = Infinity;
+    const project = window._project;
+    const members = project.teamMembers || [];
+    const allMembers = [...members];
+    if (project.owner && !allMembers.find(m => (m.email || m.username) === project.owner)) {
+        allMembers.push({ email: project.owner, role: 'Owner' });
     }
+    const usersMap = window._usersMap || {};
 
-    function renderLineItems(phase) {
-        if (!phase.lineItems || phase.lineItems.length === 0) {
-            return `<tr><td colspan="4" style="text-align:center; color:gray; font-style:italic;">No line items yet.</td></tr>`;
-        }
-        return phase.lineItems.map(item => `
-            <tr>
-                <td>${item.name}</td>
-                <td><span style="color:#666;">${item._calc.desc}</span></td>
-                <td style="text-align:right; font-weight:bold;">${Utils.formatCurrency(item._calc.cost)}</td>
-                <td style="text-align:right;">
-                    <button class="btn-edit-line" data-phase="${phase.id}" data-item="${item.id}" style="color:#666; background:none; border:none; cursor:pointer; margin-right:5px;">&#9998;</button>
-                    <button class="btn-remove-line" data-phase="${phase.id}" data-item="${item.id}" style="color:red; background:none; border:none; cursor:pointer;">&times;</button>
-                </td>
-            </tr>
-        `).join('');
-    }
-
-    // 4. Global Event Delegation (Robust Handling)
-    document.addEventListener('click', async (e) => {
-        // console.log("Global Click:", e.target); // DEBUG
-        const btn = e.target.closest('button');
-        if (!btn) return; // Only care about buttons
-
-        // Button: Add Member (Open Modal)
-        if (btn.id === 'btn-add-member') {
-            window.resetModal();
-            document.getElementById('modal-add-member').style.display = 'flex';
-        }
-
-        // Button: Add Phase
-        if (btn.id === 'btn-add-phase') {
-            document.getElementById('new-phase-name').value = '';
-            document.getElementById('modal-add-phase').style.display = 'flex';
-            document.getElementById('new-phase-name').focus();
-        }
-
-        // Button: Confirm Create Phase
-        if (btn.id === 'btn-save-new-phase') {
-            const name = document.getElementById('new-phase-name').value;
-            if (name) {
-                const proj = window._project || project;
-                proj.phases.push({
-                    id: Utils.generateId(),
-                    name: name,
-                    weeks: 0,
-                    hours: 0,
-                    lineItems: [],
-                    workers: {},
-                    overrides: {}
-                });
-                try {
-                    await Store.saveProject(proj);
-                    document.getElementById('modal-add-phase').style.display = 'none';
-                    render();
-                } catch (err) {
-                    console.error("Error creating phase:", err);
-                    alert("Failed to create phase.");
-                }
-            } else {
-                alert("Please enter a phase name.");
-            }
-        }
-
-        // Button: Rename Phase
-        if (btn.classList.contains('btn-edit-phase')) {
-            const id = btn.dataset.phase;
-            const phase = project.phases.find(p => p.id === id);
-            if (phase) {
-                const newName = prompt("Enter new phase name:", phase.name);
-                if (newName && newName.trim() !== "") {
-                    phase.name = newName.trim();
-                    Store.saveProject(project);
-                    render();
-                }
-            }
-        }
-
-        // Button: Remove Pool Member
-        if (btn.classList.contains('btn-remove-pool')) {
-            const id = btn.dataset.id;
-            if (confirm('Remove this collaborator from the project?')) {
-                project.teamMembers = project.teamMembers.filter(m => m.id !== id);
-                Store.saveProject(project);
-                render();
-            }
-        }
-
-        // Button: Add Funding (Open Modal - Clean)
-        if (btn.id === 'btn-open-income-modal') {
-            document.getElementById('income-id').value = '';
-            document.getElementById('income-name').value = '';
-            document.getElementById('income-amount').value = '';
-            document.getElementById('modal-add-income').style.display = 'flex';
-        }
-
-        // Button: Edit Funding (Open Modal - Populate)
-        if (btn.classList.contains('btn-edit-funding')) {
-            const id = btn.dataset.id;
-            const proj = window._project || project; // Fallback
-            const source = proj.incomeSources.find(s => s.id === id);
-            if (source) {
-                document.getElementById('income-id').value = source.id;
-                document.getElementById('income-name').value = source.name;
-                document.getElementById('income-amount').value = source.amount;
-                document.getElementById('income-status').value = source.status;
-                document.getElementById('modal-add-income').style.display = 'flex';
-            }
-        }
-
-        // Button: Add Line Item
-        if (btn.classList.contains('btn-add-line')) {
-            const phaseId = btn.dataset.phase;
-            // Open Wizard
-            document.getElementById('modal-line-item-wizard').style.display = 'flex';
-            Wizard.reset(phaseId);
-        }
-
-        // Button: Edit Line Item
-        if (btn.classList.contains('btn-edit-line')) {
-            const pId = btn.dataset.phase;
-            const iId = btn.dataset.item;
-            Wizard.loadForEdit(pId, iId);
-        }
-
-        // Button: Wizard Finish
-        if (btn.id === 'btn-wizard-finish') {
-            Wizard.finish();
-        }
-
-        // Button: Remove Line Item
-        if (btn.classList.contains('btn-remove-line')) {
-            const pId = btn.dataset.phase;
-            const iId = btn.dataset.item;
-            if (confirm('Remove this line item?')) {
-                const phase = project.phases.find(p => p.id === pId);
-                if (phase) {
-                    phase.lineItems = phase.lineItems.filter(i => i.id !== iId);
-                    Store.saveProject(project);
-                    render();
-                }
-            }
-        }
-
-        // Button: Delete Phase
-        if (btn.classList.contains('btn-delete-phase')) {
-            const id = btn.dataset.phase;
-            if (confirm('Delete this phase?')) {
-                project.phases = project.phases.filter(p => p.id !== id);
-                Store.saveProject(project);
-                render();
-            }
-        }
-
-        // Button: Remove Funding
-        if (btn.classList.contains('btn-delete-funding')) {
-            const id = btn.dataset.id;
-            if (confirm('Delete this funding source?')) {
-                project.incomeSources = project.incomeSources.filter(i => i.id !== id);
-                Store.saveProject(project);
-                render();
-            }
-        }
-
-
-
-        // Button: Phase Settings
-        // Button: Save Funding / Income
-        if (btn.id === 'btn-save-income') {
-            console.log("Debug: Save Source Clicked");
-
-            const id = document.getElementById('income-id').value;
-            const name = document.getElementById('income-name').value;
-            const amount = parseFloat(document.getElementById('income-amount').value) || 0;
-            const status = document.getElementById('income-status') ? document.getElementById('income-status').value : 'Confirmed';
-
-            console.log("Debug: Inputs", { id, name, amount, status });
-
-            if (!name) {
-                alert('Please enter a name for the funding source.');
-                return;
-            }
-
-            // Ensure we use the global project reference
-            const proj = window._project;
-            if (!proj) {
-                alert("Error: Project not found in scope.");
-                return;
-            }
-            // alert("Debug: Project found, saving...");
-
-            if (!proj.incomeSources) proj.incomeSources = [];
-
-            if (id) {
-                // Update
-                const source = proj.incomeSources.find(s => s.id === id);
-                if (source) {
-                    source.name = name;
-                    source.amount = amount;
-                    source.status = status;
-                }
-            } else {
-                // Create
-                proj.incomeSources.push({
-                    id: Utils.generateId(),
-                    name: name,
-                    amount: amount,
-                    status: status
-                });
-            }
-
-
-
-            // console.log("Final Project State:", proj); // DEBUG
-
-            try {
-                // FORCE UI Update first to see if it's just visual latency
-                // document.getElementById('modal-add-income').style.display = 'none'; 
-
-                await Store.saveProject(proj);
-                // alert("Source Saved Successfully!"); // Confirmation
-
-                document.getElementById('modal-add-income').style.display = 'none';
-                render();
-            } catch (e) {
-                alert("Error Saving: " + e.message);
-                console.error(e);
-            }
-        }
-
-        if (btn.classList.contains('btn-phase-settings')) {
-            const pId = btn.dataset.phase;
-            const phase = project.phases.find(p => p.id === pId);
-            if (phase) {
-                // Populate Modal
-                document.getElementById('phase-settings-id').value = pId;
-                document.getElementById('phase-name-edit').value = phase.name;
-                document.getElementById('phase-desc-edit').value = phase.description || '';
-                document.getElementById('phase-weeks').value = phase.weeks || '';
-                document.getElementById('phase-hours').value = phase.hours || '';
-                document.getElementById('phase-pay-rate').value = phase.payRate || '';
-                document.getElementById('phase-expense-rate').value = phase.expenseRate || '';
-
-                document.getElementById('modal-phase-settings').style.display = 'flex';
-            }
-        }
-
-        // Button: Worker Override
-        if (btn.classList.contains('btn-worker-override')) {
-            const pId = btn.dataset.phase;
-            const wId = btn.dataset.worker;
-            const phase = project.phases.find(p => p.id === pId);
-            const member = project.teamMembers.find(m => m.id === wId);
-
-            if (phase && member) {
-                // Populate Modal
-                document.getElementById('override-phase-id').value = pId;
-                document.getElementById('override-worker-id').value = wId;
-                document.getElementById('override-worker-name').textContent = member.name;
-
-                // Toggle Sections based on Mode
-                const mode = btn.dataset.mode; // 'rate' or 'schedule'
-                const sectionRate = document.getElementById('section-override-rate');
-                const sectionSched = document.getElementById('section-override-schedule');
-
-                if (mode === 'rate') {
-                    sectionRate.style.display = 'block';
-                    sectionSched.style.display = 'none';
-                    document.querySelector('#modal-worker-override .modal-header').textContent = 'Override Worker Rate';
-                } else if (mode === 'schedule') {
-                    sectionRate.style.display = 'none';
-                    sectionSched.style.display = 'block';
-                    document.querySelector('#modal-worker-override .modal-header').textContent = 'Override Worker Schedule';
-                } else {
-                    // Fallback (Show Both)
-                    sectionRate.style.display = 'block';
-                    sectionSched.style.display = 'block';
-                    document.querySelector('#modal-worker-override .modal-header').textContent = 'Override Worker Specs';
-                }
-
-                const state = (phase.workers && phase.workers[wId]) || {};
-
-                // Set Radio states (Simple implementation for now - reset to Auto if undefined)
-                // In production, checking specific 'checked' attributes based on state is needed.
-                // For MVP, we just open the modal. User re-selects if they want to change.
-
-                // Show/Hide Inputs for existing values
-                if (state.overrideRateMethod === 'custom') {
-                    document.querySelector('input[name="rate-rule"][value="custom"]').checked = true;
-                    document.getElementById('override-rate-val').style.display = 'inline-block';
-                    document.getElementById('override-rate-val').value = state.overrideRateVal;
-                } else if (state.overrideRateMethod) {
-                    document.querySelector('input[name="rate-rule"][value="' + state.overrideRateMethod + '"]').checked = true;
-                } else {
-                    document.querySelector('input[name="rate-rule"][value="auto"]').checked = true;
-                }
-
-                if (state.overrideSchedMethod === 'custom-weekly') {
-                    document.querySelector('input[name="sched-rule"][value="custom-weekly"]').checked = true;
-                    document.getElementById('override-sched-weekly-val').style.display = 'inline-block';
-                    document.getElementById('override-sched-weekly-val').value = state.overrideSchedWeeklyVal;
-                } else if (state.overrideSchedMethod === 'lump') {
-                    document.querySelector('input[name="sched-rule"][value="lump"]').checked = true;
-                    document.getElementById('override-sched-lump-val').style.display = 'inline-block';
-                    document.getElementById('override-sched-lump-val').value = state.overrideSchedLumpVal;
-                } else if (state.overrideSchedMethod === 'project') {
-                    document.querySelector('input[name="sched-rule"][value="project"]').checked = true;
-                } else {
-                    document.querySelector('input[name="sched-rule"][value="auto"]').checked = true;
-                }
-
-                document.getElementById('modal-worker-override').style.display = 'flex';
-            }
-        }
-
-        // Button: Save Phase Settings
-        if (btn.id === 'btn-save-phase-settings') {
-            const pId = document.getElementById('phase-settings-id').value;
-            const phase = project.phases.find(p => p.id === pId);
-            if (phase) {
-                phase.name = document.getElementById('phase-name-edit').value;
-                phase.description = document.getElementById('phase-desc-edit').value;
-                phase.weeks = parseFloat(document.getElementById('phase-weeks').value) || 0;
-                phase.hours = parseFloat(document.getElementById('phase-hours').value) || 0;
-                phase.payRate = parseFloat(document.getElementById('phase-pay-rate').value) || null;
-                phase.expenseRate = parseFloat(document.getElementById('phase-expense-rate').value) || null;
-
-                Store.saveProject(project);
-                render();
-                document.getElementById('modal-phase-settings').style.display = 'none';
-            }
-        }
-
-        // Button: Save Worker Override
-        if (btn.id === 'btn-save-worker-override') {
-            const pId = document.getElementById('override-phase-id').value;
-            const wId = document.getElementById('override-worker-id').value;
-            const phase = project.phases.find(p => p.id === pId);
-
-            if (phase) {
-                if (!phase.workers) phase.workers = {};
-                if (!phase.workers[wId]) phase.workers[wId] = {};
-
-                const wState = phase.workers[wId];
-
-                // Get Rate Rule
-                const rateRule = document.querySelector('input[name="rate-rule"]:checked').value;
-                wState.overrideRateMethod = rateRule;
-                if (rateRule === 'custom') {
-                    wState.overrideRateVal = parseFloat(document.getElementById('override-rate-val').value) || 0;
-                }
-
-                // Get Schedule Rule
-                const schedRule = document.querySelector('input[name="sched-rule"]:checked').value;
-                wState.overrideSchedMethod = schedRule;
-                if (schedRule === 'custom-weekly') {
-                    wState.overrideSchedWeeklyVal = parseFloat(document.getElementById('override-sched-weekly-val').value) || 0;
-                }
-                if (schedRule === 'lump') {
-                    wState.overrideSchedLumpVal = parseFloat(document.getElementById('override-sched-lump-val').value) || 0;
-                }
-
-                Store.saveProject(project);
-                render();
-                document.getElementById('modal-worker-override').style.display = 'none';
-            }
+    allMembers.forEach(m => {
+        const id = m.email || m.username;
+        const user = usersMap[id];
+        if (user && user.independentProfile) {
+            const rates = window.BudgetEngine.getWorkerRates(user.independentProfile);
+            if (rates.now > highNow) highNow = rates.now;
+            if (rates.goal > 0 && rates.goal < lowGoal) lowGoal = rates.goal;
         }
     });
 
-    // 5. Global Change Listener (Toggles, Inputs)
-    document.addEventListener('change', async (e) => {
-        const target = e.target;
-        // console.log("Change Event:", target);
+    if (lowGoal === Infinity) lowGoal = 0;
 
-        // Toggle Worker Presence
-        if (target.classList.contains('cb-worker-present')) {
-            const pId = target.dataset.phase;
-            const wId = target.dataset.worker;
+    let minWage = highNow * (minMod / 100);
+    let rawMax = lowGoal * (maxMod / 100);
 
-            // console.log("Toggle Worker:", pId, wId, target.checked);
+    // CONSTRAINT: Final Max cannot be lower than Final Min OR Base Min (High Now)
+    const floor = Math.max(minWage, highNow);
+    let maxWage = Math.max(rawMax, floor);
 
-            const proj = window._project || project;
-            const phase = proj.phases.find(p => p.id === pId);
-            if (phase) {
-                if (!phase.workers) phase.workers = {};
-                if (!phase.workers[wId]) phase.workers[wId] = {};
+    if (!project.globalRates) project.globalRates = {};
+    project.globalRates.minWage = minWage;
+    project.globalRates.maxWage = maxWage;
+    project.globalRates.minMod = minMod; // Save mod too if needed
 
-                phase.workers[wId].isPresent = target.checked;
+    await Store.saveProject(project);
+    // Update UI text immediately
+    const elMin = document.getElementById('pool-min-wage');
+    const elMax = document.getElementById('pool-max-wage');
+    if (elMin) elMin.textContent = `$${minWage.toFixed(2)}/hr`;
+    if (elMax) elMax.textContent = `$${maxWage.toFixed(2)}/hr`;
 
-                try {
-                    await Store.saveProject(proj);
-                    render();
-                } catch (err) {
-                    console.error("Error saving worker toggle:", err);
-                    alert("Failed to save worker state.");
-                }
-            }
-        }
+    // Reload to apply caps to table?
+    location.reload();
+};
 
-        // Project Wage Modifiers
-        if (target.id === 'project-min-mod' || target.id === 'project-max-mod') {
-            const minVal = parseFloat(document.getElementById('project-min-mod').value) || 100;
-            const maxVal = parseFloat(document.getElementById('project-max-mod').value) || 100;
-
-            project.minModifier = minVal;
-            project.maxModifier = maxVal;
-
-            Store.saveProject(project);
-            render();
-        }
-
-        // Project Global Rates (Pay/Expense)
-        if (target.id === 'project-global-pay-rate' || target.id === 'project-global-expense-rate') {
-            project.payRate = parseFloat(document.getElementById('project-global-pay-rate').value) || 100;
-            project.expenseRate = parseFloat(document.getElementById('project-global-expense-rate').value) || 100;
-
-            Store.saveProject(project);
-            render();
-        }
-
-        // Toggle All Labor
-        if (target.classList.contains('cb-toggle-all-labor')) {
-            const pId = target.dataset.phase;
-            const phase = project.phases.find(p => p.id === pId);
-            if (phase) {
-                if (!phase.workers) phase.workers = {};
-
-                project.teamMembers.forEach(m => {
-                    if (!phase.workers[m.id]) phase.workers[m.id] = {};
-                    phase.workers[m.id].isPresent = target.checked;
-                });
-                Store.saveProject(project);
-                render();
-            }
-        }
-
-        // Toggle Phase Active/Inactive
-        if (target.classList.contains('cb-phase-active')) {
-            const pId = target.dataset.phase;
-            const phase = project.phases.find(p => p.id === pId);
-            if (phase) {
-                phase.isActive = target.checked;
-                Store.saveProject(project);
-                render();
-            }
-        }
-
-        // Modal Validations/Visibility (Radio Buttons)
-        if (target.name === 'rate-rule') {
-            const valInput = document.getElementById('override-rate-val');
-            if (target.value === 'custom') {
-                valInput.style.display = 'inline-block';
-            } else {
-                valInput.style.display = 'none';
-            }
-        }
-        if (target.name === 'sched-rule') {
-            document.getElementById('override-sched-weekly-val').style.display = 'none';
-            document.getElementById('override-sched-lump-val').style.display = 'none';
-
-            if (target.value === 'custom-weekly') document.getElementById('override-sched-weekly-val').style.display = 'inline-block';
-            if (target.value === 'lump') document.getElementById('override-sched-lump-val').style.display = 'inline-block';
-        }
+// V71: Save Overhead Selections
+window.saveOverheadEdit = async () => {
+    const hourly = parseFloat(document.getElementById('oh-total-display').getAttribute('data-val')) || 0;
+    const phaseId = document.getElementById('oh-phase-id').value;
+    const itemId = document.getElementById('oh-item-id').value;
+    const selectionData = [];
+    document.querySelectorAll('.oh-biz-check:checked').forEach(c => {
+        selectionData.push(c.value); // Value is amount? No, we need ID? 
+        // We set value="${biz.amount}" previously. We need ID.
+        // Updating checkboxes to use ID as value, and store amount in data attribute.
     });
 
-    // Init
-    try {
-        render();
-    } catch (err) {
-        console.error("Render Failed:", err);
+    // Wait, I need to know WHICH checkboxes were checked.
+    // I'll update the checkbox generation to put ID in 'value' and Amount in 'data-amount'.
+    // See openOverheadModal changes below.
+
+    const selectedIds = [];
+    document.querySelectorAll('.oh-biz-check:checked').forEach(c => {
+        selectedIds.push(c.value); // This will be the ID
+    });
+
+    const p = window._project.phases.find(ph => ph.id === phaseId);
+    const item = p.lineItems.find(i => i.id === itemId);
+
+    item.overheadRate = hourly;
+    item.overheadSelections = selectedIds; // Save Persistence
+
+    await Store.saveProject(window._project);
+    document.getElementById('modal-edit-overhead').style.display = 'none';
+    location.reload();
+};
+
+// V74: Simple Summation of Hourly Rates
+window.recalcOverheadTotal = () => {
+    let rateSum = 0;
+    document.querySelectorAll('.oh-biz-check:checked').forEach(c => {
+        // V74: We stored the Calculated Hourly Rate in data-rate
+        let r = parseFloat(c.getAttribute('data-rate')) || 0;
+        rateSum += r;
+    });
+
+    const hourly = rateSum;
+    document.getElementById('oh-total-display').textContent = `$${hourly.toFixed(2)}`;
+    document.getElementById('oh-total-display').setAttribute('data-val', hourly);
+};
+
+// Event Delegation for Math Log
+document.addEventListener('click', (e) => {
+    if (e.target && e.target.closest('.btn-math-log')) {
+        const btn = e.target.closest('.btn-math-log');
+        const key = btn.getAttribute('data-key');
+        if (key) window.openMathLog(key);
     }
-
-    // Globalize access for modal callbacks if needed
-    // setupModalLogic(project, render); // Moved to end of file with try/catch
-
-    function setupModalLogic(project, renderFn) {
-        console.log("Debug: setupModalLogic temporarily disabled for syntax check.");
-    }
-
-    function _adjustDummyData() {
-        console.log("Debug: _adjustDummyData temporarily disabled.");
-    }
-
-    // Call it
-    setTimeout(_adjustDummyData, 1000);
-
-    // Initial Render
-    render();
-
-    // [Duplicate renderDistributionModal removed]
-
-    // --- Collaboration Logic ---
-
-    // Expose Modal Opener
-    window.openInviteModal = () => {
-        const emailInput = document.getElementById('invite-email');
-        if (emailInput) emailInput.value = '';
-        const modal = document.getElementById('modal-invite-member');
-        if (modal) modal.style.display = 'flex';
-    };
-    // Helper: Reset Modal
-    window.resetModal = () => {
-        const emailInput = document.getElementById('invite-email');
-        if (emailInput) emailInput.value = '';
-        const modal = document.getElementById('modal-add-member'); // Correct ID for Add Pool Member modal?
-        // Wait, btn-add-member opens modal-add-member.
-        // But the previous search found modal-invite-member usage.
-        // Let's check HTML for modal ID.
-        // Step 1528: user clicked "Invite Member" inside "Add Member"?
-
-        // Actually, btn-add-member in Step 1794 opens 'modal-add-member'.
-        // Step 1606 mentions 'invite-member.sql'.
-        // Let's assume the modal ID is indeed 'modal-add-member' based on lines 998.
-        if (document.getElementById('modal-add-member')) {
-            // document.getElementById('modal-add-member').style.display = 'none'; // logic handles display logic
-        }
-    };
-
-    // Bind Confirm Button
-    const btnConfirmInvite = document.getElementById('btn-confirm-invite');
-    if (btnConfirmInvite) {
-        btnConfirmInvite.onclick = async () => {
-            const email = document.getElementById('invite-email').value.trim();
-            const btn = document.getElementById('btn-confirm-invite');
-
-            if (!email) {
-                alert("Please enter an email.");
-                return;
-            }
-
-            btn.innerText = "Inviting...";
-            btn.disabled = true;
-
-            try {
-                // Ensure we have project ID
-                const proj = window._project || project;
-                if (!proj) throw new Error("Project state missing.");
-
-                const currentId = proj.id || (new URLSearchParams(window.location.search).get('id')); // Fallback
-
-                // 1. Backend Invite
-                await Store.inviteUser(currentId, email);
-
-                // 2. Frontend State Update (Add to Team Members List if not present)
-                const existing = proj.teamMembers.find(m => m.username === email || m.email === email);
-                if (!existing) {
-                    proj.teamMembers.push({
-                        id: Utils.generateId(), // Temporary ID until they join? Or just a unique reference.
-                        name: email.split('@')[0], // Placeholder name
-                        rate: 0,
-                        days: 0,
-                        username: email,
-                        email: email
-                    });
-                    await Store.saveProject(proj); // Save the project structure
-                    render(); // Re-render to show in Phase Lists immediately
-                }
-
-                alert(`Invited ${email} successfully!`);
-                document.getElementById('modal-invite-member').style.display = 'none';
-                await loadAndRenderCollaborators(); // Keep this for side-effects if any
-            } catch (e) {
-                alert("Error inviting user: " + e.message);
-            } finally {
-                btn.innerText = "Send Invite";
-                btn.disabled = false;
-            }
-        };
-    }
-
-    // Bind Add Member Modal Buttons (Re-applying missing code)
-    const btnLookup = document.getElementById('btn-lookup-email');
-    if (btnLookup) {
-        btnLookup.onclick = async () => {
-            const email = document.getElementById('lookup-email').value.trim();
-            if (!email) return alert("Enter email");
-
-            const originalText = btnLookup.innerText;
-            btnLookup.innerText = "...";
-            try {
-                const user = await Store.checkUser(email);
-
-                document.getElementById('step-details').style.display = 'block';
-                const msg = document.getElementById('invite-status-msg');
-                const btnSave = document.getElementById('btn-save-member');
-                const btnSend = document.getElementById('btn-send-invite');
-
-                if (user) {
-                    msg.innerHTML = `User found: <strong>${user.full_name || email}</strong>`;
-                    msg.style.color = 'green';
-                    btnSave.style.display = 'inline-block';
-                    btnSend.style.display = 'none';
-                } else {
-                    msg.textContent = "User not found. Send an invite?";
-                    msg.style.color = '#d97706'; // Amber/Orange
-                    btnSave.style.display = 'none';
-                    btnSend.style.display = 'inline-block';
-                }
-            } catch (e) {
-                console.error(e);
-                alert("Error checking user: " + e.message);
-            }
-            btnLookup.innerText = originalText;
-        };
-    }
-
-    const handleAddMember = async () => {
-        const email = document.getElementById('lookup-email').value.trim();
-        if (!email) return;
-
-        // Determine button state/loading...
-
-        try {
-            const proj = window._project || project;
-            if (!proj) throw new Error("Project state missing.");
-            const currentId = proj.id;
-
-            // 1. Backend Invite/Add
-            try {
-                await Store.inviteUser(currentId, email);
-            } catch (err) {
-                // Ignore "Already member" or "Already invited" errors
-                // so we can ensure they are added to the frontend roster below.
-                if (err.message && (err.message.includes('already') || err.message.code === '23505')) {
-                    console.warn("User already invited/member, ensuring roster is synced.");
-                } else {
-                    throw err;
-                }
-            }
-
-            // 2. Add to Roster (Frontend State)
-            const existing = proj.teamMembers.find(m => m.username === email || m.email === email);
-            if (!existing) {
-                proj.teamMembers.push({
-                    id: Utils.generateId(),
-                    name: email.split('@')[0],
-                    rate: 0,
-                    days: 0,
-                    username: email,
-                    email: email
-                });
-                await Store.saveProject(proj);
-                render();
-            }
-
-            alert("Member added/invited!");
-            document.getElementById('modal-add-member').style.display = 'none';
-            await loadAndRenderCollaborators();
-        } catch (e) {
-            alert("Error: " + e.message);
-        }
-    };
-
-    const btnSaveMember = document.getElementById('btn-save-member');
-    if (btnSaveMember) btnSaveMember.onclick = handleAddMember;
-
-    const btnSendInvite = document.getElementById('btn-send-invite');
-    if (btnSendInvite) btnSendInvite.onclick = handleAddMember;
-
-    async function loadAndRenderCollaborators() {
-        try {
-            const currentId = window._project ? window._project.id : (new URLSearchParams(window.location.search).get('id'));
-            if (!currentId) return;
-
-            const list = document.getElementById('collaborators-list');
-            if (!list) return;
-
-            // 1. Render Owner immediately (Client Side)
-            list.innerHTML = '';
-            const ownerName = (window._project && window._project.owner) ? window._project.owner : 'Owner';
-            const ownerDiv = document.createElement('div');
-            ownerDiv.className = 'summary-card';
-            ownerDiv.style.padding = '10px';
-            ownerDiv.style.minWidth = '200px';
-            ownerDiv.innerHTML = `<strong>Owner</strong><br>${ownerName}`;
-            list.appendChild(ownerDiv);
-
-            // 2. Fetch Members
-            const { data: memberData, error: memberError } = await window.supabaseClient
-                .from('project_members')
-                .select('user_id, role')
-                .eq('project_id', currentId);
-
-            if (memberError) throw memberError;
-
-            // 3. Fetch Profiles (Members + Owner)
-            let userIds = (memberData || []).map(m => m.user_id);
-
-            // Add Owner ID if available
-            const ownerId = window._project ? window._project.owner_id : null;
-            if (ownerId && !userIds.includes(ownerId)) {
-                userIds.push(ownerId);
-            }
-
-            if (userIds.length === 0) return;
-
-            const { data: profileData, error: profileError } = await window.supabaseClient
-                .from('profiles')
-                .select('id, email, full_name, independent_profile')
-                .in('id', userIds);
-
-            if (profileError) throw profileError;
-
-            // Map profiles
-            const profileMap = {};
-            if (profileData) {
-                profileData.forEach(p => profileMap[p.id] = p);
-            }
-
-            // Helper to format stats
-            const getStats = (p) => {
-                const ip = p.independent_profile || {};
-                let goalRate = ip.goals?.hourlyRateTarget || ip.goals?.hourly || 0;
-
-                // Fallback: Calculate if missing
-                if (!goalRate || goalRate === 0) {
-                    try {
-                        // We need to map 'independent_profile' to the structure BudgetEngine expects (which is usually the whole user object or the profile itself)
-                        // BudgetEngine.getWorkerRates expects { unearnedIncome:..., schedule:..., goals:... }
-                        // ip IS that structure.
-                        const rates = BudgetEngine.getWorkerRates(ip);
-                        if (rates && rates.goal) goalRate = rates.goal;
-                    } catch (e) {
-                        console.warn("Rate Calc Error", e);
-                    }
-                }
-
-                const sched = ip.schedule || {};
-                const hours = parseFloat(sched.hours) || 0;
-                const days = parseFloat(sched.days) || 0;
-                // const weeks = sched.weeks || 0; // Not needed for this specific display
-
-                // Calculate Billable Capacity (accounting for Admin/Non-Billable work)
-                // Use Utils (which is already loaded)
-                const capacity = Utils.calculateBillableCapacity(ip);
-                const pBillable = capacity.billableRatio || 0; // e.g., 0.85
-
-                let stats = [];
-                if (goalRate > 0) stats.push(`Goal: ${Utils.formatCurrency(goalRate)}/hr`);
-
-                // Total Weekly Hours = Hours/Day * Days/Week (Already in variables hours, days)
-                const totalWeeklyHours = hours * days;
-
-                // Effective Billable Hours = Total * Ratio
-                // Round to 1 decimal for cleanliness
-                const effectiveBillable = Math.round((totalWeeklyHours * pBillable) * 10) / 10;
-
-                if (effectiveBillable > 0) stats.push(`Billable Hours per week: ${effectiveBillable}`);
-
-                return stats.length > 0 ? `<br><span style="font-size:0.7rem; color:#666; font-style:italic;">${stats.join(' • ')}</span>` : '';
-            };
-
-            // Update Owner Card with Real Name & Stats
-            if (ownerId && profileMap[ownerId]) {
-                const p = profileMap[ownerId];
-                const statsHtml = getStats(p);
-                ownerDiv.innerHTML = `<strong>Owner</strong><br>${p.full_name || 'Unknown Name'}<br><span style="font-size:0.7rem; color:gray;">${p.email}</span>${statsHtml}`;
-            }
-
-            // 5. Fetch Pending Invites (Project Invites table)
-            const { data: inviteData } = await window.supabaseClient
-                .from('project_invites')
-                .select('email, invited_at')
-                .eq('project_id', currentId);
-
-            // Render Pending Invites
-            if (inviteData && inviteData.length > 0) {
-                inviteData.forEach(inv => {
-                    const d = document.createElement('div');
-                    d.className = 'summary-card';
-                    d.style.padding = '10px';
-                    d.style.minWidth = '200px';
-                    d.style.border = '1px dashed #ccc'; // Distinct style for pending
-                    d.innerHTML = `<strong>Invited</strong><br>${inv.email}<br><span style="font-size:0.7rem; color:orange;">Pending Signup</span>`;
-                    list.appendChild(d);
-                });
-            }
-
-            // 4. Render Members (Skip Owner)
-            if (memberData) {
-                memberData.forEach(m => {
-                    const profile = profileMap[m.user_id];
-                    if (profile) {
-                        if (profile.id === ownerId) return; // Skip Owner if in list
-                        const d = document.createElement('div');
-                        d.className = 'summary-card';
-                        d.style.padding = '10px';
-                        d.style.minWidth = '200px';
-                        const statsHtml = getStats(profile);
-                        d.innerHTML = `<strong>${profile.full_name || 'Collaborator'}</strong><br>${profile.email}<br><span style="font-size:0.7rem; color:gray;">${m.role}</span>${statsHtml}`;
-                        list.appendChild(d);
-                    }
-                });
-            }
-
-        } catch (err) {
-            console.error("Error loading collaborators:", err);
-            const list = document.getElementById('collaborators-list');
-            // DEBUG: Show actual error on screen
-            if (list) list.innerHTML += `<div style="color:red; font-size:0.8rem;">Error: ${err.message || err.toString()}</div>`;
-        }
-    }
-
-    // Explicitly Expose
-    window.loadAndRenderCollaborators = loadAndRenderCollaborators;
-
-    // --- Final Init ---
-    try {
-        setupModalLogic(project, render);
-    } catch (e) { console.error("Modal Logic Error", e); }
-
-    try {
-        await loadAndRenderCollaborators();
-    } catch (e) { console.error("Collab Logic Error", e); }
-
 });
+
+// EXPORT WIZARD GLOBALLY
+window.Wizard = Wizard;
+
+// V65: Global Event Delegation for Toggles
+// V67: Global Event Delegation - Custom Modal + Debounce
+let _clickLock = false;
+
+document.addEventListener('click', (e) => {
+    // Check if we clicked ANY part of a switch
+    const switchEl = e.target.closest('.switch');
+
+    if (switchEl) {
+        // Find the input
+        const input = switchEl.querySelector('input');
+
+        // DEBOUNCE: If we just handled this, ignore
+        if (_clickLock) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log("Ignored Double-Click (Debounce)");
+            return;
+        }
+
+        if (input && input.classList.contains('action-toggle-member')) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            // Lock for 500ms to prevent double-fire
+            _clickLock = true;
+            setTimeout(() => _clickLock = false, 500);
+
+            const phaseId = input.getAttribute('data-phase-id');
+            const memberId = input.getAttribute('data-member-id');
+
+            console.log("Delegated Click: Toggle Member", phaseId, memberId);
+
+            // Manually invoke
+            const mockEvent = {
+                preventDefault: () => { },
+                stopPropagation: () => { },
+                target: input
+            };
+            Wizard.toggleMember(phaseId, memberId, mockEvent);
+            return;
+        }
+
+        if (input && input.classList.contains('action-toggle-all')) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            _clickLock = true;
+            setTimeout(() => _clickLock = false, 500);
+
+            const phaseId = input.getAttribute('data-phase-id');
+            const mockEvent = {
+                preventDefault: () => { },
+                stopPropagation: () => { },
+                target: input
+            };
+            Wizard.toggleAll(phaseId, mockEvent);
+            return;
+        }
+    }
+});
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => initApp(0));
+} else {
+    initApp(0);
+}

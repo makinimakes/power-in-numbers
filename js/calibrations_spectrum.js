@@ -1,6 +1,3 @@
-console.log("Loading Spectrum Script...");
-alert("Spectrum Script Loaded vHotfix");
-
 /**
  * RATE SPECTRUM MODAL (Paired View)
  */
@@ -19,7 +16,6 @@ let cachedPersonalRateGoal = 0;
 const DELTAS = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9];
 
 async function openSpectrumModal() {
-    console.log("openSpectrumModal called");
     // 1. Fetch Overheads (if not loaded)
     // We need to fetch projects where type = 'overhead' (or check expenses)
     // Actually, Store.getProjects() checks `projects` table.
@@ -32,17 +28,9 @@ async function openSpectrumModal() {
     // We'll reload to be safe.
 
     try {
-        console.log("Fetching overhead projects...");
         overheadProjects = await Store.getOverheadProjects();
-        console.log("Overhead projects fetched:", overheadProjects.length);
 
-        console.log("Fetching profile...");
         const profile = await Store.getIndependentProfile(); // Ensure fresh profile for Billable Hours
-        console.log("Profile fetched");
-
-        // Diagnostic Alert for User
-        const user = await Store.getCurrentUser();
-        alert(`Debug Info:\nUser: ${user ? user.email : 'Unknown'}\nFound ${overheadProjects.length} Business Profiles.`);
 
         // (Filter step removed as getOverheadProjects handles it)
 
@@ -76,7 +64,6 @@ async function openSpectrumModal() {
         renderOverheadToggles();
         renderPairedSpectrum();
         if (modalSpectrum) {
-            console.log("Showing modal...");
             modalSpectrum.showModal();
         } else {
             console.error("modalSpectrum element not found!");
@@ -228,7 +215,6 @@ function createRateCell(baseRate, multiplier, hpd, dpw) {
 function bindSpectrumBtn() {
     const btn = document.getElementById('btn-view-spectrum');
     if (btn) {
-        console.log("Attached event listener to btn-view-spectrum");
         btn.onclick = openSpectrumModal; // Direct binding to avoid stacking listeners if run multiple times
     } else {
         console.warn("btn-view-spectrum not found");

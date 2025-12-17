@@ -28,6 +28,62 @@
             justify-content: center;
         }
 
+        /* Toggle Switch CSS */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 34px;
+            height: 20px;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            -webkit-transition: .4s;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            -webkit-transition: .4s;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked+.slider {
+            background-color: #2196F3;
+        }
+
+        input:focus+.slider {
+            box-shadow: 0 0 1px #2196F3;
+        }
+
+        input:checked+.slider:before {
+            -webkit-transform: translateX(14px);
+            -ms-transform: translateX(14px);
+            transform: translateX(14px);
+        }
+
         /* Modal Overlay */
         .modal {
             display: none;
@@ -43,11 +99,19 @@
         }
 
         .modal-content {
-            border: 2px solid black;
-            background: white;
-            width: 100%;
+            background-color: #fefefe;
+            margin: auto;
+            border: 1px solid #888;
+            width: 90%;
             max-width: 600px;
-            box-shadow: 20px 20px 0px black;
+            border-radius: 8px;
+            position: absolute;
+            top: 5%;
+            left: 50%;
+            transform: translate(-50%, 0);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            max-height: 90vh;
+            overflow-y: auto;
         }
 
         .modal-header {
@@ -57,7 +121,24 @@
             font-weight: 700;
             text-transform: uppercase;
         }
+
+        .clickable-cell {
+            cursor: pointer;
+            transition: background 0.2s;
+            text-decoration: underline dotted #999;
+        }
+
+        .clickable-cell:hover {
+            background-color: #f0f8ff;
+            color: #000;
+            text-decoration: underline solid #000;
+        }
     </style>
+    <div id="debug-console"
+        style="position:fixed; top:0; left:0; width:100%; height:150px; background:rgba(0,0,0,0.8); color:#0f0; font-family:monospace; font-size:12px; z-index:99999; overflow-y:scroll; pointer-events:none; padding:10px; display:none;">
+        <strong>DEBUG CONSOLE (Latest messages at bottom)</strong><br>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
@@ -76,6 +157,8 @@
             </div>
             <div style="text-align: right;">
                 <nav>
+                    <a href="index.html"
+                        style="color: var(--color-text-inverse); margin-right: var(--spacing-sm); font-weight:bold;">Home</a>
                     <a href="independent.html"
                         style="color: var(--color-text-inverse); margin-right: var(--spacing-sm);">My Economic Dream
                         Plan</a>
@@ -91,9 +174,10 @@
         <section class="ledger-section"
             style="margin-top:20px; padding:var(--spacing-sm); border:2px solid #000; background:#fff;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h3 style="margin:0;">Collaborators</h3>
-                <button class="btn btn-primary" onclick="window.openInviteModal()" style="font-size:0.8rem;">+ Invite
-                    Member</button>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h2 class="section-title">Collaborators</h2>
+                    <button class="btn btn-primary" onclick="window.openInviteModal()">+ Invite Member</button>
+                </div>
             </div>
 
             <div id="collaborators-list" style="margin-top:15px; display:flex; gap:10px; flex-wrap:wrap;">
@@ -207,6 +291,7 @@
                                 <th>Role</th>
                                 <th>Equity (Liability)</th>
                                 <th>Project Share %</th>
+                                <th>Details</th>
                             </tr>
                         </thead>
                         <tbody id="shares-table-body">
@@ -217,6 +302,7 @@
                                 <td colspan="2">Total Liability</td>
                                 <td id="shares-total-equity">$0.00</td>
                                 <td>100%</td>
+                                <td>-</td>
                             </tr>
                         </tfoot>
                     </table>
@@ -227,60 +313,70 @@
         <!-- 4. SCENARIOS -->
         <section class="ledger-section" style="border-top:var(--border-hero); border-bottom:var(--border-hero);">
             <h3>Project Scenarios (Budget vs. Funding)</h3>
+
+            <!-- Global Expenses Display -->
+            <div
+                style="background:var(--color-bg-inverse); color:var(--color-text-inverse); padding:15px; border-radius:4px; margin-bottom:20px; text-align:center;">
+                <span style="font-size:1rem; opacity:0.9;">Total Cash Expenses:</span>
+                <strong id="dash-global-expenses" style="font-size:1.5rem; margin-left:10px;">$0</strong>
+            </div>
+
             <div class="grid-2" style="grid-template-columns: 1fr 1fr 1fr; background: var(--color-bg-base);">
                 <!-- Ideal -->
                 <div class="card-scenario" style="padding:20px; border-right:var(--border-std); position:relative;">
                     <div class="result-label">Ideal Funding</div>
-                    <div class="result-value" id="dash-ideal-total">$0</div>
-                    <div style="margin-top:10px; font-size:0.9rem;">
-                        <div style="display:flex; justify-content:space-between;">
-                            <span>Gross Profit:</span>
-                            <span id="dash-ideal-gross" style="font-weight:bold;">$0</span>
+                    <!-- Main Number: Net Profit -->
+                    <div class="result-value" id="dash-ideal-net" style="font-size:2rem;">$0</div>
+                    <div style="text-align:center; font-size:0.8rem; margin-bottom:10px;">Net Profit</div>
+
+                    <div style="margin-top:15px; font-size:0.9rem; border-top:1px solid #eee; padding-top:10px;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                            <span>Total Income:</span>
+                            <span id="dash-ideal-income" style="font-weight:bold;">$0</span>
                         </div>
-                        <div style="display:flex; justify-content:space-between; margin-top:5px;">
-                            <span>Actual Profit:</span>
-                            <span id="dash-ideal-net" style="font-weight:bold;">$0</span>
+                        <div style="display:flex; justify-content:space-between; color:var(--color-primary);">
+                            <span>Net After Distributions:</span>
+                            <span id="dash-ideal-dist-net" style="font-weight:bold;">$0</span>
                         </div>
                     </div>
-                    <button type="button" class="btn-text-action"
-                        onclick="event.stopPropagation(); window.renderDistributionModal('ideal')"
-                        style="margin-top:10px; font-size:0.8rem; text-decoration:underline;">View Distribution</button>
                 </div>
+
                 <!-- Possible -->
                 <div class="card-scenario" style="padding:20px; border-right:var(--border-std); position:relative;">
                     <div class="result-label">Possible Funding</div>
-                    <div class="result-value" id="dash-possible-total">$0</div>
-                    <div style="margin-top:10px; font-size:0.9rem;">
-                        <div style="display:flex; justify-content:space-between;">
-                            <span>Gross Profit:</span>
-                            <span id="dash-possible-gross" style="font-weight:bold;">$0</span>
+                    <!-- Main Number: Net Profit -->
+                    <div class="result-value" id="dash-possible-net" style="font-size:2rem;">$0</div>
+                    <div style="text-align:center; font-size:0.8rem; margin-bottom:10px;">Net Profit</div>
+
+                    <div style="margin-top:15px; font-size:0.9rem; border-top:1px solid #eee; padding-top:10px;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                            <span>Total Income:</span>
+                            <span id="dash-possible-income" style="font-weight:bold;">$0</span>
                         </div>
-                        <div style="display:flex; justify-content:space-between; margin-top:5px;">
-                            <span>Actual Profit:</span>
-                            <span id="dash-possible-net" style="font-weight:bold;">$0</span>
+                        <div style="display:flex; justify-content:space-between; color:var(--color-primary);">
+                            <span>Net After Distributions:</span>
+                            <span id="dash-possible-dist-net" style="font-weight:bold;">$0</span>
                         </div>
                     </div>
-                    <button type="button" class="btn-text-action"
-                        onclick="event.stopPropagation(); window.renderDistributionModal('possible')"
-                        style="margin-top:10px; font-size:0.8rem; text-decoration:underline;">View Distribution</button>
                 </div>
+
                 <!-- Confirmed -->
                 <div class="card-scenario" style="padding:20px; position:relative;">
                     <div class="result-label">Confirmed Funding</div>
-                    <div class="result-value" id="dash-confirmed-total">$0</div>
-                    <div style="margin-top:10px; font-size:0.9rem;">
-                        <div style="display:flex; justify-content:space-between;">
-                            <span>Gross Profit:</span>
-                            <span id="dash-confirmed-gross" style="font-weight:bold;">$0</span>
+                    <!-- Main Number: Net Profit -->
+                    <div class="result-value" id="dash-confirmed-net" style="font-size:2rem;">$0</div>
+                    <div style="text-align:center; font-size:0.8rem; margin-bottom:10px;">Net Profit</div>
+
+                    <div style="margin-top:15px; font-size:0.9rem; border-top:1px solid #eee; padding-top:10px;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                            <span>Total Income:</span>
+                            <span id="dash-confirmed-income" style="font-weight:bold;">$0</span>
                         </div>
-                        <div style="display:flex; justify-content:space-between; margin-top:5px;">
-                            <span>Actual Profit:</span>
-                            <span id="dash-confirmed-net" style="font-weight:bold;">$0</span>
+                        <div style="display:flex; justify-content:space-between; color:var(--color-primary);">
+                            <span>Net After Distributions:</span>
+                            <span id="dash-confirmed-dist-net" style="font-weight:bold;">$0</span>
                         </div>
                     </div>
-                    <button type="button" class="btn-text-action"
-                        onclick="event.stopPropagation(); window.renderDistributionModal('confirmed')"
-                        style="margin-top:10px; font-size:0.8rem; text-decoration:underline;">View Distribution</button>
                 </div>
             </div>
             <!-- Add Income Button for Scenarios context -->
@@ -422,14 +518,35 @@
                             <input type="text" id="wiz-name" placeholder="e.g. Catering, Editor">
                         </div>
                         <div class="input-group">
+                            <label>Assign to Member (Optional)</label>
+                            <select id="wiz-assignee" style="width:100%; padding:8px;">
+                                <option value="">(None / General Project)</option>
+                                <!-- JS Populated -->
+                            </select>
+                        </div>
+                        <div class="input-group">
                             <label>Cost Type</label>
                             <div style="display:flex; gap:10px;">
                                 <button class="btn btn-outline" onclick="Wizard.setType('Flat')">Flat Amount</button>
                                 <button class="btn btn-outline" onclick="Wizard.setType('Percentage')">% of Phase
                                     Total</button>
+                                <!-- Removed Import Overhead Button (V92) -->
+                                <!-- <button class="btn btn-outline"
+                                    style="border-color:var(--color-primary); color:var(--color-primary);"
+                                    onclick="Wizard.setImportMode()">Import Overhead</button> -->
                             </div>
                         </div>
                     </div>
+
+                    <!-- Step 2: Import Overhead (Removed V92) -->
+                    <!-- <div id="wizard-step-overhead" style="display:none;">
+                        <label>Select Overhead Profile</label>
+                        <p style="font-size:0.8rem; color:#666; margin-bottom:10px;">We'll calculate an hourly rate
+                            based on the owner's billable capacity.</p>
+                        <select id="wiz-overhead-select" style="width:100%; padding:8px; margin-bottom:10px;">
+                            <option value="">Loading...</option>
+                        </select>
+                    </div> -->
 
                     <!-- Step 2: Percentage -->
                     <div id="wizard-step-percent" style="display:none;">
@@ -501,6 +618,31 @@
                             <label>Rate ($ per Unit)</label>
                             <input type="number" id="wiz-time-rate" placeholder="0.00">
                         </div>
+                        <div style="margin-top:10px; font-size:0.85rem;">
+                            <a href="#" onclick="Wizard.toggleCalculator(event)"
+                                style="color:var(--color-primary); text-decoration:underline;">Calculate from Weekly
+                                Schedule...</a>
+                        </div>
+                        <div id="wiz-time-calc"
+                            style="display:none; background:#f0f8ff; padding:10px; margin-top:10px; border-radius:4px; border:1px dashed #3498db;">
+                            <div class="grid-3" style="gap:10px;">
+                                <div>
+                                    <label style="font-size:0.8rem;">Hrs/Day</label>
+                                    <input type="number" id="wiz-calc-hpd" onchange="Wizard.calcDetailedSchedule()">
+                                </div>
+                                <div>
+                                    <label style="font-size:0.8rem;">Days/Wk</label>
+                                    <input type="number" id="wiz-calc-dpw" onchange="Wizard.calcDetailedSchedule()">
+                                </div>
+                                <div>
+                                    <label style="font-size:0.8rem;">Weeks</label>
+                                    <input type="number" id="wiz-calc-wks" onchange="Wizard.calcDetailedSchedule()">
+                                </div>
+                            </div>
+                            <div style="margin-top:5px; text-align:right; font-size:0.8rem; color:#666;">
+                                Total: <strong id="wiz-calc-total">0</strong> hours
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Actions -->
@@ -508,8 +650,9 @@
                         style="display: flex; justify-content: space-between; margin-top: 20px; border-top:1px solid #eee; padding-top:10px;">
                         <button class="btn"
                             onclick="document.getElementById('modal-line-item-wizard').style.display='none'">Cancel</button>
-                        <button class="btn btn-primary" id="btn-wizard-finish" style="display:none;">Add Line
-                            Item</button>
+                        <!-- V98: Added Debug Alert -->
+                        <button class="btn btn-primary" id="btn-wizard-finish" style="display:none;"
+                            onclick="console.log('BTN CLICKED'); Wizard.finish();">Add Line Item</button>
                     </div>
 
                 </div>
@@ -606,44 +749,21 @@
         <!-- Modal: Worker Override -->
         <div id="modal-worker-override" class="modal">
             <div class="modal-content">
-                <div class="modal-header">Override Worker Specs</div>
+                <div class="modal-header">Worker Override</div>
                 <div style="padding: var(--spacing-md);">
-                    <input type="hidden" id="override-phase-id">
-                    <input type="hidden" id="override-worker-id">
-
-                    <h3 id="override-worker-name" style="margin-top:0;">Worker Name</h3>
-
-                    <div class="summary-card" style="margin-bottom:15px;" id="section-override-rate">
-                        <strong>Hourly Rate Override</strong>
-                        <div style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">
-                            <label><input type="radio" name="rate-rule" value="auto" checked> Auto (Goal * Pay
-                                Rate)</label>
-                            <label><input type="radio" name="rate-rule" value="min"> Force to Project Min Wage</label>
-                            <label><input type="radio" name="rate-rule" value="max"> Force to Project Max Wage</label>
-                            <label><input type="radio" name="rate-rule" value="custom"> Custom Amount ($/hr)</label>
-                            <input type="number" id="override-rate-val" placeholder="0.00"
-                                style="display:none; margin-left:25px; width:150px;">
-                        </div>
+                    <input type="hidden" id="worker-override-id">
+                    <div class="input-group">
+                        <label>Worker Name</label>
+                        <input type="text" id="worker-override-name" readonly>
                     </div>
-
-                    <div class="summary-card" id="section-override-schedule">
-                        <strong>Schedule Override</strong>
-                        <div style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">
-                            <label><input type="radio" name="sched-rule" value="auto" checked> Standard Phase Schedule
-                                (Capped by Capacity)</label>
-                            <label><input type="radio" name="sched-rule" value="project"> Conform to Project Schedule
-                                (Full Hours)</label>
-                            <label><input type="radio" name="sched-rule" value="custom-weekly"> Custom Weekly
-                                Hours</label>
-                            <input type="number" id="override-sched-weekly-val" placeholder="Hrs/Wk"
-                                style="display:none; margin-left:25px; width:150px;">
-                            <label><input type="radio" name="sched-rule" value="lump"> Lump Sum Hours (total for
-                                phase)</label>
-                            <input type="number" id="override-sched-lump-val" placeholder="Total Hrs"
-                                style="display:none; margin-left:25px; width:150px;">
-                        </div>
+                    <div class="input-group">
+                        <label>Override Pay Rate (%)</label>
+                        <input type="number" id="worker-override-pay-rate" placeholder="Default">
                     </div>
-
+                    <div class="input-group">
+                        <label>Override Expense Rate (%)</label>
+                        <input type="number" id="worker-override-expense-rate" placeholder="Default">
+                    </div>
                     <div class="modal-actions">
                         <button class="btn"
                             onclick="document.getElementById('modal-worker-override').style.display='none'">Cancel</button>
@@ -712,12 +832,323 @@
             </div>
         </div>
 
-        <script src="js/utils.js"></script>
-        <script src="js/supabase_client.js"></script>
-        <script src="js/store.js"></script>
-        <script src="js/budget_engine.js"></script>
-        <script src="js/project.js"></script>
+        <!-- Invite Member Modal -->
+        <div id="invite-modal" class="modal">
+            <div class="modal-content" style="max-width:500px;">
+                <div
+                    style="background:#000; color:#fff; padding:15px; display:flex; justify-content:space-between; align-items:center;">
+                    <h3 style="margin:0; font-size:1.2rem;">INVITE MEMBER</h3>
+                    <button onclick="document.getElementById('invite-modal').style.display='none'"
+                        style="background:none; border:none; color:#fff; font-size:1.5rem; cursor:pointer;">&times;</button>
+                </div>
+                <div style="padding:20px;">
+                    <p>Enter the email address of the person you want to invite.</p>
+                    <div class="input-group">
+                        <label>Email Address</label>
+                        <input type="text" id="invite-email" placeholder="collab@example.com">
+                    </div>
+                    <div style="text-align:right; margin-top:20px;">
+                        <button class="btn"
+                            onclick="document.getElementById('invite-modal').style.display='none'">Cancel</button>
+                        <button class="btn btn-primary" id="btn-send-invite">Send Invite</button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
+        <!-- Math Log Modal -->
+        <div id="math-log-modal" class="modal">
+            <div class="modal-content" style="max-width: 600px;">
+                <div
+                    style="background: #000; color: #fff; padding: 15px; display: flex; justify-content: space-between; align-items: center;">
+                    <h3 style="margin: 0; font-size: 1.2rem;">CALCULATION DETAILS</h3>
+                    <button onclick="document.getElementById('math-log-modal').style.display='none'"
+                        style="background: none; border: none; color: #fff; font-size: 1.5rem; cursor: pointer;">&times;</button>
+                </div>
+                <div id="math-log-body"
+                    style="padding: 20px; max-height: 60vh; overflow-y: auto; font-family: monospace; font-size: 0.9rem; background: #f9f9f9;">
+                    <!-- Logs injected here -->
+                </div>
+                <div style="padding: 15px; text-align: right; border-top: 1px solid #ddd;">
+                    <button class="btn"
+                        onclick="document.getElementById('math-log-modal').style.display='none'">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MICRO MODALS (Restored) -->
+
+        <!-- Modal: Edit Schedule -->
+        <div id="modal-edit-schedule" class="modal">
+            <div class="modal-content" style="max-width: 500px;">
+                <div class="modal-header">Edit Schedule</div>
+                <div style="padding: var(--spacing-md);">
+                    <input type="hidden" id="sched-phase-id">
+                    <input type="hidden" id="sched-item-id">
+
+                    <div style="margin-bottom:20px;">
+                        <label style="display:block; margin-bottom:10px; cursor:pointer;">
+                            <input type="radio" name="sched_mode" value="phase">
+                            Conform to Phase Schedule (<span id="lbl-phase-sched">10 wks @ 40 hrs</span>)
+                        </label>
+
+                        <label style="display:block; margin-bottom:10px; cursor:pointer;">
+                            <input type="radio" name="sched_mode" value="curbed" checked>
+                            Curb by Worker's Billable Capacity (<span id="lbl-curbed-sched">Max Cap.</span>)
+                        </label>
+
+                        <label style="display:block; margin-bottom:10px; cursor:pointer;">
+                            <input type="radio" name="sched_mode" value="custom">
+                            Custom Schedule
+                        </label>
+
+                        <label style="display:block; margin-bottom:10px; cursor:pointer;">
+                            <input type="radio" name="sched_mode" value="total">
+                            Total Hours (Lump Sum)
+                        </label>
+                    </div>
+
+                    <div id="sched-custom-inputs" style="padding-left:25px; display:none; border-left:2px solid #ddd;">
+                        <div class="grid-2" style="gap:10px;">
+                            <div>
+                                <label style="font-size:0.8rem;">Weeks</label>
+                                <input type="number" id="sched-custom-weeks" style="width:100%;">
+                            </div>
+                            <div>
+                                <label style="font-size:0.8rem;">Hours/Wk</label>
+                                <input type="number" id="sched-custom-hours" style="width:100%;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="sched-total-inputs" style="padding-left:25px; display:none; border-left:2px solid #ddd;">
+                        <div class="input-group">
+                            <label style="font-size:0.8rem;">Total Hours for Phase</label>
+                            <input type="number" id="sched-total-hours" style="width:100px;">
+                        </div>
+                    </div>
+
+                    <div class="modal-actions" style="margin-top:20px;">
+
+                        <div class="modal-actions" style="margin-top:20px;">
+                            <button class="btn"
+                                onclick="document.getElementById('modal-edit-schedule').style.display='none'">Cancel</button>
+                            <button class="btn btn-primary" onclick="window.saveScheduleEdit()">Save Schedule</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal: Edit Rate -->
+        <div id="modal-edit-rate" class="modal">
+            <div class="modal-content" style="max-width: 500px;">
+                <div class="modal-header">Edit Pay Rate</div>
+                <div style="padding: var(--spacing-md);">
+                    <input type="hidden" id="rate-phase-id">
+                    <input type="hidden" id="rate-item-id">
+
+                    <div style="margin-bottom:20px;">
+                        <label style="display:block; margin-bottom:10px; cursor:pointer;">
+                            <input type="radio" name="rate_mode" value="phase" checked>
+                            Conform to Phase Pay Rate (<span id="lbl-phase-rate">Default</span>)
+                        </label>
+                        <p style="font-size:0.75rem; color:#666; margin-left:25px; margin-bottom:10px;">
+                            Uses the project's standard pay rate (or phase override), capped by Min/Max wage.
+                        </p>
+
+                        <label style="display:block; margin-bottom:10px; cursor:pointer;">
+                            <input type="radio" name="rate_mode" value="goal">
+                            Conform to Goal Rate (<span id="lbl-goal-rate">$0.00</span>)
+                        </label>
+
+                        <label style="display:flex; align-items:center; margin-bottom:10px; cursor:pointer;">
+                            <input type="radio" name="rate_mode" value="custom" id="rate-mode-custom">
+                            <span style="margin-left:8px;">Custom Hourly</span>
+                        </label>
+
+                        <div id="rate-custom-inputs" style="padding-left:25px; display:none;">
+                            <label style="font-size:0.8rem;">Hourly Rate ($)</label>
+                            <input type="number" id="rate-custom-val" style="width:100px; padding:5px;">
+                        </div>
+
+                        <label style="display:flex; align-items:center; margin-bottom:10px; cursor:pointer;">
+                            <input type="radio" name="rate_mode" value="flat" id="rate-mode-flat">
+                            <span style="margin-left:8px;">Flat Fee (Total)</span>
+                        </label>
+
+                        <div id="rate-flat-inputs" style="padding-left:25px; display:none;">
+                            <label style="font-size:0.8rem;">Total Fee ($)</label>
+                            <input type="number" id="rate-flat-val" style="width:100px; padding:5px;">
+                            <p style="font-size:0.75rem; color:#666; margin-top:5px;">Will be converted to hourly
+                                based
+                                on schedule.</p>
+                        </div>
+                    </div>
+
+                    <div class="modal-actions" style="margin-top:20px;">
+                        <button class="btn"
+                            onclick="document.getElementById('modal-edit-rate').style.display='none'">Cancel</button>
+                        <button class="btn btn-primary" onclick="window.saveRateEdit()">Save Rate</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal: Edit Overhead -->
+        <div id="modal-edit-overhead" class="modal">
+            <div class="modal-content" style="max-width: 600px;">
+                <div class="modal-header">Manage Overhead</div>
+                <div style="padding: var(--spacing-md);">
+                    <input type="hidden" id="oh-phase-id">
+                    <input type="hidden" id="oh-item-id">
+
+                    <p>Select applicable overhead businesses for this phase:</p>
+
+                    <div id="oh-business-list"
+                        style="max-height:200px; overflow-y:auto; border:1px solid #eee; padding:10px; margin-bottom:15px;">
+                        <!-- JS Populated -->
+                    </div>
+
+                    <div style="background:#f9f9f9; padding:10px; text-align:right;">
+                        <strong>Total Hourly Overhead: <span id="oh-total-display">$0.00/hr</span></strong>
+                        <br><small style="color:#666;">(Sum of Annual / Billable Capacity)</small>
+                    </div>
+
+                    <div class="modal-actions" style="margin-top:20px;">
+                        <button class="btn"
+                            onclick="document.getElementById('modal-edit-overhead').style.display='none'">Cancel</button>
+                        <button class="btn btn-primary" onclick="window.saveOverheadEdit()">Save Overhead</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Custom Confirmation Modal -->
+    <div id="modal-confirm-action" class="modal" style="z-index: 9999;">
+        <div class="modal-content" style="max-width:400px;">
+            <div class="modal-header" style="background:#d9534f; color:white; text-align:center;">Confirmation
+            </div>
+            <div style="padding:30px; text-align:center;">
+                <p id="confirm-message" style="font-size:1.1rem; margin-bottom:30px;">Are you sure?</p>
+                <div style="display:flex; justify-content:center; gap:15px;">
+                    <button class="btn" style="background:#eee; color:#333; min-width:100px;"
+                        onclick="window.Wizard.resolveConfirm(false)">Cancel</button>
+                    <button class="btn" style="background:#d9534f; color:#fff; min-width:100px;"
+                        onclick="window.Wizard.resolveConfirm(true)">Remove</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Member Modal -->
+    <div id="modal-edit-member" class="modal" style="z-index: 9998;">
+        <div class="modal-content" style="max-width:400px;">
+            <div class="modal-header">Manage Member</div>
+            <div style="padding:20px;">
+                <input type="hidden" id="edit-member-id">
+                <h3 id="edit-member-name" style="margin-top:0; border-bottom:1px solid #eee; padding-bottom:10px;">
+                    Name</h3>
+
+                <div class="form-group" style="margin-top:20px;">
+                    <label>Role / Title</label>
+                    <input type="text" id="edit-member-role" placeholder="e.g. Producer">
+                </div>
+
+                <div style="display:flex; justify-content:space-between; margin-top:30px; align-items:center;">
+                    <button class="btn" onclick="window.Wizard.removeMember()"
+                        style="background:#d9534f; color:white; font-size:0.8rem;">Remove from Project</button>
+                    <div style="display:flex; gap:10px;">
+                        <button class="btn" onclick="document.getElementById('modal-edit-member').style.display='none'"
+                            style="background:#eee; color:#333;">Cancel</button>
+                        <button class="btn btn-primary" onclick="window.Wizard.saveMemberEdit()">Save
+                            Changes</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Manage Income Modal -->
+    <div id="modal-manage-income" class="modal" style="z-index: 9998;">
+        <div class="modal-content" style="max-width:400px;">
+            <div class="modal-header">Add Funding Source</div>
+            <div style="padding:20px;">
+                <div class="form-group">
+                    <label>Source Name</label>
+                    <input type="text" id="income-source-name" placeholder="e.g. Arts Council Grant">
+                </div>
+                <div class="form-group">
+                    <label>Amount ($)</label>
+                    <input type="number" id="income-source-amount" placeholder="0.00">
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="income-source-status" class="form-control">
+                        <option value="Confirmed">Confirmed</option>
+                        <option value="Likely">Likely</option>
+                        <option value="Not Likely">Not Likely</option>
+                    </select>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; margin-top:20px;">
+                    <button id="btn-delete-income" class="btn" onclick="window.deleteFundingSource()"
+                        style="background:#d9534f; color:white; display:none;">Delete</button>
+                    <div style="display:flex; justify-content:flex-end; gap:10px; flex-grow:1;">
+                        <button class="btn"
+                            onclick="document.getElementById('modal-manage-income').style.display='none'"
+                            style="background:#eee; color:#333;">Cancel</button>
+                        <button class="btn btn-primary" onclick="window.saveFundingSource()">Save Funding</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Distribution Details Modal (Added for V116 Logic) -->
+    <div id="modal-distribution" class="modal" style="z-index: 9999;">
+        <div class="modal-content" style="max-width:600px;">
+            <div class="modal-header">Producerial Distribution Details</div>
+            <div style="padding:20px;">
+                <div class="grid-2"
+                    style="background:#f9f9f9; padding:10px; border-radius:5px; margin-bottom:15px; font-size:0.9rem;">
+                    <div>Total Income: <strong id="dist-income">-</strong></div>
+                    <div>Total Liability: <strong id="dist-liability">$0</strong></div>
+                    <div>Distributable: <strong id="dist-distributable" style="color:green;">$0</strong></div>
+                    <div>Remaining Surplus: <strong id="dist-actual-profit">$0</strong></div>
+                </div>
+
+                <div style="max-height:300px; overflow-y:auto; border:1px solid #eee;">
+                    <table class="table" style="font-size:0.9rem;">
+                        <thead>
+                            <tr>
+                                <th>Worker</th>
+                                <th>Share %</th>
+                                <th>Owed</th>
+                                <th>Payout</th>
+                                <th>Remaining Due</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dist-list">
+                            <!-- JS Injected -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="text-align:right; margin-top:15px;">
+                    <button class="btn"
+                        onclick="document.getElementById('modal-distribution').style.display='none'">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/utils.js?v=FIXED_FINAL"></script>
+    <script src="js/budget_engine.js?v=FIXED_FINAL_V2"></script>
+    <script src="js/supabase_client.js?v=FIXED_FINAL"></script>
+    <script src="js/store.js?v=FIXED_FINAL_V2"></script>
+    <script src="js/project.js?v=FIXED_FINAL_V139"></script>
 </body>
 
 </html>

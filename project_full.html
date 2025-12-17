@@ -1,0 +1,2749 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interdependence Ledger - Power in Numbers</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            padding: var(--spacing-sm);
+            border-bottom: var(--border-hero);
+        }
+
+        .summary-panel {
+            position: sticky;
+            top: 0;
+            padding: var(--spacing-md);
+            background: var(--color-bg-inverse);
+            color: var(--color-text-inverse);
+            height: 100%;
+            min-height: 50vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        /* Modal Overlay */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            border: 2px solid black;
+            background: white;
+            width: 100%;
+            max-width: 600px;
+            box-shadow: 20px 20px 0px black;
+        }
+
+        .modal-header {
+            background: black;
+            color: white;
+            padding: var(--spacing-sm);
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body>
+    <!-- DEBUG CONSOLE -->
+    <div id="debug-console"
+        style="background:#000; color:#0f0; padding:10px; margin:10px; border:2px solid red; max-height:200px; overflow:auto; font-family:monospace; font-size:12px; z-index:9999; position:relative;">
+        <strong>DEBUG LOG (Please provide screenshot or text if stuck):</strong><br>
+    </div>
+    <script>
+        (function () {
+            var oldLog = console.log;
+            var oldErr = console.error;
+            var debugBox = document.getElementById('debug-console');
+
+            function print(type, msg) {
+                var d = document.createElement('div');
+                d.textContent = '[' + type + '] ' + msg;
+                if (type === 'ERROR') d.style.color = 'red';
+                debugBox.appendChild(d);
+            }
+
+            console.log = function () {
+                var msg = Array.from(arguments).join(' ');
+                oldLog.apply(console, arguments);
+                print('LOG', msg);
+            };
+
+            console.error = function () {
+                var msg = Array.from(arguments).join(' ');
+                oldErr.apply(console, arguments);
+                print('ERROR', msg);
+            };
+
+            window.onerror = function (msg, url, lineNo, columnNo, error) {
+                print('ERROR', msg + ' at line ' + lineNo + ':' + columnNo);
+                return false;
+            };
+
+            console.log("Debug Console Initialized.");
+        })();
+    </script>
+    <div class="container">
+        <!-- Header -->
+        <header
+            style="padding: var(--spacing-md); background: var(--color-bg-inverse); color: var(--color-text-inverse); display: flex; justify-content: space-between; align-items: flex-end;">
+            <div>
+                <a href="projects.html"
+                    style="color:var(--color-text-inverse); text-decoration:none; font-size:0.8rem; margin-bottom:10px; display:inline-block;">&larr;
+                    My Projects</a>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <h1 id="project-title" style="display:inline-block; margin:0;">Project Name</h1>
+                </div>
+            </div>
+            <div style="text-align: right;">
+                <nav>
+                    <a href="independent.html"
+                        style="color: var(--color-text-inverse); margin-right: var(--spacing-sm);">My Economic Dream
+                        Plan</a>
+                    <button onclick="Store.logout()"
+                        style="background:none; border:none; text-decoration:underline; cursor:pointer; color:var(--color-text-inverse);">Logout</button>
+                </nav>
+                <a href="profile.html" id="user-display"
+                    style="display:block; font-size:0.8rem; font-weight:bold; margin-top:5px; color:var(--color-text-inverse); text-decoration:none;"></a>
+            </div>
+        </header>
+
+        <!-- Collaborators Section -->
+        <section class="ledger-section"
+            style="margin-top:20px; padding:var(--spacing-sm); border:2px solid #000; background:#fff;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h2 class="section-title">Collaborators</h2>
+                    <button class="btn btn-primary" onclick="window.openInviteModal()">+ Invite Member</button>
+                </div>
+            </div>
+
+            <div id="collaborators-list" style="margin-top:15px; display:flex; gap:10px; flex-wrap:wrap;">
+                <!-- JS Injected -->
+                <div style="padding:10px; background:#eee; border-radius:4px;">Loading...</div>
+            </div>
+        </section>
+
+        <!-- 0. PROJECT GLOBAL RATES -->
+        <section class="ledger-section"
+            style="margin-top:20px; padding:var(--spacing-sm); border:2px solid #000; background:#fff;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="margin:0;">Project Global Rates</h3>
+                <div style="display:flex; gap:20px; align-items:center;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <label style="font-weight:bold;">Pay Rate (%):</label>
+                        <input type="number" id="project-global-pay-rate" placeholder="100"
+                            style="width:70px; padding:5px;">
+                    </div>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <label style="font-weight:bold;">Expense Rate (%):</label>
+                        <input type="number" id="project-global-expense-rate" placeholder="100"
+                            style="width:70px; padding:5px;">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 1. TEAM POOL (Top) -->
+        <section class="ledger-section" style="margin-top:20px;">
+            <div
+                style="padding:var(--spacing-sm); display:flex; justify-content:space-between; align-items:center; background:#f0f0f0;">
+                <div>
+                    <h3>Worker Collaborators (Pool)</h3>
+                    <small>Establishes Project Min/Max Wage Rates</small>
+                </div>
+                <div style="text-align:right;">
+                    <div style="display:flex; align-items:center; gap:8px; justify-content:flex-end;">
+                        <label style="font-size:0.8rem;">Min (% of High Now):</label>
+                        <input type="number" id="project-min-mod" placeholder="100"
+                            style="width:50px; padding:2px; font-size:0.8rem; text-align:right;">
+                        <strong>Min: <span id="pool-min-wage">$0/hr</span></strong>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px; justify-content:flex-end; margin-top:5px;">
+                        <label style="font-size:0.8rem;">Max (% of Low Goal):</label>
+                        <input type="number" id="project-max-mod" placeholder="100"
+                            style="width:50px; padding:2px; font-size:0.8rem; text-align:right;">
+                        <strong>Max: <span id="pool-max-wage">$0/hr</span></strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-container" style="max-height: 200px; overflow-y: auto; font-size: 0.85rem;">
+                <table class="ledger-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Role/Username</th>
+                            <th>Rates (Now / Goal)</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="team-pool-list">
+                        <!-- Pool Items Render Here -->
+                    </tbody>
+                </table>
+            </div>
+            <div style="padding:var(--spacing-sm);">
+                <button class="btn" id="btn-add-member">+ Add Collaborator to Pool</button>
+            </div>
+        </section>
+
+        <!-- 2. PHASES -->
+        <section class="ledger-section" id="phases-section">
+            <div
+                style="padding:var(--spacing-sm); display:flex; justify-content:space-between; align-items:center; background: #000; color: #fff;">
+                <h3>Project Phases</h3>
+                <button class="btn btn-primary" id="btn-add-phase" style="border:1px solid white;">+ New Phase</button>
+            </div>
+
+            <div id="phases-container">
+                <!-- Dynamic Phases Render Here -->
+            </div>
+        </section>
+
+
+        </section>
+
+
+        <!-- 3. PRODUCERIAL SHARES -->
+        <section class="ledger-section" id="shares-section" style="border-top:var(--border-hero);">
+            <h3>Producerial Shares & Equity</h3>
+            <div class="grid-2" style="grid-template-columns: 300px 1fr; align-items:start; gap:var(--spacing-lg);">
+                <!-- Chart Area -->
+                <div style="background:#fff; padding:20px; text-align:center;">
+                    <div id="shares-pie-chart"
+                        style="width:200px; height:200px; border-radius:50%; background:#eee; margin:0 auto; position:relative;">
+                        <!-- Conic Gradient applied via JS -->
+                    </div>
+                    <div id="shares-legend" style="margin-top:20px; font-size:0.8rem; text-align:left;">
+                        <!-- Legend Items -->
+                    </div>
+                </div>
+
+                <!-- Table Area -->
+                <div class="table-container">
+                    <table class="ledger-table">
+                        <thead>
+                            <tr>
+                                <th>Collaborator</th>
+                                <th>Role</th>
+                                <th>Equity (Liability)</th>
+                                <th>Project Share %</th>
+                            </tr>
+                        </thead>
+                        <tbody id="shares-table-body">
+                            <!-- Dynamic Content -->
+                        </tbody>
+                        <tfoot>
+                            <tr style="font-weight:bold; background:#f9f9f9;">
+                                <td colspan="2">Total Liability</td>
+                                <td id="shares-total-equity">$0.00</td>
+                                <td>100%</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. SCENARIOS -->
+        <section class="ledger-section" style="border-top:var(--border-hero); border-bottom:var(--border-hero);">
+            <h3>Project Scenarios (Budget vs. Funding)</h3>
+            <div class="grid-2" style="grid-template-columns: 1fr 1fr 1fr; background: var(--color-bg-base);">
+                <!-- Ideal -->
+                <div class="card-scenario" style="padding:20px; border-right:var(--border-std); position:relative;">
+                    <div class="result-label">Ideal Funding</div>
+                    <div class="result-value" id="dash-ideal-total">$0</div>
+                    <div style="margin-top:10px; font-size:0.9rem;">
+                        <div style="display:flex; justify-content:space-between;">
+                            <span>Gross Profit:</span>
+                            <span id="dash-ideal-gross" style="font-weight:bold;">$0</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; margin-top:5px;">
+                            <span>Actual Profit:</span>
+                            <span id="dash-ideal-net" style="font-weight:bold;">$0</span>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-text-action"
+                        onclick="event.stopPropagation(); window.renderDistributionModal('ideal')"
+                        style="margin-top:10px; font-size:0.8rem; text-decoration:underline;">View Distribution</button>
+                </div>
+                <!-- Possible -->
+                <div class="card-scenario" style="padding:20px; border-right:var(--border-std); position:relative;">
+                    <div class="result-label">Possible Funding</div>
+                    <div class="result-value" id="dash-possible-total">$0</div>
+                    <div style="margin-top:10px; font-size:0.9rem;">
+                        <div style="display:flex; justify-content:space-between;">
+                            <span>Gross Profit:</span>
+                            <span id="dash-possible-gross" style="font-weight:bold;">$0</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; margin-top:5px;">
+                            <span>Actual Profit:</span>
+                            <span id="dash-possible-net" style="font-weight:bold;">$0</span>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-text-action"
+                        onclick="event.stopPropagation(); window.renderDistributionModal('possible')"
+                        style="margin-top:10px; font-size:0.8rem; text-decoration:underline;">View Distribution</button>
+                </div>
+                <!-- Confirmed -->
+                <div class="card-scenario" style="padding:20px; position:relative;">
+                    <div class="result-label">Confirmed Funding</div>
+                    <div class="result-value" id="dash-confirmed-total">$0</div>
+                    <div style="margin-top:10px; font-size:0.9rem;">
+                        <div style="display:flex; justify-content:space-between;">
+                            <span>Gross Profit:</span>
+                            <span id="dash-confirmed-gross" style="font-weight:bold;">$0</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; margin-top:5px;">
+                            <span>Actual Profit:</span>
+                            <span id="dash-confirmed-net" style="font-weight:bold;">$0</span>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-text-action"
+                        onclick="event.stopPropagation(); window.renderDistributionModal('confirmed')"
+                        style="margin-top:10px; font-size:0.8rem; text-decoration:underline;">View Distribution</button>
+                </div>
+            </div>
+            <!-- Add Income Button for Scenarios context -->
+            <div style="padding:10px; text-align:right; background:#f9f9f9;">
+                <button class="btn" id="btn-open-income-modal">+ Add Funding Source</button>
+            </div>
+
+            <!-- Funding List -->
+            <div class="table-container" style="padding:0 var(--spacing-sm) var(--spacing-sm);">
+                <table class="ledger-table" style="font-size:0.9rem;">
+                    <thead>
+                        <tr>
+                            <th>Source</th>
+                            <th>Status (Likelihood)</th>
+                            <th>Amount</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="funding-list">
+                        <!-- Rendered by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Modal: Distribution -->
+        <div id="modal-distribution" class="modal">
+            <div class="modal-content" style="max-width: 800px;">
+                <div class="modal-header">Profit & Share Distribution</div>
+                <div style="padding: var(--spacing-md);">
+
+                    <div class="summary-card" style="margin-bottom:20px; background:#f9f9f9;">
+                        <div class="grid-2">
+                            <div>
+                                <div class="label-sm">Total Income</div>
+                                <div id="dist-income" style="font-size:1.2rem; font-weight:bold;">$0</div>
+                            </div>
+                            <div>
+                                <div class="label-sm">Cash Expenses</div>
+                                <div id="dist-cost" style="font-size:1.2rem; font-weight:bold;">$0</div>
+                            </div>
+                            <div>
+                                <div class="label-sm">Profit Share (Equity)</div>
+                                <div id="dist-liability"
+                                    style="font-size:1.2rem; font-weight:bold; color:var(--color-primary);">$0</div>
+                            </div>
+                            <div>
+                                <div class="label-sm">Distributable Profit</div>
+                                <div id="dist-distributable" style="font-size:1.2rem; font-weight:bold;">$0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="ledger-table" style="font-size:0.9rem;">
+                            <thead>
+                                <tr>
+                                    <th>Collaborator</th>
+                                    <th>Project Share</th>
+                                    <th>Profit Share (Due)</th>
+                                    <th>Payout</th>
+                                    <th>Remaining Due</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dist-list"></tbody>
+                        </table>
+                    </div>
+
+                    <div style="margin-top:20px; padding-top:20px; border-top:1px solid #eee; text-align:right;">
+                        <div style="font-size:1.1rem;">Actual Profit (Net of Payouts): <strong
+                                id="dist-actual-profit">$0</strong></div>
+                    </div>
+
+                    <div style="display: flex; justify-content: flex-end; margin-top: var(--spacing-md);">
+                        <button class="btn"
+                            onclick="document.getElementById('modal-distribution').style.display='none'">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal -->
+        <div id="modal-add-member" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">Add Worker Collaborator</div>
+                <div style="padding: var(--spacing-md);">
+
+                    <!-- Step 1: Email Lookup -->
+                    <div id="step-lookup">
+                        <div class="input-group">
+                            <label>Collaborator Email Address</label>
+                            <div style="display:flex; gap:10px;">
+                                <input type="email" id="lookup-email" placeholder="colleague@example.com">
+                                <button class="btn btn-primary" id="btn-lookup-email">Find</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Confirmation / Details (Hidden initially) -->
+                    <div id="step-details"
+                        style="display:none; margin-top:20px; border-top:1px dashed #ccc; padding-top:20px;">
+                        <div id="invite-status-msg" style="margin-bottom:15px; font-weight:bold;"></div>
+
+                        <div style="display: none; grid-template-columns: 1fr 1fr; gap: var(--spacing-sm);">
+                            <!-- Inputs Hidden by default as per request -->
+                            <div class="input-group">
+                                <label>Day Rate ($)</label>
+                                <input type="number" id="new-member-rate">
+                            </div>
+                            <div class="input-group">
+                                <label>Days Allocated</label>
+                                <input type="number" id="new-member-days">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div
+                        style="display: flex; justify-content: flex-end; gap: var(--spacing-sm); margin-top: var(--spacing-md);">
+                        <button class="btn" onclick="closeModal()">Close</button>
+                        <button class="btn btn-primary" id="btn-save-member" style="display:none;">Confirm &
+                            Add</button>
+                        <button class="btn btn-primary" id="btn-send-invite" style="display:none;">Send
+                            Invitation</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal: Add Line Item Wizard -->
+        <div id="modal-line-item-wizard" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">Add Line Item</div>
+                <div style="padding: var(--spacing-md);">
+
+                    <!-- Step 1: Basic Info -->
+                    <div id="wizard-step-1">
+                        <div class="input-group">
+                            <label>Item Name</label>
+                            <input type="text" id="wiz-name" placeholder="e.g. Catering, Editor">
+                        </div>
+                        <div class="input-group">
+                            <label>Assign to Member (Optional)</label>
+                            <select id="wiz-assignee" style="width:100%; padding:8px;">
+                                <option value="">(None / General Project)</option>
+                                <!-- JS Populated -->
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>Cost Type</label>
+                            <div style="display:flex; gap:10px;">
+                                <button class="btn btn-outline" onclick="Wizard.setType('Flat')">Flat Amount</button>
+                                <button class="btn btn-outline" onclick="Wizard.setType('Percentage')">% of Phase
+                                    Total</button>
+                                <button class="btn btn-outline"
+                                    style="border-color:var(--color-primary); color:var(--color-primary);"
+                                    onclick="Wizard.setImportMode()">Import Overhead</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Import Overhead -->
+                    <div id="wizard-step-overhead" style="display:none;">
+                        <label>Select Overhead Profile</label>
+                        <p style="font-size:0.8rem; color:#666; margin-bottom:10px;">We'll calculate an hourly rate
+                            based on the owner's billable capacity.</p>
+                        <select id="wiz-overhead-select" style="width:100%; padding:8px; margin-bottom:10px;">
+                            <option value="">Loading...</option>
+                        </select>
+                    </div>
+
+                    <!-- Step 2: Percentage -->
+                    <div id="wizard-step-percent" style="display:none;">
+                        <input type="number" id="wiz-percent" placeholder="Ex: 10" style="width:100px;"> %
+                    </div>
+
+                    <!-- Step 2: Flat Type Select -->
+                    <div id="wizard-step-flat-type" style="display:none;">
+                        <label>Is this Item Time-Based?</label>
+                        <div style="display:flex; gap:10px; margin-top:10px;">
+                            <button class="btn btn-outline" onclick="Wizard.setTimeBased(true)">Yes
+                                (Time-Based)</button>
+                            <button class="btn btn-outline" onclick="Wizard.setTimeBased(false)">No
+                                (Fixed/Unit)</button>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Non-Time Structure -->
+                    <div id="wizard-step-fixed-struct" style="display:none;">
+                        <label>Pricing Structure</label>
+                        <div style="display:flex; gap:10px; margin-top:10px;">
+                            <button class="btn btn-outline" onclick="Wizard.setFixedType('Lump')">Lump Sum</button>
+                            <button class="btn btn-outline" onclick="Wizard.setFixedType('Unit')">Per Unit</button>
+                        </div>
+                    </div>
+
+                    <!-- Step 4: Lump Sum -->
+                    <div id="wizard-step-lump" style="display:none;">
+                        <label>Total Amount ($)</label>
+                        <input type="number" id="wiz-lump-amount">
+                    </div>
+
+                    <!-- Step 4: Unit -->
+                    <div id="wizard-step-unit" style="display:none;">
+                        <div class="grid-2" style="gap:10px;">
+                            <div>
+                                <label>Quantity</label>
+                                <input type="number" id="wiz-unit-qty">
+                            </div>
+                            <div>
+                                <label>Cost Per Item ($)</label>
+                                <input type="number" id="wiz-unit-cost">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Time Based -->
+                    <div id="wizard-step-time" style="display:none;">
+                        <div class="input-group">
+                            <label>Count (How many people/items?)</label>
+                            <input type="number" id="wiz-time-count" value="1">
+                        </div>
+                        <div class="grid-2" style="gap:10px;">
+                            <div>
+                                <label>Duration</label>
+                                <input type="number" id="wiz-time-duration">
+                            </div>
+                            <div>
+                                <label>Time Unit</label>
+                                <select id="wiz-time-unit">
+                                    <option value="Hours">Hours</option>
+                                    <option value="Days">Days</option>
+                                    <option value="Weeks">Weeks</option>
+                                    <option value="Months">Months</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label>Rate ($ per Unit)</label>
+                            <input type="number" id="wiz-time-rate" placeholder="0.00">
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div
+                        style="display: flex; justify-content: space-between; margin-top: 20px; border-top:1px solid #eee; padding-top:10px;">
+                        <button class="btn"
+                            onclick="document.getElementById('modal-line-item-wizard').style.display='none'">Cancel</button>
+                        <button class="btn btn-primary" id="btn-wizard-finish" style="display:none;">Add Line
+                            Item</button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal: Add Income -->
+        <div id="modal-add-income" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">Manage Income Source</div>
+                <div style="padding: var(--spacing-md);">
+                    <input type="hidden" id="income-id">
+                    <div class="input-group">
+                        <label>Source Name</label>
+                        <input type="text" id="income-name" placeholder="e.g. Grant Name, Donor">
+                    </div>
+                    <div class="input-group">
+                        <label>Amount ($)</label>
+                        <input type="number" id="income-amount" placeholder="0.00">
+                    </div>
+                    <div class="input-group">
+                        <label>Status</label>
+                        <select id="income-status" style="width:100%; padding:8px;">
+                            <option value="Confirmed">Confirmed</option>
+                            <option value="Likely">Likely</option>
+                            <option value="Unconfirmed">Unconfirmed</option>
+                        </select>
+                    </div>
+
+                    <div
+                        style="display: flex; justify-content: flex-end; gap: var(--spacing-sm); margin-top: var(--spacing-md);">
+                        <button class="btn"
+                            onclick="document.getElementById('modal-add-income').style.display='none'">Cancel</button>
+                        <button class="btn btn-primary" id="btn-save-income">Save Source</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal: Phase Settings -->
+        <div id="modal-phase-settings" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">Phase Settings</div>
+                <div style="padding: var(--spacing-md);">
+                    <input type="hidden" id="phase-settings-id">
+
+                    <div class="input-group">
+                        <label>Phase Name</label>
+                        <input type="text" id="phase-name-edit">
+                    </div>
+
+                    <div class="input-group">
+                        <label>Description</label>
+                        <textarea id="phase-desc-edit" rows="3"
+                            style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; font-family:inherit;"></textarea>
+                    </div>
+
+                    <div class="grid-2" style="gap:15px;">
+                        <div class="input-group">
+                            <label>Duration (Weeks)</label>
+                            <input type="number" id="phase-weeks" placeholder="e.g. 10">
+                        </div>
+                        <div class="input-group">
+                            <label>Hours / Week</label>
+                            <input type="number" id="phase-hours" placeholder="e.g. 40">
+                        </div>
+                    </div>
+
+                    <div class="summary-card" style="margin-top:20px; background:#f9f9f9;">
+                        <strong>Rate Overrides (Optional)</strong>
+                        <p style="font-size:0.8rem; color:gray;">Leave blank to use Global Project Defaults.</p>
+
+                        <div class="grid-2" style="gap:15px; margin-top:10px;">
+                            <div class="input-group">
+                                <label>Pay Rate (%)</label>
+                                <input type="number" id="phase-pay-rate" placeholder="Default">
+                            </div>
+                            <div class="input-group">
+                                <label>Expense Rate (%)</label>
+                                <input type="number" id="phase-expense-rate" placeholder="Default">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button class="btn"
+                            onclick="document.getElementById('modal-phase-settings').style.display='none'">Cancel</button>
+                        <button class="btn btn-primary" id="btn-save-phase-settings">Save Settings</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal: Worker Override -->
+        <div id="modal-worker-override" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">Override Worker Specs</div>
+                <div style="padding: var(--spacing-md);">
+                    <input type="hidden" id="override-phase-id">
+                    <input type="hidden" id="override-worker-id">
+
+                    <h3 id="override-worker-name" style="margin-top:0;">Worker Name</h3>
+
+                    <div class="summary-card" style="margin-bottom:15px;" id="section-override-rate">
+                        <strong>Hourly Rate Override</strong>
+                        <div style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">
+                            <label><input type="radio" name="rate-rule" value="auto" checked> Auto (Goal * Pay
+                                Rate)</label>
+                            <label><input type="radio" name="rate-rule" value="min"> Force to Project Min Wage</label>
+                            <label><input type="radio" name="rate-rule" value="max"> Force to Project Max Wage</label>
+                            <label><input type="radio" name="rate-rule" value="custom"> Custom Amount ($/hr)</label>
+                            <input type="number" id="override-rate-val" placeholder="0.00"
+                                style="display:none; margin-left:25px; width:150px;">
+                        </div>
+                    </div>
+
+                    <div class="summary-card" id="section-override-schedule">
+                        <strong>Schedule Override</strong>
+                        <div style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">
+                            <label><input type="radio" name="sched-rule" value="auto" checked> Standard Phase Schedule
+                                (Capped by Capacity)</label>
+                            <label><input type="radio" name="sched-rule" value="project"> Conform to Project Schedule
+                                (Full Hours)</label>
+                            <label><input type="radio" name="sched-rule" value="custom-weekly"> Custom Weekly
+                                Hours</label>
+                            <input type="number" id="override-sched-weekly-val" placeholder="Hrs/Wk"
+                                style="display:none; margin-left:25px; width:150px;">
+                            <label><input type="radio" name="sched-rule" value="lump"> Lump Sum Hours (total for
+                                phase)</label>
+                            <input type="number" id="override-sched-lump-val" placeholder="Total Hrs"
+                                style="display:none; margin-left:25px; width:150px;">
+                        </div>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button class="btn"
+                            onclick="document.getElementById('modal-worker-override').style.display='none'">Cancel</button>
+                        <button class="btn btn-primary" id="btn-save-worker-override">Save Override</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal: Add Phase -->
+        <div id="modal-add-phase" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">New Project Phase</div>
+                <div style="padding: var(--spacing-md);">
+                    <div class="input-group">
+                        <label>Phase Name</label>
+                        <input type="text" id="new-phase-name" placeholder="e.g. Pre-Production, Shooting, Post">
+                    </div>
+                    <div class="modal-actions">
+                        <button class="btn"
+                            onclick="document.getElementById('modal-add-phase').style.display='none'">Cancel</button>
+                        <button class="btn btn-primary" id="btn-save-new-phase">Create Phase</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal: Invite Member -->
+        <div id="modal-invite-member" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">Invite Collaborator</div>
+                <div style="padding: var(--spacing-md);">
+                    <p style="margin-bottom:15px; font-size:0.9rem;">
+                        Enter the email address of the user you want to invite.
+                        <br><small style="color:#666;">If they don't have an account, we'll save a spot for
+                            them.</small>
+                    </p>
+                    <div class="input-group">
+                        <label>User Email</label>
+                        <input type="email" id="invite-email" placeholder="user@example.com">
+                    </div>
+                    <div
+                        style="display: flex; justify-content: flex-end; gap: var(--spacing-sm); margin-top: var(--spacing-md);">
+                        <button class="btn"
+                            onclick="document.getElementById('modal-invite-member').style.display='none'">Cancel</button>
+                        <button class="btn btn-primary" id="btn-confirm-invite">Send Invite</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Modal: Math Log -->
+        <div id="modal-math-log" class="modal">
+            <div class="modal-content" style="max-width: 600px;">
+                <div class="modal-header">Equity Calculation Details</div>
+                <div style="padding: var(--spacing-md);">
+                    <h3 id="math-log-title" style="margin-top:0;">Worker Name</h3>
+                    <div id="math-log-content"
+                        style="max-height: 400px; overflow-y: auto; background: #f9f9f9; padding: 10px; border: 1px solid #eee;">
+                        <!-- Content -->
+                    </div>
+                    <div style="text-align: right; margin-top: 20px;">
+                        <button class="btn"
+                            onclick="document.getElementById('modal-math-log').style.display='none'">Close</button>
+                        <!-- Invite Member Modal -->
+                        <div id="invite-modal" class="modal">
+                            <div class="modal-content" style="max-width:500px;">
+                                <div
+                                    style="background:#000; color:#fff; padding:15px; display:flex; justify-content:space-between; align-items:center;">
+                                    <h3 style="margin:0; font-size:1.2rem;">INVITE MEMBER</h3>
+                                    <button onclick="document.getElementById('invite-modal').style.display='none'"
+                                        style="background:none; border:none; color:#fff; font-size:1.5rem; cursor:pointer;">&times;</button>
+                                </div>
+                                <div style="padding:20px;">
+                                    <p>Enter the email address of the person you want to invite.</p>
+                                    <div class="input-group">
+                                        <label>Email Address</label>
+                                        <input type="text" id="invite-email" placeholder="collab@example.com">
+                                    </div>
+                                    <div style="text-align:right; margin-top:20px;">
+                                        <button class="btn"
+                                            onclick="document.getElementById('invite-modal').style.display='none'">Cancel</button>
+                                        <button class="btn btn-primary" id="btn-send-invite">Send Invite</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Math Log Modal -->
+                        <div id="math-log-modal" class="modal">
+                            <div class="modal-content" style="max-width: 600px;">
+                                <div
+                                    style="background: #000; color: #fff; padding: 15px; display: flex; justify-content: space-between; align-items: center;">
+                                    <h3 style="margin: 0; font-size: 1.2rem;">CALCULATION DETAILS</h3>
+                                    <button onclick="document.getElementById('math-log-modal').style.display='none'"
+                                        style="background: none; border: none; color: #fff; font-size: 1.5rem; cursor: pointer;">&times;</button>
+                                </div>
+                                <div id="math-log-body"
+                                    style="padding: 20px; max-height: 60vh; overflow-y: auto; font-family: monospace; font-size: 0.9rem; background: #f9f9f9;">
+                                    <!-- Logs injected here -->
+                                </div>
+                                <div style="padding: 15px; text-align: right; border-top: 1px solid #ddd;">
+                                    <button class="btn"
+                                        onclick="document.getElementById('math-log-modal').style.display='none'">Close</button>
+                                </div>
+                            </div>
+                        </div>
+
+
+
+
+
+
+
+
+                        <script>
+
+                            // --- supabase_client.js ---
+                            /**
+                             * Supabase Client Initialization
+                             */
+
+                            const SUPABASE_URL = 'https://egpvxwntqpwaajvgybdx.supabase.co';
+                            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVncHZ4d250cXB3YWFqdmd5YmR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU0OTEwMjQsImV4cCI6MjA4MTA2NzAyNH0.TXK7iID_bTSvG-_UKlPTvVvOLQ7xYGX95CwlvLM0svQ';
+
+                            let _supabase = null;
+
+                            if (window.supabase) {
+                                _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                            } else {
+                                console.error("Supabase library not loaded. Ensure CDN script is in <head>.");
+                            }
+
+                            window.supabaseClient = _supabase;
+
+
+                            // --- utils.js ---
+                            /**
+                             * Power in Numbers - Utilities
+                             * Utility Functions
+                             */
+
+                            const Utils = {
+                                formatCurrency: (amount) => {
+                                    return new Intl.NumberFormat('en-US', {
+                                        style: 'currency',
+                                        currency: 'USD',
+                                        maximumFractionDigits: 0
+                                    }).format(amount);
+                                },
+
+                                formatNumber: (amount) => {
+                                    return new Intl.NumberFormat('en-US', {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2
+                                    }).format(amount);
+                                },
+
+                                generateId: () => {
+                                    return crypto.randomUUID ? crypto.randomUUID() : 'id-' + Math.random().toString(36).substr(2, 9);
+                                },
+
+                                // Calculate Rate based on Income approach
+                                calculateRateFromIncome: (annualIncome, weeks, days) => {
+                                    if (!weeks || !days) return 0;
+                                    const totalDays = weeks * days;
+                                    return annualIncome / totalDays;
+                                },
+
+                                // Calculate Income needed from Expenses approach
+                                calculateTotalNeeds: (expenses) => {
+                                    return Object.values(expenses).reduce((a, b) => a + b, 0);
+                                },
+
+                                // Normalizer Helpers (moved from independent.js)
+                                Normalizer: {
+                                    getLineWeeks: (durationVal, durationUnit, globalWeeks) => {
+                                        const val = parseFloat(durationVal) || 0;
+                                        switch (durationUnit) {
+                                            case 'Weeks': return val;
+                                            case 'Months': return val * 4.333;
+                                            case '% of Year': return (val / 100) * globalWeeks;
+                                            default: return 0;
+                                        }
+                                    },
+                                    getActivityAnnualHours: (act, lineWeeks, workDaysPerWeek, workHoursPerDay) => {
+                                        const amount = parseFloat(act.amount) || 0;
+                                        const E6 = workHoursPerDay;
+                                        const E7 = workDaysPerWeek;
+                                        const E8 = lineWeeks;
+                                        const activeMonths = (E8 * 12) / 52;
+
+                                        switch (act.unit) {
+                                            case 'Hours':
+                                                switch (act.frequency) {
+                                                    case 'Per Day': return amount * E7 * E8;
+                                                    case 'Per Week': return amount * E8;
+                                                    case 'Per Month': return amount * activeMonths;
+                                                    case 'Per Year': return amount;
+                                                }
+                                                break;
+                                            case 'Days':
+                                                switch (act.frequency) {
+                                                    case 'Per Day': return -1;
+                                                    case 'Per Week': return amount * E6 * E8;
+                                                    case 'Per Month': return amount * E6 * activeMonths;
+                                                    case 'Per Year': return amount * E6;
+                                                }
+                                                break;
+                                            case 'Weeks':
+                                                switch (act.frequency) {
+                                                    case 'Per Day': return -1;
+                                                    case 'Per Week': return -1;
+                                                    case 'Per Month': return amount * E7 * E6 * activeMonths;
+                                                    case 'Per Year': return amount * E7 * E6;
+                                                }
+                                                break;
+                                            case 'Months':
+                                                switch (act.frequency) {
+                                                    case 'Per Day': return -1;
+                                                    case 'Per Week': return -1;
+                                                    case 'Per Month': return -1;
+                                                    case 'Per Year': return amount * E7 * E6 * activeMonths;
+                                                }
+                                                break;
+                                        }
+                                        return 0;
+                                    }
+                                },
+
+                                // Centralized Capacity Calculation
+                                calculateBillableCapacity: (profile) => {
+                                    const weeks = parseFloat(profile.schedule?.weeks) || 0;
+                                    const days = parseFloat(profile.schedule?.days) || 0;
+                                    const hours = parseFloat(profile.schedule?.hours) || 0;
+
+                                    const totalWorkDays = weeks * days;
+                                    const totalWorkHours = totalWorkDays * hours;
+
+                                    let totalNonBillableHours = 0;
+
+                                    if (profile.linesOfWork) {
+                                        profile.linesOfWork.forEach(line => {
+                                            const lineWeeks = Utils.Normalizer.getLineWeeks(line.duration.value, line.duration.unit, weeks);
+                                            if (line.activities) {
+                                                line.activities.forEach(act => {
+                                                    const actHours = Utils.Normalizer.getActivityAnnualHours(act, lineWeeks, days, hours);
+                                                    if (actHours !== -1) {
+                                                        totalNonBillableHours += actHours;
+                                                    }
+                                                });
+                                            }
+                                        });
+                                    }
+
+                                    const totalBillableHours = Math.max(0, totalWorkHours - totalNonBillableHours);
+                                    const billableRatio = totalWorkHours > 0 ? (totalBillableHours / totalWorkHours) : 0;
+
+                                    return {
+                                        totalWorkHours,
+                                        totalNonBillableHours,
+                                        totalBillableHours,
+                                        billableRatio
+                                    };
+                                }
+                            };
+
+                            window.Utils = Utils;
+                            window.formatMoney = Utils.formatCurrency;
+                            console.log("Utils.js Loaded. Window.Utils:", window.Utils);
+
+
+                            // --- budget_engine.js ---
+                            /**
+                             * Budget Engine
+                             * Handles complex rate calculations, scenario aggregation, and producerial shares.
+                             */
+
+                            const BudgetEngine = {
+                                /**
+                                 * Calculate Annual Rates for a Worker based on their Profile.
+                                 * Replicates logic from calibrations.js but strictly Annualized.
+                                 */
+                                getWorkerRates: (profile) => {
+                                    if (!profile) return { now: 0, goal: 0 };
+
+                                    // 1. Calculate Unearned Income Sum (Annualized)
+                                    let unearnedSum = 0;
+                                    if (profile.unearnedIncome && profile.unearnedIncome.items) {
+                                        profile.unearnedIncome.items.forEach(item => {
+                                            const amount = parseFloat(item.amount) || 0;
+                                            if (item.type === 'Monthly') unearnedSum += amount * 12;
+                                            else if (item.type === 'Periodic') unearnedSum += amount * (item.frequency || 1);
+                                            else unearnedSum += amount; // Annual
+                                        });
+                                    }
+
+                                    // 2. Capacity & Billable Ratio
+                                    // Use shared Utils to ensure exact match with Independent Tool
+                                    const capacity = Utils.calculateBillableCapacity(profile);
+                                    const pBillable = capacity.billableRatio;
+
+                                    const weeks = parseFloat(profile.schedule?.weeks) || 0;
+                                    const days = parseFloat(profile.schedule?.days) || 0;
+                                    const hours = parseFloat(profile.schedule?.hours) || 0;
+
+                                    // Safety check: Prevent division by zero
+                                    if (weeks <= 0 || days <= 0 || hours <= 0 || pBillable <= 0) {
+                                        return { now: 0, goal: 0 };
+                                    }
+
+                                    const totalAnnualHours = weeks * days * hours;
+
+                                    // 3. Get Gross Income Targets
+                                    // These are expected to be saved by the Independent Tool in profile.goals
+                                    const currentGross = (profile.goals && profile.goals.current) ? profile.goals.current : 0;
+                                    const goalGross = (profile.goals && profile.goals.gross) ? profile.goals.gross : 0;
+
+                                    // 4. Calculate Hourly Rates
+                                    // Formula: (Gross - Unearned) / Weeks / pBillable / Days / Hours
+                                    // Simplified: (Gross - Unearned) / (TotalHours * pBillable)
+
+                                    const adjCurrent = Math.max(0, currentGross - unearnedSum);
+                                    const adjGoal = Math.max(0, goalGross - unearnedSum);
+
+                                    // 5. Precision: Keep full precision for accuracy (User request: "accurate... AS LONG AS evidenced")
+                                    const rateNow = adjCurrent / (totalAnnualHours * pBillable);
+                                    const rateGoal = adjGoal / (totalAnnualHours * pBillable);
+
+                                    return {
+                                        now: rateNow,
+                                        goal: rateGoal
+                                    };
+                                },
+
+                                /**
+                                 * Calculate Overhead Rate for a specific Line of Work
+                                 */
+                                calculateOverheadRate: (totalOverheadExpenses, totalBillableHours) => {
+                                    if (totalBillableHours <= 0) return 0;
+                                    return totalOverheadExpenses / totalBillableHours;
+                                },
+
+                                /**
+                                 * Calculate Project-Wide Min/Max Wage
+                                 */
+                                calculateProjectParams: (teamMembers, userMap, minModifierPct = 100, maxModifierPct = 100) => {
+                                    let maxNow = 0;
+                                    let minGoal = Infinity;
+                                    let validGoalFound = false;
+
+                                    teamMembers.forEach(member => {
+                                        // Member might be just { username, ... } or have overrides.
+                                        // We need their FULL profile from userMap to calc rates
+                                        const user = userMap[member.username];
+                                        const profile = user ? user.independentProfile : null;
+
+                                        const rates = BudgetEngine.getWorkerRates(profile); // { now, goal }
+
+                                        if (rates.now > maxNow) maxNow = rates.now;
+                                        if (rates.goal > 0 && rates.goal < minGoal) {
+                                            minGoal = rates.goal;
+                                            validGoalFound = true;
+                                        }
+                                    });
+
+                                    // Apply Modifiers
+                                    // "minimum wage is a certain percentage of the highest ... NOW rate"
+                                    const projectMin = maxNow * (minModifierPct / 100);
+
+                                    // "max is a certain percentage of the lowest ... GOAL rate"
+                                    let projectMaxBase = validGoalFound ? minGoal : 0;
+                                    let projectMax = projectMaxBase * (maxModifierPct / 100);
+
+                                    // Safety: Max shouldn't be less than Min (unless user explicitly pushes it down, but that breaks the 'range' concept)
+                                    // User request says: "as long as this is higher than Min Wage"
+                                    if (projectMax < projectMin) projectMax = projectMin;
+
+                                    return {
+                                        projectMinWage: projectMin,
+                                        projectMaxWage: projectMax
+                                    };
+                                },
+
+                                /**
+                                 * Calculate Fee for a Line Item
+                                 */
+                                calculateLineItemFee: (workerGoalRate, projectMin, projectMax) => {
+                                    // Logic:
+                                    // 1. Default to Goal Rate.
+                                    let fee = workerGoalRate;
+
+                                    // 2. Cap at Project Max
+                                    if (fee > projectMax) fee = projectMax;
+
+                                    // 3. Floor at Project Min
+                                    if (fee < projectMin) fee = projectMin;
+
+                                    // 4. EXCEPTION: If original Goal Rate < Project Min, revert to Goal.
+                                    // "No Worker Collaborator would earn an hourly fee that exceeds their GOAL hourly fee"
+                                    if (workerGoalRate < projectMin) {
+                                        fee = workerGoalRate;
+                                    }
+
+                                    return fee;
+                                },
+
+                                calculateScenario: (phase, projectMin, projectMax, userMap) => {
+                                    // ... Logic for Ideal, Possible, Confirmed ...
+                                    // Returns { cost, income, profit, equityMap }
+                                    // For now stubbed out, will implement fully when building UI structure
+                                    return {};
+                                },
+
+                                calculateEquity: (workerGoalRate, actualPayRate, hours) => {
+                                    const gap = workerGoalRate - actualPayRate;
+                                    if (gap <= 0) {
+                                        return { value: 0, gap: 0 };
+                                    }
+                                    return {
+                                        value: gap * hours,
+                                        gap: gap
+                                    };
+                                },
+
+                                /**
+                                 * Safe Float Parser (handles commas)
+                                 */
+                                safeFloat: (val) => {
+                                    if (typeof val === 'number') return val;
+                                    if (!val) return 0;
+                                    const str = String(val).replace(/,/g, '');
+                                    return parseFloat(str) || 0;
+                                }
+                            };
+
+                            // Export to window
+                            window.BudgetEngine = BudgetEngine;
+
+
+                            // --- store.js ---
+                            /**
+                             * Data Store - Supabase Edition (Async)
+                             * Wraps Supabase Client for Power in Numbers
+                             */
+
+                            const Store = {
+                                // Debug Log
+                                _debug: console.log("Store.js Loading..."),
+                                // --- Auth Methods ---
+
+                                /**
+                                 * Check current session. Returns string username (email) or null.
+                                 * NOW ASYNC if validating against server, but for speed we can check local session.
+                                 * Supabase handles session auto-refresh.
+                                 */
+                                checkSession: async () => {
+                                    if (!window.supabaseClient) await Store.init();
+                                    const { data: { session } } = await window.supabaseClient.auth.getSession();
+                                    if (!session) {
+                                        // Redirect if not on public pages
+                                        if (!window.location.href.includes('login.html') && !window.location.href.includes('signup.html')) {
+                                            window.location.href = 'login.html';
+                                        }
+                                        return null;
+                                    }
+                                    return session.user.email;
+                                },
+
+                                getCurrentUser: async () => {
+                                    if (!window.supabaseClient) await Store.init();
+                                    const { data: { user } } = await window.supabaseClient.auth.getUser();
+                                    return user;
+                                },
+
+                                login: async (email, password) => {
+                                    const cleanEmail = email.trim();
+
+                                    const { data, error } = await window.supabaseClient.auth.signInWithPassword({
+                                        email: cleanEmail,
+                                        password: password
+                                    });
+
+                                    if (error) {
+                                        alert("Login Failed: " + error.message);
+                                        console.error(error);
+                                        return false;
+                                    }
+                                    return true;
+                                },
+
+                                logout: async () => {
+                                    await window.supabaseClient.auth.signOut();
+                                    window.location.href = 'login.html';
+                                },
+
+                                register: async (email, password, fullName) => {
+                                    const cleanEmail = email.trim();
+                                    const { data, error } = await window.supabaseClient.auth.signUp({
+                                        email: cleanEmail,
+                                        password: password,
+                                        options: {
+                                            data: {
+                                                full_name: fullName
+                                            }
+                                        }
+                                    });
+
+                                    if (error) {
+                                        throw new Error(error.message);
+                                    }
+
+                                    // Create Profile Row
+                                    if (data.user) {
+                                        // Check if profile exists (triggered by trigger? or manual?)
+                                        // Manual creation to be safe
+                                        const { error: profileError } = await window.supabaseClient
+                                            .from('profiles')
+                                            .insert([
+                                                {
+                                                    id: data.user.id,
+                                                    email: email,
+                                                    full_name: fullName,
+                                                    independent_profile: window.DEFAULT_INDEPENDENT // Init with defaults
+                                                }
+                                            ]);
+
+                                        if (profileError) console.error("Profile creation error:", profileError);
+                                    }
+                                },
+
+                                // --- Profile Methods ---
+
+                                getIndependentProfile: async () => {
+                                    const user = await Store.getCurrentUser();
+                                    if (!user) return window.DEFAULT_INDEPENDENT;
+
+                                    const { data, error } = await window.supabaseClient
+                                        .from('profiles')
+                                        .select('independent_profile')
+                                        .eq('id', user.id)
+                                        .single();
+
+                                    if (error) {
+                                        console.error("Error fetching profile:", error);
+                                        return window.DEFAULT_INDEPENDENT;
+                                    }
+
+                                    // Merge defaults
+                                    return { ...window.DEFAULT_INDEPENDENT, ...data.independent_profile };
+                                },
+
+                                saveIndependentProfile: async (profile) => {
+                                    const user = await Store.getCurrentUser();
+                                    if (!user) return;
+
+                                    const { error } = await window.supabaseClient
+                                        .from('profiles')
+                                        .update({ independent_profile: profile })
+                                        .eq('id', user.id);
+
+                                    if (error) {
+                                        console.error("Error saving profile:", error);
+                                        alert("Failed to save profile.");
+                                    } else {
+                                        // Notify local listeners just in case
+                                        window.dispatchEvent(new CustomEvent('pin-independent-update', { detail: profile }));
+                                    }
+                                },
+
+                                // --- Project Methods ---
+
+                                /**
+                                 * Get ALL projects (Owned + Shared)
+                                 * Returns Map: { [id]: project }
+                                 */
+                                getProjects: async () => {
+                                    const user = await Store.getCurrentUser();
+                                    if (!user) return {};
+
+                                    // 1. Fetch Owned Projects
+                                    const { data: owned, error: err1 } = await window.supabaseClient
+                                        .from('projects')
+                                        .select('*')
+                                        .eq('owner_id', user.id);
+
+                                    if (err1) throw err1;
+
+                                    // 2. Fetch Shared Projects
+                                    // Query project_members to find project_ids where user_id = me
+                                    const { data: memberRows, error: err2 } = await window.supabaseClient
+                                        .from('project_members')
+                                        .select('project_id, role')
+                                        .eq('user_id', user.id);
+
+                                    // If error (e.g. table doesn't exist yet), just return owned.
+                                    let shared = [];
+                                    if (!err2 && memberRows && memberRows.length > 0) {
+                                        const sharedIds = memberRows.map(r => r.project_id);
+                                        if (sharedIds.length > 0) {
+                                            const { data: sharedProjects, error: err3 } = await window.supabaseClient
+                                                .from('projects')
+                                                .select('*')
+                                                .in('id', sharedIds);
+
+                                            if (!err3 && sharedProjects) {
+                                                shared = sharedProjects;
+                                            }
+                                        }
+                                    }
+
+                                    // Merge
+                                    const projects = {};
+                                    [...(owned || []), ...(shared || [])].forEach(p => {
+                                        projects[p.id] = { ...p.data, id: p.id, name: p.name, owner_id: p.owner_id };
+                                    });
+
+                                    return projects;
+                                },
+
+                                /**
+                                 * Invite a user to a project by email.
+                                 * 1. Check if user exists (requires Public Profiles).
+                                 * 2. Add to project_members.
+                                 */
+                                init: async () => {
+                                    // Initialize Supabase Client
+                                    if (window.supabase) {
+                                        window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                                        console.log("Supabase Client Initialized");
+
+                                        // Check session and claim invites if logged in
+                                        const { data: { session } } = await window.supabaseClient.auth.getSession();
+                                        if (session) {
+                                            try {
+                                                await window.supabaseClient.rpc('claim_invites');
+                                            } catch (e) {
+                                                console.log("Claim Invites check (silent fail):", e);
+                                            }
+                                        }
+                                    } else {
+                                        console.error("Supabase SDK not found!");
+                                    }
+                                },
+
+                                /**
+                                 * Invite a user to a project by email.
+                                 * 1. Check if user exists (requires Public Profiles).
+                                 * 2. If yes, Add to project_members.
+                                 * 3. If no, Add to project_invites (Pending).
+                                 */
+                                inviteUser: async (projectId, email) => {
+                                    // 1. Try to Find User ID first
+                                    const { data: profileData, error: profileError } = await window.supabaseClient
+                                        .from('profiles')
+                                        .select('id')
+                                        .eq('email', email)
+                                        .single();
+
+                                    // 2. If User Found -> Add to Members
+                                    if (profileData && profileData.id) {
+                                        const userId = profileData.id;
+                                        const { error: insertError } = await window.supabaseClient
+                                            .from('project_members')
+                                            .insert([{
+                                                project_id: projectId,
+                                                user_id: userId,
+                                                role: 'editor'
+                                            }]);
+
+                                        if (insertError) {
+                                            if (insertError.code === '23505') throw new Error("User is already a member.");
+                                            throw insertError;
+                                        }
+                                        return { status: 'added', message: 'User added to project.' };
+                                    }
+
+                                    // 3. User Not Found -> Add to Invites
+                                    else {
+                                        // We need the current user ID for 'invited_by'
+                                        const { data: { user } } = await window.supabaseClient.auth.getUser();
+                                        if (!user) throw new Error("You must be logged in to invite.");
+
+                                        const { error: inviteError } = await window.supabaseClient
+                                            .from('project_invites')
+                                            .insert([{
+                                                project_id: projectId,
+                                                email: email,
+                                                invited_by: user.id
+                                            }]);
+
+                                        if (inviteError) {
+                                            if (inviteError.code === '23505') throw new Error("User already invited.");
+                                            throw inviteError;
+                                        }
+                                        return { status: 'invited', message: 'User not found. Invite sent (Pending).' };
+                                    }
+                                },
+
+                                getProjectInvites: async (projectId) => {
+                                    const { data, error } = await window.supabaseClient
+                                        .from('project_invites')
+                                        .select('*')
+                                        .eq('project_id', projectId)
+                                        .eq('status', 'pending');
+
+                                    if (error) {
+                                        console.warn("Error fetching invites:", error);
+                                        return [];
+                                    }
+                                    return data || [];
+                                },
+
+                                checkUser: async (email) => {
+                                    const { data } = await window.supabaseClient
+                                        .from('profiles')
+                                        .select('id, full_name, independent_profile')
+                                        .eq('email', email)
+                                        .single();
+                                    return data; // Returns object if found, null if not
+                                },
+
+                                getProject: async (id) => {
+                                    // 1. Try Supabase
+                                    try {
+                                        const { data, error } = await window.supabaseClient
+                                            .from('projects')
+                                            .select('*')
+                                            .eq('id', id)
+                                            .single();
+
+                                        if (data) {
+                                            return { ...data.data, id: data.id, name: data.name, owner_id: data.owner_id };
+                                        }
+                                    } catch (e) {
+                                        console.warn("Supabase getProject failed, falling back to local:", e);
+                                    }
+
+                                    // 2. Fallback to LocalStorage
+                                    const localRaw = JSON.parse(localStorage.getItem('pin_projects') || '{}');
+                                    let localP = null;
+
+                                    if (Array.isArray(localRaw)) {
+                                        localP = localRaw.find(p => p.id === id);
+                                    } else {
+                                        localP = localRaw[id];
+                                    }
+
+                                    if (localP) {
+                                        console.log("Loaded Project from LocalStorage:", localP.name);
+                                        return localP;
+                                    }
+
+                                    throw new Error("Project not found in Cloud or Local storage.");
+                                },
+
+                                /**
+                                 * Overhead Profiles Management
+                                 * Stored in 'projects' table with type='overhead'
+                                 */
+                                getOverheadProjects: async () => {
+                                    const user = await Store.getCurrentUser();
+                                    if (!user) return [];
+
+                                    const { data, error } = await window.supabaseClient
+                                        .from('projects')
+                                        .select('*')
+                                        .eq('owner_id', user.id);
+
+                                    if (error) {
+                                        console.error("Error fetching overhead profiles:", error);
+                                        return [];
+                                    }
+
+                                    // Filter for overhead type in data json
+                                    return data.filter(p => p.data && (p.data.type === 'overhead' || p.data.type === 'business_overhead'))
+                                        .map(p => ({ ...p.data, id: p.id, name: p.name }));
+                                },
+
+                                createOverheadProject: async (name) => {
+                                    const user = await Store.getCurrentUser();
+                                    if (!user) return null;
+
+                                    const { data, error } = await window.supabaseClient
+                                        .from('projects')
+                                        .insert([{
+                                            owner_id: user.id,
+                                            name: name,
+                                            data: {
+                                                type: 'overhead',
+                                                expenses: []
+                                            }
+                                        }])
+                                        .select()
+                                        .single();
+
+                                    if (error) throw error;
+                                    return { ...data.data, id: data.id, name: data.name };
+                                },
+
+                                saveOverheadProject: async (project) => {
+                                    // Strip out ID/name from data blob if passing full object, preserve type
+                                    const payload = {
+                                        type: 'overhead',
+                                        expenses: project.expenses || []
+                                    };
+
+                                    const { error } = await window.supabaseClient
+                                        .from('projects')
+                                        .update({
+                                            name: project.name,
+                                            data: payload
+                                        })
+                                        .eq('id', project.id);
+
+                                    if (error) throw error;
+                                },
+
+                                saveProject: async (project) => {
+                                    const user = await Store.getCurrentUser();
+                                    if (!user) return;
+
+                                    const payload = {
+                                        id: project.id, // CRITICAL: Required for Upsert to update existing row
+                                        name: project.name,
+                                        data: project, // Storing full object in JSONB
+                                        owner_id: user.id
+                                    };
+
+                                    if (project.id && !project.id.includes('-')) {
+                                        // Legacy numeric ID check? No, all UUIDs now.
+                                        // Just proceed to payload.
+                                    }
+
+                                    // Use UPSERT for simplicity (Insert if new/ID not found, Update if ID found)
+                                    // Note: For this to work, ID must be a primary key.
+                                    const { data, error } = await window.supabaseClient
+                                        .from('projects')
+                                        .upsert(payload)
+                                        .select()
+                                        .single();
+
+                                    if (error) {
+                                        console.error("Save Project Error", error);
+                                        throw error;
+                                    }
+
+                                    // Return merged data (DB truth)
+                                    // Ensure we merge back the full 'data' json column into the object structure
+                                    // The DB returns: { id, name, owner_id, data: {...}, created_at }
+                                    // We want to return the 'expanded' object.
+                                    const merged = { ...data.data, id: data.id, name: data.name, owner_id: data.owner_id };
+                                    return merged;
+                                },
+
+                                /**
+                                 * Delete a project by ID
+                                 */
+                                deleteProject: async (id) => {
+                                    const user = await Store.getCurrentUser();
+                                    if (!user) return;
+
+                                    // Perform delete
+                                    // RLS policies should prevent deleting projects you don't own
+                                    const { error } = await window.supabaseClient
+                                        .from('projects')
+                                        .delete()
+                                        .eq('id', id);
+
+                                    if (error) {
+                                        console.error("Delete Project Error:", error);
+                                        throw error;
+                                    }
+                                    return true;
+                                },
+
+                                // Helper to find users (for collaboration)
+                                findUserByEmail: async (email) => {
+                                    // Requires RLS policy 'Public profiles are viewable by everyone'
+                                    const { data, error } = await window.supabaseClient
+                                        .from('profiles')
+                                        .select('*')
+                                        .eq('email', email)
+                                        .single();
+
+                                    if (error || !data) return null;
+
+                                    return {
+                                        username: data.email, // Map email to legacy username field
+                                        email: data.email,
+                                        fullName: data.full_name,
+                                        independentProfile: data.independent_profile
+                                    };
+                                },
+
+                                // Helper: Map of all users (Deprecated in Async World, but used by Project.js)
+                                // We must replace usages of `Store.getUsers()` with individual lookups or a batch fetch.
+                                // For now, we can implement a method that fetches ALL profiles if the user base is small, 
+                                // OR we change the project logic.
+                                // Given the prompt "collaborators to observe", let's try to fetch all needed profiles via `getProjectTeam`.
+
+                                getUsersMap: async (emailsArray) => {
+                                    if (!emailsArray || emailsArray.length === 0) return {};
+
+                                    const map = {};
+
+                                    // 1. Try Supabase
+                                    try {
+                                        const { data, error } = await window.supabaseClient
+                                            .from('profiles')
+                                            .select('*')
+                                            .in('email', emailsArray);
+
+                                        if (data) {
+                                            data.forEach(p => {
+                                                map[p.email] = {
+                                                    username: p.email,
+                                                    email: p.email,
+                                                    fullName: p.full_name,
+                                                    independentProfile: p.independent_profile
+                                                };
+                                            });
+                                        }
+                                    } catch (e) {
+                                        console.warn("Supabase getUsersMap failed, using local:", e);
+                                    }
+
+                                    // 2. Merge/Fallback LocalStorage
+                                    // We use 'pin_users' which is { [username]: UserObject }
+                                    const localUsers = JSON.parse(localStorage.getItem('pin_users') || '{}');
+
+                                    emailsArray.forEach(email => {
+                                        // If missing from Supabase map, try local
+                                        if (!map[email]) {
+                                            // Check by email or username (legacy structure varies)
+                                            // pin_users keys are often usernames. 
+                                            // We naively iterate or check keys.
+                                            // Optimistic check:
+                                            if (localUsers[email]) {
+                                                map[email] = localUsers[email];
+                                            } else {
+                                                // Start digging
+                                                const foundKey = Object.keys(localUsers).find(k => localUsers[k].email === email || k === email);
+                                                if (foundKey) {
+                                                    map[email] = localUsers[foundKey];
+                                                }
+                                            }
+                                        }
+                                    });
+
+                                    return map;
+                                },
+
+                                createProject: async (name) => {
+                                    const user = await Store.getCurrentUser();
+
+                                    // Fetch full profile for the creator
+                                    const profile = await Store.getIndependentProfile();
+
+                                    const newProject = {
+                                        id: window.Utils ? window.Utils.generateId() : 'fallback-' + Math.random(),
+                                        name: name,
+                                        owner: user.email,
+                                        teamMembers: [],
+                                        incomeSources: [],
+                                        phases: [
+                                            {
+                                                id: window.Utils ? window.Utils.generateId() : 'fallback-' + Math.random(),
+                                                name: 'Phase 1',
+                                                schedule: {},
+                                                lineItems: [],
+                                                overrides: {}
+                                            }
+                                        ],
+                                        totalBudget: 0
+                                    };
+
+                                    // Auto-add creator
+                                    newProject.teamMembers.push({
+                                        id: window.Utils ? window.Utils.generateId() : 'fallback-' + Math.random(), // Fallback for file://
+                                        name: profile.fullName || "Me",
+                                        rate: 0,
+                                        days: 0,
+                                        username: user.email,
+                                        email: user.email
+                                    });
+
+                                    // Save and Return the DB version (which has the authoritative ID)
+                                    return await Store.saveProject(newProject);
+                                }
+                            };
+
+                            // Temp helper to check if ID is UUID (server side) vs something else? 
+                            // Supabase handles upsert if we pass ID.
+                            function isNew(id) {
+                                // If we rely on UPSERT, we don't need this check.
+                                return false;
+                            }
+
+                            // Re-export defaults
+                            // Ensure Utils is loaded first or duplicated constants
+                            const BASE_EXPENSE_CATEGORIES = [
+                                { label: 'Monthly rent/mortgage', type: 'Monthly', frequency: 1 },
+                                { label: 'Utilities', type: 'Monthly', frequency: 1 },
+                                { label: 'Internet', type: 'Monthly', frequency: 1 },
+                                { label: 'Car payments, insurance, & gas, public transportation, Lyft/Uber, etc.', type: 'Monthly', frequency: 1 },
+                                { label: 'Cell phone', type: 'Monthly', frequency: 1 },
+                                { label: 'Groceries', type: 'Monthly', frequency: 1 },
+                                { label: 'Eating Out', type: 'Monthly', frequency: 1 },
+                                { label: 'Fun', type: 'Monthly', frequency: 1 },
+                                { label: 'Classes', type: 'Monthly', frequency: 1 },
+                                { label: 'Research', type: 'Monthly', frequency: 1 },
+                                { label: 'Clothes', type: 'Monthly', frequency: 1 },
+                                { label: 'Childcare', type: 'Monthly', frequency: 1 },
+                                { label: 'Family Support', type: 'Monthly', frequency: 1 },
+                                { label: 'Insurance and healthcare not covered through employment', type: 'Monthly', frequency: 1 },
+                                { label: 'Bodywork', type: 'Monthly', frequency: 1 },
+                                { label: 'Fixed amount credit/debt payment', type: 'Monthly', frequency: 1 },
+                                { label: 'Vacation', type: 'Periodic', frequency: 1 },
+                                { label: 'Charity/Giving/Community Investing', type: 'Percent', frequency: 1 },
+                                { label: 'Savings', type: 'Percent', frequency: 1 },
+                                { label: 'Credit and/or other debt paydown', type: 'Percent', frequency: 1 },
+                                { label: 'Retirement', type: 'Percent', frequency: 1 },
+                                { label: 'Student Loan', type: 'Monthly', frequency: 1 }
+                            ];
+
+                            const DEFAULT_INDEPENDENT = {
+                                income: 60000,
+                                schedule: { weeks: 48, days: 4, hours: 6 },
+                                linesOfWork: [],
+                                expenses: {
+                                    taxRate: 30,
+                                    items: BASE_EXPENSE_CATEGORIES.map(item => ({
+                                        ...item,
+                                        id: window.Utils ? window.Utils.generateId() : 'fallback-' + Math.random(),
+                                        amount: 0
+                                    }))
+                                },
+                                unearnedIncome: {
+                                    items: [
+                                        { id: '1', label: 'Interest', amount: 0, type: 'Annual', frequency: 1 },
+                                        { id: '2', label: 'Dividends', amount: 0, type: 'Annual', frequency: 1 },
+                                        { id: '3', label: 'Capital Gains', amount: 0, type: 'Annual', frequency: 1 },
+                                        { id: '4', label: 'Trust Distributions', amount: 0, type: 'Annual', frequency: 1 },
+                                        { id: '5', label: 'Inheritance', amount: 0, type: 'Annual', frequency: 1 },
+                                        { id: '6', label: 'Passive Rental Income', amount: 0, type: 'Monthly', frequency: 1 },
+                                        { id: '7', label: 'Royalties', amount: 0, type: 'Annual', frequency: 1 },
+                                        { id: '8', label: 'Regularly Received Gifts', amount: 0, type: 'Annual', frequency: 1 },
+                                        { id: '9', label: 'Social Security Income', amount: 0, type: 'Monthly', frequency: 1 },
+                                        { id: '10', label: 'Retirement Income', amount: 0, type: 'Monthly', frequency: 1 },
+                                        { id: '11', label: 'Pension Income', amount: 0, type: 'Monthly', frequency: 1 },
+                                        { id: '12', label: 'Alimony', amount: 0, type: 'Monthly', frequency: 1 },
+                                        { id: '13', label: 'Child Support', amount: 0, type: 'Monthly', frequency: 1 }
+                                    ]
+                                },
+                                slidingScalePercentages: {
+                                    items: BASE_EXPENSE_CATEGORIES.map(item => ({
+                                        ...item,
+                                        percent: 4.5
+                                    }))
+                                },
+                                calibrations: {
+                                    periodValue: 1,
+                                    periodUnit: 'Years',
+                                    confirmed: [],
+                                    projected: []
+                                },
+                                currentNetIncome: 0
+                            };
+
+                            // Export to window
+                            window.Store = Store;
+                            window.DEFAULT_INDEPENDENT = DEFAULT_INDEPENDENT;
+
+
+                            // --- project_repaired.js ---
+                            console.log("PROJECT.JS LOADED");
+                            /**
+                             * Power in Numbers - Project Dashboard Logic
+                             * Robust Version (Refactored)
+                             */
+                            // alert("Project JS Loaded - Rebuilt"); // Debug Alert removed for Prod
+
+                            // --- 1. Budget Engine ---
+                            const BudgetEngine = {
+                                safeFloat: (v) => {
+                                    if (v === null || v === undefined) return 0;
+                                    if (typeof v === 'number') return v;
+                                    const s = v.toString().replace(/,/g, '');
+                                    return parseFloat(s) || 0;
+                                },
+                                getWorkerRates: (profile) => {
+                                    if (!profile) return { now: 0, goal: 0 };
+                                    let unearnedSum = 0;
+                                    if (profile.unearnedIncome && profile.unearnedIncome.items) {
+                                        profile.unearnedIncome.items.forEach(item => {
+                                            const amount = BudgetEngine.safeFloat(item.amount);
+                                            if (item.type === 'Monthly') unearnedSum += amount * 12;
+                                            else if (item.type === 'Periodic') unearnedSum += amount * (item.frequency || 1);
+                                            else unearnedSum += amount;
+                                        });
+                                    }
+                                    const weeks = BudgetEngine.safeFloat(profile.schedule?.weeks);
+                                    const days = BudgetEngine.safeFloat(profile.schedule?.days);
+                                    const hours = BudgetEngine.safeFloat(profile.schedule?.hours);
+                                    const pBillable = (profile.capacity && profile.capacity.billable) ? BudgetEngine.safeFloat(profile.capacity.billable) / 100 : 0.6;
+
+                                    if (weeks <= 0 || days <= 0 || hours <= 0 || pBillable <= 0) return { now: 0, goal: 0 };
+                                    const totalAnnualHours = weeks * days * hours;
+
+                                    const currentGross = (profile.goals?.current) || 0;
+                                    const goalGross = (profile.goals?.gross) || 0;
+
+                                    const adjCurrent = Math.max(0, currentGross - unearnedSum);
+                                    const adjGoal = Math.max(0, goalGross - unearnedSum);
+
+                                    return {
+                                        now: adjCurrent / (totalAnnualHours * pBillable),
+                                        goal: adjGoal / (totalAnnualHours * pBillable)
+                                    };
+                                }
+                            };
+                            window.BudgetEngine = BudgetEngine;
+
+                            // --- 1.5 Wizard UI Logic ---
+                            const Wizard = {
+                                state: { type: null, isTimeBased: false, fixedType: null },
+
+                                open: (phaseId) => {
+                                    Wizard.state = { type: null, isTimeBased: false, fixedType: null };
+                                    const modal = document.getElementById('modal-line-item-wizard');
+                                    if (!modal) return;
+                                    modal.setAttribute('data-phase-id', phaseId);
+                                    modal.removeAttribute('data-edit-id'); // Clear edit mode
+                                    modal.style.display = 'block';
+
+                                    document.querySelectorAll('#modal-line-item-wizard input').forEach(i => i.value = '');
+                                    document.getElementById('wiz-assignee').value = '';
+                                    const overheadSel = document.getElementById('wiz-overhead-select');
+                                    if (overheadSel) overheadSel.innerHTML = '<option>Loading...</option>';
+
+                                    Wizard.showStep('wizard-step-1');
+                                    ['wizard-step-percent', 'wizard-step-flat-type', 'wizard-step-fixed-struct',
+                                        'wizard-step-lump', 'wizard-step-unit', 'wizard-step-time', 'wizard-step-overhead']
+                                        .forEach(id => {
+                                            const el = document.getElementById(id);
+                                            if (el) el.style.display = 'none';
+                                        });
+                                    document.getElementById('btn-wizard-finish').style.display = 'none';
+
+                                    Wizard.populateAssignees();
+                                },
+
+                                populateAssignees: () => {
+                                    const select = document.getElementById('wiz-assignee');
+                                    if (!select || !window._project) return;
+                                    let html = '<option value="">(None / General Project)</option>';
+                                    if (window._project.teamMembers) {
+                                        window._project.teamMembers.forEach(m => {
+                                            const name = m.name || m.username || m.email;
+                                            html += `<option value="${m.email || m.username}">${name}</option>`;
+                                        });
+                                    }
+                                    select.innerHTML = html;
+                                },
+
+                                populateOverheads: async () => {
+                                    const select = document.getElementById('wiz-overhead-select');
+                                    if (!select) return;
+                                    try {
+                                        const projects = await Store.getOverheadProjects();
+                                        let html = '<option value="">-- Select Profile --</option>';
+                                        (projects || []).forEach(p => {
+                                            const total = (p.expenses || []).reduce((sum, e) => sum + BudgetEngine.safeFloat(e.amount), 0);
+
+                                            html += `<option value="${p.id}" data-total="${total}">${p.name} ($${total.toLocaleString()}/yr)</option>`;
+                                        });
+                                        select.innerHTML = html;
+                                    } catch (e) {
+                                        select.innerHTML = '<option>Error loading profiles</option>';
+                                    }
+                                },
+
+                                setImportMode: () => {
+                                    Wizard.state.type = 'Import';
+                                    Wizard.showStep('wizard-step-overhead');
+                                    Wizard.populateOverheads();
+                                    document.getElementById('btn-wizard-finish').style.display = 'inline-block';
+                                },
+
+                                setType: (t) => {
+                                    Wizard.state.type = t;
+                                    if (t === 'Percentage') {
+                                        Wizard.showStep('wizard-step-percent');
+                                        document.getElementById('btn-wizard-finish').style.display = 'inline-block';
+                                    } else {
+                                        Wizard.showStep('wizard-step-flat-type');
+                                    }
+                                },
+
+                                setTimeBased: (isTime) => {
+                                    Wizard.state.isTimeBased = isTime;
+                                    if (isTime) {
+                                        Wizard.showStep('wizard-step-time');
+                                        document.getElementById('btn-wizard-finish').style.display = 'inline-block';
+                                    } else {
+                                        Wizard.showStep('wizard-step-fixed-struct');
+                                    }
+                                },
+
+                                setFixedType: (ft) => {
+                                    Wizard.state.fixedType = ft;
+                                    if (ft === 'Lump') {
+                                        Wizard.showStep('wizard-step-lump');
+                                    } else {
+                                        Wizard.showStep('wizard-step-unit');
+                                    }
+                                    document.getElementById('btn-wizard-finish').style.display = 'inline-block';
+                                },
+
+                                showStep: (id) => {
+                                    document.getElementById(id).style.display = 'block';
+                                },
+
+                                // Updated: Inline Add (No Wizard)
+                                openForMember: async (phaseId, memberId) => {
+                                    // 1. Get Project & Member Profile
+                                    const project = window._project;
+                                    if (!project) return;
+                                    const phase = project.phases.find(p => p.id === phaseId);
+                                    if (!phase) return;
+
+                                    const user = window._usersMap[memberId];
+                                    const profile = user ? user.independentProfile : {};
+                                    const userName = user ? (user.name || user.username) : 'Collaborator';
+
+                                    // 2. Calculate Defaults
+                                    // Rate: Use Goal Rate if available, else 50
+                                    const rates = window.BudgetEngine.getWorkerRates(profile);
+                                    const rate = rates.goal > 0 ? rates.goal.toFixed(2) : "50.00";
+
+                                    // Schedule: Use Profile Schedule if available
+                                    // logic: Count = Weeks, Duration = Hours/Week
+                                    let weeks = 1;
+                                    let hours = 40;
+                                    if (profile.schedule) {
+                                        let weeks = BudgetEngine.safeFloat(profile.schedule.weeks) || 50;
+                                        hours = BudgetEngine.safeFloat(profile.schedule.hours) || 40;
+
+                                    }
+
+                                    // 3. Create Item
+                                    const item = {
+                                        id: 'li-' + Date.now(),
+                                        name: user && user.role ? user.role : 'Collaborator',
+                                        assignee: memberId,
+                                        itemType: 'Labor',
+                                        method: 'Time',
+                                        rate: rate,
+                                        unit: 'Hours',
+                                        duration: hours, // e.g. 40 hours
+                                        count: weeks // e.g. 50 weeks
+                                    };
+
+                                    // 4. Save
+                                    if (!phase.lineItems) phase.lineItems = [];
+                                    phase.lineItems.push(item);
+                                    await Store.saveProject(project);
+
+                                    // Reload to show added item
+                                    location.reload();
+                                },
+
+                                edit: (itemId) => {
+                                    let phaseId = null;
+                                    let item = null;
+                                    if (window._project && window._project.phases) {
+                                        for (let p of window._project.phases) {
+                                            if (p.lineItems) {
+                                                const found = p.lineItems.find(i => i.id === itemId);
+                                                if (found) {
+                                                    item = found;
+                                                    phaseId = p.id;
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                    }
+                                    if (!item || !phaseId) return alert("Item not found");
+
+                                    Wizard.open(phaseId);
+                                    document.getElementById('modal-line-item-wizard').setAttribute('data-edit-id', itemId);
+
+                                    document.getElementById('wiz-name').value = item.name;
+                                    document.getElementById('wiz-assignee').value = item.assignee || '';
+
+                                    if (item.method === 'Percentage') {
+                                        Wizard.setType('Percentage');
+                                        document.getElementById('wiz-percent').value = item.percent;
+                                    } else if (item.name && item.name.startsWith('Overhead:')) {
+                                        Wizard.setType('Flat');
+                                        Wizard.setTimeBased(true);
+                                        Wizard.showStep('wizard-step-time');
+                                        document.getElementById('wiz-time-count').value = item.count;
+                                        document.getElementById('wiz-time-duration').value = item.duration;
+                                        document.getElementById('wiz-time-rate').value = item.rate;
+                                        document.getElementById('wiz-time-unit').value = item.unit;
+                                        document.getElementById('btn-wizard-finish').style.display = 'inline-block';
+                                    } else if (item.method === 'Time') {
+                                        Wizard.setType('Flat');
+                                        Wizard.setTimeBased(true);
+                                        document.getElementById('wiz-time-count').value = item.count;
+                                        document.getElementById('wiz-time-duration').value = item.duration;
+                                        document.getElementById('wiz-time-rate').value = item.rate;
+                                        document.getElementById('wiz-time-unit').value = item.unit;
+                                    } else {
+                                        Wizard.setType('Flat');
+                                        Wizard.setTimeBased(false);
+                                        if (item.method === 'LumpSum') {
+                                            Wizard.setFixedType('Lump');
+                                            document.getElementById('wiz-lump-amount').value = item.amount;
+                                        } else if (item.method === 'Unit') {
+                                            Wizard.setFixedType('Unit');
+                                            document.getElementById('wiz-unit-qty').value = item.count || 1;
+                                            document.getElementById('wiz-unit-cost').value = item.rate;
+                                        }
+                                    }
+                                },
+
+                                deleteLineItem: async (phaseId, itemId) => {
+                                    // Quick Delete without confirm for checkbox toggle experience?
+                                    // User asked for "Select/Deselect" experience.
+                                    // If unchecking:
+                                    if (!confirm("Remove this collaborator from this phase?")) return;
+
+                                    const project = window._project;
+                                    const phase = project.phases.find(p => p.id === phaseId);
+                                    if (phase && phase.lineItems) {
+                                        phase.lineItems = phase.lineItems.filter(i => i.id !== itemId);
+                                        await Store.saveProject(project);
+                                        location.reload();
+                                    }
+                                },
+
+                                // Toggle All Helper
+                                togglePhaseMembers: async (phaseId, selectAll) => {
+                                    const project = window._project;
+                                    const phase = project.phases.find(p => p.id === phaseId);
+                                    if (!phase || !project.teamMembers) return;
+
+                                    // 1. If Select All: Add missing members
+                                    if (selectAll) {
+                                        let changed = false;
+                                        if (!phase.lineItems) phase.lineItems = [];
+
+                                        for (let m of project.teamMembers) {
+                                            const mid = m.email || m.username;
+                                            // Check if already in phase
+                                            const exists = phase.lineItems.find(i => i.assignee === mid);
+                                            if (!exists) {
+                                                // Add Default
+                                                const user = window._usersMap[mid];
+                                                const profile = user ? user.independentProfile : {};
+                                                const rates = window.BudgetEngine.getWorkerRates(profile);
+                                                const rate = rates.goal > 0 ? rates.goal.toFixed(2) : "50.00";
+                                                let weeks = 1; let hours = 40;
+                                                if (profile.schedule) {
+                                                    weeks = parseFloat(profile.schedule.weeks) || 50;
+                                                    hours = parseFloat(profile.schedule.hours) || 40;
+                                                }
+                                                phase.lineItems.push({
+                                                    id: 'li-' + Date.now() + Math.random(), // Unique ID
+                                                    name: user && user.role ? user.role : 'Collaborator',
+                                                    assignee: mid,
+                                                    itemType: 'Labor',
+                                                    method: 'Time',
+                                                    rate: rate,
+                                                    unit: 'Hours',
+                                                    duration: hours,
+                                                    count: weeks
+                                                });
+                                                changed = true;
+                                            }
+                                        }
+                                        if (changed) {
+                                            await Store.saveProject(project);
+                                            location.reload();
+                                        }
+                                    } else {
+                                        // 2. Deselect All: Remove all assigned labor
+                                        if (!phase.lineItems) return;
+                                        if (!confirm("Remove ALL collaborators from this phase?")) return;
+
+                                        phase.lineItems = phase.lineItems.filter(i => !i.assignee); // Keep unassigned & expenses
+                                        await Store.saveProject(project);
+                                        location.reload();
+                                    }
+                                },
+
+                                finish: async () => {
+                                    const modal = document.getElementById('modal-line-item-wizard');
+                                    const phaseId = modal.getAttribute('data-phase-id');
+                                    const editId = modal.getAttribute('data-edit-id');
+                                    const name = document.getElementById('wiz-name').value;
+                                    const assignee = document.getElementById('wiz-assignee').value;
+
+                                    let item = {
+                                        id: editId || ('li-' + Date.now()),
+                                        name: name,
+                                        assignee: assignee,
+                                        itemType: 'Expense'
+                                    };
+
+                                    if (assignee && !name.startsWith('Overhead:')) item.itemType = 'Labor';
+
+                                    if (Wizard.state.type === 'Percentage') {
+                                        item.method = 'Percentage';
+                                        item.percent = document.getElementById('wiz-percent').value;
+                                    } else if (Wizard.state.type === 'Import') {
+                                        const select = document.getElementById('wiz-overhead-select');
+                                        const option = select.options[select.selectedIndex];
+                                        const totalOverhead = BudgetEngine.safeFloat(option.getAttribute('data-total'));
+
+                                        const profileName = option.text.split(' ($')[0];
+
+                                        let currentUserEmail = null;
+                                        const { data: { user } } = await window.supabaseClient.auth.getUser();
+                                        if (user) currentUserEmail = user.email;
+
+                                        let capacity = 2000;
+                                        if (currentUserEmail && window._usersMap && window._usersMap[currentUserEmail]) {
+                                            const uProfile = window._usersMap[currentUserEmail].independentProfile;
+                                            if (uProfile && uProfile.schedule) {
+                                                let weeks = BudgetEngine.safeFloat(uProfile.schedule.weeks) || 50;
+                                                let hours = BudgetEngine.safeFloat(uProfile.schedule.hours) || 40;
+                                                let ratio = BudgetEngine.safeFloat(uProfile.billableRatio) || 0.75;
+
+                                                capacity = weeks * hours * ratio;
+                                            }
+                                        }
+                                        if (capacity <= 0) capacity = 1;
+                                        const calculatedRate = totalOverhead / capacity;
+
+                                        item.name = `Overhead: ${profileName}`;
+                                        item.method = 'Time';
+                                        item.rate = calculatedRate.toFixed(2);
+                                        item.count = 1;
+                                        item.duration = 40;
+                                        item.unit = 'Hours';
+                                        item.itemType = 'Expense';
+
+                                    } else {
+                                        if (Wizard.state.isTimeBased) {
+                                            item.method = 'Time';
+                                            item.count = document.getElementById('wiz-time-count').value;
+                                            item.duration = document.getElementById('wiz-time-duration').value;
+                                            item.unit = document.getElementById('wiz-time-unit').value;
+                                            item.rate = document.getElementById('wiz-time-rate').value;
+                                            if (assignee) item.itemType = 'Labor';
+                                        } else {
+                                            if (Wizard.state.fixedType === 'Lump') {
+                                                item.method = 'LumpSum';
+                                                item.amount = document.getElementById('wiz-lump-amount').value;
+                                                if (assignee) item.itemType = 'Labor';
+                                            } else {
+                                                item.method = 'Unit';
+                                                item.count = document.getElementById('wiz-unit-qty').value;
+                                                item.rate = document.getElementById('wiz-unit-cost').value;
+                                            }
+                                        }
+                                    }
+
+                                    const project = window._project;
+                                    if (project) {
+                                        const phase = project.phases.find(p => p.id === phaseId);
+                                        if (phase) {
+                                            if (!phase.lineItems) phase.lineItems = [];
+                                            if (editId) {
+                                                const idx = phase.lineItems.findIndex(i => i.id === editId);
+                                                if (idx >= 0) phase.lineItems[idx] = { ...phase.lineItems[idx], ...item };
+                                            } else {
+                                                phase.lineItems.push(item);
+                                            }
+                                            await Store.saveProject(project);
+                                            modal.style.display = 'none';
+                                            location.reload();
+                                        }
+                                    }
+                                }
+                            };
+                            window.Wizard = Wizard;
+
+
+                            // --- App Logic ---
+                            async function initApp(retryCount = 0) {
+                                const logDebug = (msg) => { if (window.debugLog) window.debugLog(msg); else console.log("[DEBUG]", msg); };
+
+                                // Retry Logic for Store
+                                if (typeof Store === 'undefined') {
+                                    if (retryCount < 5) {
+                                        logDebug(`Store undefined, retrying (${retryCount + 1}/5)...`);
+                                        setTimeout(() => initApp(retryCount + 1), 500);
+                                        return;
+                                    }
+                                    logDebug("CRITICAL: Store undefined after retries.");
+                                    return;
+                                }
+
+                                try {
+                                    // Force init to ensure Supabase client is ready
+                                    if (!window.supabaseClient) await Store.init();
+                                    await Store.checkSession();
+                                } catch (e) {
+                                    console.warn("Session check warning:", e);
+                                }
+
+                                const urlParams = new URLSearchParams(window.location.search);
+                                const projectId = urlParams.get('id');
+                                if (!projectId) {
+                                    logDebug("ERROR: No ID found in URL");
+                                    const listContainer = document.getElementById('collaborators-list');
+                                    if (listContainer) listContainer.innerHTML = '<p style="padding:10px; color:red;">No Project ID found. Please return to <a href="projects.html">My Projects</a> and select a project.</p>';
+                                    return;
+                                }
+
+                                let project = null;
+                                try {
+                                    project = await Store.getProject(projectId);
+                                } catch (e) {
+                                    console.error("Fetch Error:", e);
+                                    document.getElementById('phases-container').innerHTML = `<p style="color:red; padding:20px;">Error loading project: ${e.message}</p>`;
+                                    const listContainer = document.getElementById('collaborators-list');
+                                    if (listContainer) listContainer.innerHTML = '<p style="padding:10px; color:red;">Error loading project data.</p>';
+                                    return;
+                                }
+
+                                if (!project) return;
+                                window._project = project; // Success!
+
+                                const title = document.getElementById('project-title');
+                                if (title) title.textContent = project.name;
+
+                                try {
+                                    const members = project.teamMembers || [];
+                                    const memberEmails = members.map(m => m.email || m.username);
+                                    if (project.owner) memberEmails.push(project.owner);
+
+                                    let usersMap = {};
+                                    if (Store.getUsersMap) usersMap = await Store.getUsersMap(memberEmails);
+
+                                    let invites = [];
+                                    if (Store.getProjectInvites) invites = await Store.getProjectInvites(projectId);
+
+                                    renderDashboard(project, usersMap, invites);
+                                    assignGlobalHelpers();
+                                    setupInviteHandlers(projectId);
+
+                                    const btnFinish = document.getElementById('btn-wizard-finish');
+                                    if (btnFinish) btnFinish.onclick = Wizard.finish;
+
+                                } catch (e) {
+                                    logDebug("Render Error: " + e.message);
+                                    console.error(e);
+                                }
+                            }
+
+
+                            function assignGlobalHelpers() {
+                                window.openInviteModal = () => { document.getElementById('modal-invite-member').style.display = 'block'; };
+                            }
+
+                            function setupInviteHandlers(currentProjectId) {
+                                const btnSend = document.getElementById('btn-send-invite');
+                                if (btnSend) {
+                                    btnSend.addEventListener('click', () => {
+                                        const emailInput = document.getElementById('invite-email');
+                                        if (emailInput && emailInput.value) {
+                                            btnSend.textContent = "Sending...";
+                                            Store.inviteUser(window._project.id, emailInput.value)
+                                                .then(() => {
+                                                    alert('Invite sent successfully!');
+                                                    document.getElementById('modal-invite-member').style.display = 'none';
+                                                    emailInput.value = '';
+                                                    initApp();
+                                                })
+                                                .catch(err => {
+                                                    console.error(err);
+                                                    alert('Error sending invite: ' + err.message);
+                                                })
+                                                .finally(() => { btnSend.textContent = "Send Invite"; });
+                                        } else {
+                                            alert('Please enter an email address.');
+                                        }
+                                    });
+                                }
+                                const btnAddPool = document.getElementById('btn-add-member');
+                                if (btnAddPool) {
+                                    btnAddPool.addEventListener('click', () => { window.openInviteModal(); });
+                                }
+                            }
+
+                            function renderDashboard(project, usersMap, invites = []) {
+                                renderCollaborators(project, usersMap, invites);
+                                renderPhases(project);
+                                calculateAndRenderTotals(project, usersMap);
+                            }
+
+                            function renderCollaborators(project, usersMap, invites = []) {
+                                const list = document.getElementById('collaborators-list');
+                                if (!list) return;
+                                list.innerHTML = '';
+
+                                const ownerDiv = document.createElement('div');
+                                ownerDiv.className = 'summary-card';
+                                ownerDiv.style.padding = '10px';
+
+                                // Fetch Owner Details
+                                let ownerStats = '';
+                                if (project.owner) {
+                                    if (window.BudgetEngine) {
+                                        const ownerUser = usersMap[project.owner] || {};
+                                        const ownerProfile = ownerUser.independentProfile || {};
+                                        const ownerRates = window.BudgetEngine.getWorkerRates(ownerProfile);
+                                        ownerStats = ownerRates.goal > 0 ? `<br>Goal: $${ownerRates.goal.toFixed(2)}/hr` : `<br><span style="color:red">Incomplete</span>`;
+                                    }
+                                }
+
+                                ownerDiv.innerHTML = `<strong>Owner</strong><br>${project.owner || 'Unknown'}${ownerStats}`;
+                                list.appendChild(ownerDiv);
+
+                                (project.teamMembers || []).forEach(m => {
+                                    // Skip if this is the owner (already displayed)
+                                    if (project.owner && (m.email === project.owner || m.username === project.owner)) return;
+
+                                    const d = document.createElement('div');
+                                    d.className = 'summary-card';
+                                    d.style.padding = '10px';
+                                    const user = usersMap[m.username] || {};
+                                    const profile = user.independentProfile || {};
+
+                                    let stats = '';
+                                    if (window.BudgetEngine) {
+                                        const rates = window.BudgetEngine.getWorkerRates(profile);
+                                        stats = rates.goal > 0 ? `Goal: $${rates.goal.toFixed(2)}/hr` : `<span style="color:red">Incomplete</span>`;
+                                    } else {
+                                        stats = '<span style="color:orange">Calc Unavailable</span>';
+                                    }
+
+                                    d.innerHTML = `<strong>${m.name || m.username}</strong><br>${m.email || m.username}<br>${stats}`;
+                                    list.appendChild(d);
+                                });
+
+                                invites.forEach(inv => {
+                                    const d = document.createElement('div');
+                                    d.className = 'summary-card';
+                                    d.style.padding = '10px';
+                                    d.style.border = '1px dashed #ccc';
+                                    d.style.opacity = '0.7';
+                                    d.innerHTML = `<strong>${inv.email}</strong><br><span style="color:#666;">(Pending)</span>`;
+                                    list.appendChild(d);
+                                });
+                            }
+
+                            function renderPhases(project) {
+                                const container = document.getElementById('phases-container');
+                                if (!container) return;
+                                container.innerHTML = '';
+
+                                if (!project.phases || project.phases.length === 0) {
+                                    container.innerHTML = '<p style="padding:20px; color:#999;">No phases yet. Click "Add Phase" above.</p>';
+                                    return;
+                                }
+
+                                // try { removed
+                                window.openAddLineItem = (pid) => { Wizard.open(pid); };
+
+                                project.phases.forEach(phase => {
+                                    const pDiv = document.createElement('div');
+                                    pDiv.className = 'phase-block';
+                                    pDiv.style.border = '1px solid #ddd';
+                                    pDiv.style.borderRadius = '5px';
+                                    pDiv.style.background = '#fff';
+                                    pDiv.style.marginBottom = '20px';
+                                    pDiv.style.overflow = 'hidden';
+
+                                    pDiv.innerHTML = `<div style="background:#000; color:#fff; padding:15px; display:flex; justify-content:space-between; align-items:center;">
+        <h3 style="margin:0; font-size:1.2rem;">${phase.name}</h3>
+        <div style="display:flex; gap:15px; align-items:center;">
+            <div style="font-size:0.8rem;">
+                 <button class="btn-text-action" style="color:#fff;" onclick="Wizard.togglePhaseMembers('${phase.id}', true)">Select All</button>
+                 <span style="opacity:0.5;">|</span>
+                 <button class="btn-text-action" style="color:#fff;" onclick="Wizard.togglePhaseMembers('${phase.id}', false)">Deselect All</button>
+            </div>
+            <button class="btn btn-sm" style="background:#fff; color:#000; padding:5px 10px; border:none;" onclick="window.openAddLineItem('${phase.id}')">+ Add Item</button>
+        </div>
+    </div>`;
+
+                                    // Wages Header (Simplified)
+                                    pDiv.innerHTML += `<div style="padding:15px; border-bottom:1px solid #eee;">
+        <h4 style="font-size:0.9rem; text-transform:uppercase; color:#666; margin:0;">Worker Wages</h4>
+    </div>`;
+
+                                    if (!phase.lineItems || phase.lineItems.length === 0) {
+                                        pDiv.innerHTML += `<div style="padding:20px; color:#999; font-style:italic;">No line items added yet.</div>`;
+                                    } else {
+                                        const assignedLabor = [];
+                                        const unassignedLabor = [];
+                                        const expenseItems = [];
+
+                                        phase.lineItems.forEach(i => {
+                                            let isLabor = false;
+                                            const isOverhead = i.name && i.name.startsWith('Overhead:');
+                                            if (i.itemType === 'Labor') isLabor = true;
+                                            else if (i.assignee && !isOverhead) isLabor = true;
+                                            else if (i.method === 'Time' && !isOverhead) isLabor = true;
+
+                                            if (isLabor) {
+                                                if (i.assignee) assignedLabor.push(i);
+                                                else unassignedLabor.push(i);
+                                            } else {
+                                                expenseItems.push(i);
+                                            }
+                                        });
+
+                                        // UPDATED: Added Select All Button
+                                        // Removed redundant Wages button block here (moved to header)
+
+                                        let teamRows = '';
+                                        // Determine if everyone is selected for "Select ALL" state? No just buttons.
+
+                                        if (window._project.teamMembers && window._project.teamMembers.length > 0) {
+                                            teamRows = window._project.teamMembers.map(member => {
+                                                const memberId = member.email || member.username;
+                                                const memberName = member.name || member.username;
+                                                const existingItem = assignedLabor.find(i => i.assignee === memberId);
+
+                                                // Define user here so it is available in both blocks
+                                                const user = window._usersMap[memberId] || {};
+
+                                                if (existingItem) {
+                                                    // ACTIVE
+                                                    let cost = BudgetEngine.safeFloat(existingItem.count) * BudgetEngine.safeFloat(existingItem.duration) * BudgetEngine.safeFloat(existingItem.rate);
+
+
+                                                    return `<tr>
+                            <td>
+                                <input type="checkbox" checked onclick="Wizard.deleteLineItem('${phase.id}', '${existingItem.id}')" title="Uncheck to remove">
+                                <strong style="margin-left:10px;">${memberName}</strong>
+                            </td>
+                            <td>${user && user.role ? user.role : 'Collaborator'}</td>
+                            <td>
+                                <div>$${BudgetEngine.safeFloat(existingItem.rate).toFixed(2)}/hr</div>
+                                <div style="font-size:0.8rem; color:#666;">${existingItem.count} wks x ${existingItem.duration} hrs</div>
+                            </td>
+                            <td style="text-align:right; font-weight:bold;">$${cost.toLocaleString()}</td>
+                            <td style="text-align:right;">
+                                <button class="btn-text-action" onclick="Wizard.edit('${existingItem.id}')">Edit</button>
+                            </td>
+                        </tr>`;
+                                                } else {
+                                                    // INACTIVE
+                                                    const role = user.role || (user.independentProfile ? user.independentProfile.role : 'Collaborator');
+                                                    return `<tr style="opacity:0.6; background:#fafafa;">
+                            <td>
+                                <input type="checkbox" onclick="Wizard.openForMember('${phase.id}', '${memberId}')" title="Check to add to phase">
+                                <span style="margin-left:10px;">${memberName}</span>
+                            </td>
+                            <td>${role}</td>
+                            <td>-</td>
+                            <td style="text-align:right;">-</td>
+                            <td style="text-align:right;"></td>
+                        </tr>`;
+                                                }
+                                            }).join('');
+                                        } else {
+                                            teamRows = '<tr><td colspan="5" style="padding:10px; color:#999;">No team members. Add collaborators.</td></tr>';
+                                        }
+
+                                        let unassignedRows = '';
+                                        if (unassignedLabor.length > 0) {
+                                            unassignedRows = unassignedLabor.map(item => {
+                                                let cost = BudgetEngine.safeFloat(item.count) * BudgetEngine.safeFloat(item.duration) * BudgetEngine.safeFloat(item.rate);
+
+                                                return `<tr>
+                         <td>(Unassigned)</td>
+                         <td>${item.name}</td>
+                         <td>${item.count} x ${item.duration} ${item.unit} @ $${item.rate}/hr</td>
+                         <td style="text-align:right; font-weight:bold;">$${cost.toFixed(2)}</td>
+                         <td style="text-align:right;">
+                             <button class="btn-text-action" onclick="Wizard.edit('${item.id}')">Edit</button>
+                             <button class="btn-text-action" style="color:red; margin-left:5px;" onclick="Wizard.deleteLineItem('${phase.id}', '${item.id}')">Delete</button>
+                         </td>
+                     </tr>`;
+                                            }).join('');
+                                        }
+
+                                        pDiv.innerHTML += `<table class="ledger-table">
+                <thead>
+                    <tr>
+                        <th style="width:30%;">Collaborator</th>
+                        <th style="width:20%;">Role</th>
+                        <th style="width:25%;">Rate / Time</th>
+                        <th style="text-align:right;">Cost</th>
+                        <th style="width:10%;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${teamRows}
+                    ${unassignedRows.length > 0 ? `<tr style="background:#eee;"><td colspan="5" style="font-weight:bold; font-size:0.8rem; text-transform:uppercase;">Unassigned Labor</td></tr>${unassignedRows}` : ''}
+                </tbody>
+            </table>`;
+
+                                        pDiv.innerHTML += `<div style="padding:15px 15px 5px 15px; border-bottom:1px solid #eee; margin-top:0;">
+                <h4 style="font-size:0.9rem; text-transform:uppercase; color:#666; margin-bottom:10px;">Project Expenses</h4>
+            </div>`;
+
+                                        if (expenseItems.length > 0) {
+                                            let expRows = expenseItems.map(item => {
+                                                let desc = item.method === 'LumpSum' ? 'Flat Fee' :
+                                                    item.method === 'Percentage' ? `${item.percent}%` :
+                                                        item.method === 'Time' ? `${item.count} x ${item.duration} ${item.unit} @ $${item.rate}` :
+                                                            `${item.count} Units @ $${item.rate}`;
+                                                let cost = 0;
+                                                if (item.method === 'LumpSum') cost = BudgetEngine.safeFloat(item.amount);
+                                                else if (item.method === 'Time') cost = BudgetEngine.safeFloat(item.count) * BudgetEngine.safeFloat(item.duration) * BudgetEngine.safeFloat(item.rate);
+                                                else cost = BudgetEngine.safeFloat(item.count) * BudgetEngine.safeFloat(item.rate);
+
+
+                                                return `<tr>
+                        <td>${item.name}</td>
+                        <td style="color:#666;">${item.itemType || 'Expense'}</td>
+                        <td>${desc}</td>
+                        <td style="text-align:right;">$${cost.toFixed(2)}</td>
+                        <td style="text-align:right;">
+                             <button class="btn-text-action" onclick="Wizard.edit('${item.id}')">Edit</button>
+                             <button class="btn-text-action" style="color:red; margin-left:5px;" onclick="Wizard.deleteLineItem('${phase.id}', '${item.id}')">Del</button>
+                        </td>
+                    </tr>`;
+                                            }).join('');
+                                            pDiv.innerHTML += `<table class="ledger-table"><thead><tr><th>Item</th><th>Category</th><th>Details</th><th style="text-align:right;">Est. Cost</th><th style="width:10%;"></th></tr></thead><tbody>${expRows}</tbody></table>`;
+                                        } else {
+                                            pDiv.innerHTML += `<div style="padding:20px; color:#999; font-style:italic;">No expenses added.</div>`;
+                                        }
+                                    }
+                                    container.appendChild(pDiv);
+                                });
+
+                                // } catch (e) { removed for syntax fix
+                            }
+
+                            function calculateAndRenderTotals(project, usersMap) {
+                                let totalIdeal = 0;
+                                let totalConfirmed = 0;
+                                let equityTotal = 0;
+                                let equityByMember = {};
+                                window._mathLogs = {};
+
+                                (project.phases || []).forEach(p => {
+                                    (p.lineItems || []).forEach(i => {
+                                        let actualCost = 0;
+                                        // Calculate Actual Cost (Confirmed)
+                                        if (i.method === 'LumpSum') actualCost = BudgetEngine.safeFloat(i.amount);
+                                        else if (i.method === 'Time') actualCost = BudgetEngine.safeFloat(i.count) * BudgetEngine.safeFloat(i.duration) * BudgetEngine.safeFloat(i.rate);
+                                        else actualCost = BudgetEngine.safeFloat(i.count) * BudgetEngine.safeFloat(i.rate);
+
+                                        totalConfirmed += actualCost;
+
+                                        // Start Ideal with Actual, then override if Labor
+                                        let idealCost = actualCost;
+
+                                        if (i.assignee) {
+                                            const user = usersMap[i.assignee];
+                                            if (user && user.independentProfile) {
+                                                let goalRate = 0;
+                                                if (window.BudgetEngine) {
+                                                    const rates = window.BudgetEngine.getWorkerRates(user.independentProfile);
+                                                    goalRate = rates.goal || 0;
+                                                }
+
+                                                let actualRate = 0;
+                                                let hours = 0;
+                                                if (i.method === 'Time') {
+                                                    actualRate = BudgetEngine.safeFloat(i.rate);
+                                                    const unit = i.unit || 'Hours';
+                                                    const dur = BudgetEngine.safeFloat(i.duration);
+                                                    const count = BudgetEngine.safeFloat(i.count) || 1;
+
+                                                    if (unit === 'Hours') hours = dur * count;
+                                                    else if (unit === 'Days') hours = dur * 8 * count;
+                                                    else if (unit === 'Weeks') hours = dur * 40 * count;
+                                                }
+
+                                                // Ideal = Hours * Goal Rate
+                                                if (hours > 0 && goalRate > 0) {
+                                                    idealCost = hours * goalRate;
+                                                }
+
+                                                totalIdeal += idealCost;
+
+                                                if (hours > 0 && goalRate > actualRate) {
+                                                    const gap = goalRate - actualRate;
+                                                    const equityValue = gap * hours;
+                                                    equityTotal += equityValue;
+                                                    const logKey = `equity_${i.assignee}`;
+                                                    if (!window._mathLogs[logKey]) {
+                                                        window._mathLogs[logKey] = [
+                                                            `<strong>Calculation Log for ${user.name || i.assignee}</strong>`,
+                                                            `Role: ${user.role || 'Collaborator'}`,
+                                                            `Goal Rate: $${goalRate.toFixed(2)}/hr (Source: Independent Profile)`,
+                                                            `----------------------------------------`
+                                                        ];
+                                                    }
+                                                    window._mathLogs[logKey].push(
+                                                        `<strong>Line Item: ${i.name}</strong><br>` +
+                                                        `Hours: ${hours.toFixed(1)} hrs | Pay Rate: $${actualRate.toFixed(2)}/hr<br>` +
+                                                        `Gap: $${gap.toFixed(2)}/hr (Goal - Pay)<br>` +
+                                                        `Equity: $${gap.toFixed(2)} x ${hours.toFixed(1)} = <strong>$${equityValue.toFixed(2)}</strong>`
+                                                    );
+                                                    if (!equityByMember[i.assignee]) equityByMember[i.assignee] = 0;
+                                                    equityByMember[i.assignee] += equityValue;
+                                                }
+                                            }
+                                        }
+                                    });
+                                });
+
+                                let incomeTotal = 0;
+                                const fundList = document.getElementById('funding-list');
+                                if (fundList) fundList.innerHTML = '';
+                                if (project.incomeSources && project.incomeSources.length > 0) {
+                                    project.incomeSources.forEach(src => {
+                                        let val = BudgetEngine.safeFloat(src.amount);
+
+                                        if (src.status === 'Confirmed') incomeTotal += val;
+                                        if (fundList) {
+                                            const tr = document.createElement('tr');
+                                            tr.innerHTML = `<td>${src.name}</td><td>${src.status}</td><td>$${val.toLocaleString()}</td><td><button class="btn-text-action" onclick="alert('Manage Income')">Edit</button></td>`;
+                                            fundList.appendChild(tr);
+                                        }
+                                    });
+                                } else if (fundList) {
+                                    fundList.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#999;">No funding sources added.</td></tr>';
+                                }
+
+                                updateScenario('confirmed', totalConfirmed, incomeTotal);
+                                let possibleIncome = 0;
+                                if (project.incomeSources) possibleIncome = project.incomeSources.reduce((sum, src) => sum + BudgetEngine.safeFloat(src.amount), 0);
+                                // Ideal uses Same Income as Possible for now, assuming all grants get confirmed in ideal world?
+                                // Or just incomeTotal? Let's use possibleIncome.
+                                updateScenario('ideal', totalIdeal, possibleIncome); // Using updated Ideal Logic
+                                updateScenario('possible', totalConfirmed, possibleIncome); // Possible = Current Commitments + Possible Income
+
+                                const shareBody = document.getElementById('shares-table-body');
+                                const pieChart = document.getElementById('shares-pie-chart');
+                                if (shareBody && project.teamMembers && project.teamMembers.length > 0) {
+                                    shareBody.innerHTML = '';
+                                    let pool = equityTotal;
+                                    if (pool <= 0) pool = 1;
+                                    let segments = [];
+                                    let startDeg = 0;
+                                    project.teamMembers.forEach((m, idx) => {
+                                        const name = m.name || m.username || m.email;
+                                        const identifier = m.email || m.username;
+                                        const earnedEquity = equityByMember[identifier] || 0;
+                                        const pct = pool > 0 ? ((earnedEquity / pool) * 100).toFixed(1) : 0;
+                                        const logKey = `equity_${identifier}`;
+                                        const hasLog = window._mathLogs && window._mathLogs[logKey] && window._mathLogs[logKey].length > 0;
+                                        const tr = document.createElement('tr');
+                                        tr.innerHTML = `
+            <td>${name}</td>
+            <td>${m.role || 'Collaborator'}</td>
+            <td style="font-weight:bold;">$${earnedEquity.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+            <td>${pct}%</td>
+            <td style="text-align:center;">
+                ${hasLog ? `<button class="btn-text-action" style="font-size:1.2rem; cursor:pointer;" onclick="window.openMathLog('${logKey}')">ℹ️</button>` : '-'}
+            </td>`;
+                                        shareBody.appendChild(tr);
+                                        const slice = earnedEquity / pool;
+                                        const deg = slice * 360;
+                                        const color = getColor(idx);
+                                        segments.push(`${color} ${startDeg}deg ${startDeg + deg}deg`);
+                                        startDeg += deg;
+                                    });
+                                    if (pieChart) pieChart.style.background = `conic-gradient(${segments.join(', ')})`;
+                                } else if (shareBody) {
+                                    shareBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No team members found.</td></tr>';
+                                    if (pieChart) pieChart.style.background = '#eee';
+                                }
+
+                                function updateScenario(type, cost, income) {
+                                    const elTotal = document.getElementById(`dash-${type}-total`);
+                                    const elGross = document.getElementById(`dash-${type}-gross`);
+                                    const elNet = document.getElementById(`dash-${type}-net`);
+                                    if (elTotal) elTotal.textContent = '$' + cost.toLocaleString(undefined, { minimumFractionDigits: 2 });
+                                    const gross = income - cost;
+                                    if (elGross) {
+                                        elGross.textContent = '$' + gross.toLocaleString(undefined, { minimumFractionDigits: 2 });
+                                        elGross.style.color = gross >= 0 ? 'green' : 'red';
+                                    }
+                                    if (elNet) {
+                                        elNet.textContent = '$' + gross.toLocaleString(undefined, { minimumFractionDigits: 2 });
+                                        elNet.style.color = gross >= 0 ? 'green' : 'red';
+                                    }
+                                }
+                            }
+
+                            window.openMathLog = (key) => {
+                                // Add simple debug
+                                console.log("Opening log for:", key);
+                                const modal = document.getElementById('math-log-modal');
+                                const body = document.getElementById('math-log-body');
+                                if (!modal || !body) { console.error("Modal not found"); return; }
+
+                                const logs = window._mathLogs ? window._mathLogs[key] : [];
+                                if (!logs || logs.length === 0) {
+                                    body.innerHTML = '<p>No calculation details available.</p>';
+                                } else {
+                                    body.innerHTML = logs.map(line => `<div style="margin-bottom:5px; border-bottom:1px dashed #eee; padding-bottom:2px;">${line}</div>`).join('');
+                                }
+                                modal.style.display = 'flex';
+                            };
+
+                            function getColor(idx) {
+                                const colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'];
+                                return colors[idx % colors.length];
+                            }
+
+
+
+                            // Global Exports verification
+                            window.Wizard = Wizard;
+
+                            // Boot
+                            if (document.readyState === 'loading') {
+                                document.addEventListener('DOMContentLoaded', () => initApp(0));
+                            } else {
+                                initApp(0);
+                            }
+
+
+                        </script>
+</body>
+
+</html>

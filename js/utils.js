@@ -130,4 +130,3 @@ const Utils = {
 
 window.Utils = Utils;
 window.formatMoney = Utils.formatCurrency;
-console.log("Utils.js Loaded. Window.Utils:", window.Utils);

@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Power in Numbers - Data Fixer</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 40px;
+            line-height: 1.6;
+        }
+
+        .success {
+            color: green;
+            font-weight: bold;
+        }
+
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+
+        pre {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Fixing Local Data...</h1>
+    <div id="status">Running...</div>
+    <div id="log"></div>
+
+    <script>
+        const log = (msg, isError = false) => {
+            const div = document.createElement('div');
+            div.textContent = msg;
+            if (isError) div.style.color = 'red';
+            document.getElementById('log').appendChild(div);
+        };
+
+        try {
+            // 1. Define Users (Minimal but sufficient for BudgetEngine rates)
+            const users = {
+                'jumatatu': {
+                    username: 'jumatatu', email: 'jumatatu@example.com', full_name: 'Jumatatu Poe',
+                    independentProfile: {
+                        income: 60000,
+                        schedule: { weeks: 48, days: 4, hours: 6 }, // 1152 hrs/yr
+                        unearnedIncome: { items: [] },
+                        goals: { gross: 80000, hourly: 70 }, // Implied goal rate
+                        expenses: { taxRate: 30 }
+                    }
+                },
+                'donte': {
+                    username: 'donte', email: 'donte@example.com', full_name: 'Donte Beacham',
+                    independentProfile: {
+                        schedule: { weeks: 48, days: 5, hours: 8 },
+                        goals: { gross: 90000 },
+                        expenses: { taxRate: 30 }
+                    }
+                },
+                'will': {
+                    username: 'will', email: 'will@example.com', full_name: 'Will Tom',
+                    independentProfile: {
+                        schedule: { weeks: 40, days: 4, hours: 6 },
+                        goals: { gross: 50000 },
+                        expenses: { taxRate: 25 }
+                    }
+                },
+                'miona': {
+                    username: 'miona', email: 'miona@example.com', full_name: 'Miona Short',
+                    independentProfile: {
+                        schedule: { weeks: 50, days: 5, hours: 8 },
+                        goals: { gross: 100000 },
+                        expenses: { taxRate: 30 }
+                    }
+                }
+            };
+
+            // 2. Define Project
+            const projectId = 'proj-1';
+            const project = {
+                id: projectId,
+                name: "Power in Numbers",
+                owner: "jumatatu",
+                owner_id: "jumatatu",
+                teamMembers: [
+                    { id: 'tm-1', username: 'jumatatu', name: 'Jumatatu Poe', role: 'Owner' },
+                    { id: 'tm-2', username: 'donte', name: 'Donte Beacham', role: 'Collaborator' },
+                    { id: 'tm-3', username: 'will', name: 'Will Tom', role: 'Collaborator' },
+                    { id: 'tm-4', username: 'miona', name: 'Miona Short', role: 'Collaborator' }
+                ],
+                phases: [
+                    {
+                        id: 'phase-1', name: 'Pilot Phase',
+                        weeks: 12, hours: 10,
+                        workers: {
+                            'tm-1': { isPresent: true },
+                            'tm-2': { isPresent: true },
+                            'tm-3': { isPresent: true },
+                            'tm-4': { isPresent: true }
+                        }
+                    }
+                ],
+                isActive: true
+            };
+
+            // 3. Write to LocalStorage
+
+            // Users
+            const existingUsers = JSON.parse(localStorage.getItem('pin_users') || '{}');
+            const mergedUsers = { ...existingUsers, ...users };
+            localStorage.setItem('pin_users', JSON.stringify(mergedUsers));
+            log("Users Patched: jumatatu, donte, will, miona.");
+
+            // Projects
+            let existingProjects = JSON.parse(localStorage.getItem('pin_projects'));
+            if (!existingProjects) existingProjects = {};
+
+            const targetName = "Power in Numbers";
+            let targetId = null;
+
+            // Helper to normalize Object/Array
+            let projectList = [];
+            if (Array.isArray(existingProjects)) {
+                projectList = existingProjects;
+            } else {
+                projectList = Object.values(existingProjects);
+            }
+
+            // Find by Name
+            const existingP = projectList.find(p => p.name === targetName);
+            if (existingP) {
+                targetId = existingP.id;
+                log(`Found existing project "${targetName}" with ID: ${targetId}`);
+            } else {
+                targetId = projectId; // Default to new ID
+                log(`Project "${targetName}" not found. Creating new with ID: ${targetId}`);
+            }
+
+            // Update Phase & Members on the FOUND ID
+            project.id = targetId;
+            // Also need to update the object being saved
+
+            if (Array.isArray(existingProjects)) {
+                const idx = existingProjects.findIndex(p => p.id === targetId);
+                if (idx >= 0) {
+                    existingProjects[idx] = { ...existingProjects[idx], ...project }; // Merge to keep other potential fields? Or just overwrite? Overwrite is safer for fix.
+                } else {
+                    existingProjects.push(project);
+                }
+            } else {
+                existingProjects[targetId] = { ...existingProjects[targetId], ...project };
+            }
+
+            localStorage.setItem('pin_projects', JSON.stringify(existingProjects));
+
+            // Done
+            document.getElementById('status').textContent = "SUCCESS!";
+            document.getElementById('status').className = 'success';
+            log("Core data repaired. You can now close this tab and refresh the Project page.");
+
+        } catch (e) {
+            document.getElementById('status').textContent = "FAILED";
+            document.getElementById('status').className = 'error';
+            log(e.message, true);
+        }
+    </script>
+</body>
+
+</html>

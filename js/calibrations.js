@@ -27,6 +27,7 @@
     // State
     let profile = {}; // Init empty
     let activeContractType = 'confirmed'; // 'confirmed' or 'projected'
+    let activeContractId = null; // Track ID for editing
 
     async function init() {
         // Wait for Supabase/Store
@@ -59,6 +60,13 @@
         // Listeners
         if (inPeriodValue) inPeriodValue.addEventListener('input', handlePeriodChange);
         if (inPeriodUnit) inPeriodUnit.addEventListener('change', handlePeriodChange);
+
+        // Modal Listeners
+        const elDensityFreq = document.getElementById('c-density-freq');
+        if (elDensityFreq) elDensityFreq.addEventListener('change', updateOccurrenceUI);
+
+        const elMethod = document.getElementById('c-method');
+        if (elMethod) elMethod.addEventListener('change', toggleMethod);
     }
 
     function handlePeriodChange() {
@@ -74,50 +82,203 @@
 
     function openContractModal(type, contractId = null) {
         activeContractType = type;
+        activeContractId = contractId; // Set active ID
         if (modal) modal.style.display = 'flex';
 
-        const form = document.getElementById('form-contract');
-        if (form) form.reset();
+        // Reset Form
+        document.getElementById('c-name').value = '';
+        document.getElementById('c-method').value = 'rate';
 
-        // Set Hidden ID or Clear
-        const elId = document.getElementById('contract-id');
-        const elName = document.getElementById('contract-name');
-        const elAmount = document.getElementById('contract-amount');
-        const elHours = document.getElementById('contract-hours');
-        const elProb = document.getElementById('contract-prob');
+        // Rate Defaults
+        document.getElementById('c-rate').value = '';
+        document.getElementById('c-rate-unit').value = 'Hour';
+        document.getElementById('c-density-value').value = 1;
+        document.getElementById('c-density-unit').value = 'Hours';
+        document.getElementById('c-density-freq').value = 'Day';
+        document.getElementById('c-duration').value = 1;
+        document.getElementById('c-duration-unit').value = 'Years';
+
+        // Flat Defaults
+        document.getElementById('c-flat-amount').value = '';
+        document.getElementById('c-flat-duration-val').value = 1;
+        document.getElementById('c-flat-duration-unit').value = 'Months';
+
+        toggleMethod(); // Ensure correct view
 
         if (contractId) {
-            // Edit Mode
+            // Edit Mode: Populate from stored PARAMS
             const list = activeContractType === 'confirmed' ? profile.calibrations.confirmed : profile.calibrations.projected;
             const contract = list.find(c => c.id === contractId);
-            if (contract) {
-                if (elId) elId.value = contract.id;
-                if (elName) elName.value = contract.name;
-                if (elAmount) elAmount.value = contract.amount;
-                if (elHours) elHours.value = contract.hours;
-                if (elProb) elProb.value = contract.probability || 100;
+            if (contract && contract.params) {
+                const p = contract.params;
+
+                document.getElementById('c-name').value = contract.name || '';
+                document.getElementById('c-method').value = p.method || 'rate';
+
+                // Rate Params
+                if (p.method === 'rate') {
+                    if (p.rate) document.getElementById('c-rate').value = p.rate;
+                    if (p.rateUnit) document.getElementById('c-rate-unit').value = p.rateUnit;
+                    if (p.densityVal) document.getElementById('c-density-value').value = p.densityVal;
+                    if (p.densityUnit) document.getElementById('c-density-unit').value = p.densityUnit;
+                    if (p.densityFreq) document.getElementById('c-density-freq').value = p.densityFreq;
+                    if (p.duration) document.getElementById('c-duration').value = p.duration;
+                    if (p.durationUnit) document.getElementById('c-duration-unit').value = p.durationUnit;
+
+                    // Occurrence Param
+                    if (p.occurrenceVal) document.getElementById('c-occurrence-value').value = p.occurrenceVal;
+                }
+
+                // Flat Params
+                if (p.method === 'flat') {
+                    if (p.flatAmount) document.getElementById('c-flat-amount').value = p.flatAmount;
+                    if (p.flatDurVal) document.getElementById('c-flat-duration-val').value = p.flatDurVal;
+                    if (p.flatDurUnit) document.getElementById('c-flat-duration-unit').value = p.flatDurUnit;
+                }
+
+                toggleMethod(); // Refresh view based on loaded method
+                updateOccurrenceUI(); // Refresh labels
             }
-        } else {
-            // Create Mode
-            if (elId) elId.value = '';
         }
     }
 
     function closeContractModal() {
+        activeContractId = null;
         if (modal) modal.style.display = 'none';
     }
 
-
     async function saveContract() {
-        const idInput = document.getElementById('contract-id');
-        const id = (idInput && idInput.value) ? idInput.value : (window.Utils ? window.Utils.generateId() : 'fallback-' + Date.now());
+        const id = activeContractId || (window.Utils ? window.Utils.generateId() : 'c-' + Date.now());
+        const name = document.getElementById('c-name').value || 'Untitled Contract';
+        const method = document.getElementById('c-method').value;
 
-        const name = document.getElementById('contract-name').value;
-        const amount = parseFloat(document.getElementById('contract-amount').value) || 0;
-        const hours = parseFloat(document.getElementById('contract-hours').value) || 0;
-        const prob = parseFloat(document.getElementById('contract-prob').value) || 100;
+        let totalAmount = 0;
+        let totalHours = 0;
+        let params = { method };
 
-        const contract = { id, name, amount, hours, probability: prob };
+        if (method === 'rate') {
+            // RATES LOGIC
+            const rate = parseFloat(document.getElementById('c-rate').value) || 0;
+            const rateUnit = document.getElementById('c-rate-unit').value;
+            const densityVal = parseFloat(document.getElementById('c-density-value').value) || 0;
+            const densityUnit = document.getElementById('c-density-unit').value;
+            const densityFreq = document.getElementById('c-density-freq').value;
+            const duration = parseFloat(document.getElementById('c-duration').value) || 0;
+            const durationUnit = document.getElementById('c-duration-unit').value;
+
+            // Occurrence
+            const occurrenceVal = parseFloat(document.getElementById('c-occurrence-value').value) || 1;
+            // Note: UI might hide it, but logic should handle "1" effectively if hidden? 
+            // No, if hidden it means 100% or standard? 
+            // Actually, if densityFreq is Year, and occurrence hidden, it means 1 per Year? 
+            // Let's rely on the Algorithm.
+
+            // Store Params
+            params = { ...params, rate, rateUnit, densityVal, densityUnit, densityFreq, duration, durationUnit, occurrenceVal };
+
+            // CALCULATION LOGIC 3.0 (Occurrence-Aware)
+
+            // 1. Normalize Units to Hours for easy conversion
+            const toHours = (unit) => {
+                if (unit === 'Hour' || unit === 'Hours') return 1;
+                if (unit === 'Day' || unit === 'Days') return 8; // Std assumption for conversion
+                if (unit === 'Week' || unit === 'Weeks') return 40;
+                if (unit === 'Month' || unit === 'Months') return 172;
+                if (unit === 'Year' || unit === 'Years') return 2064;
+                return 1;
+            };
+
+            // 2. Define Time Hierarchy (in Days) for Frequency / Duration Handling
+            const toDays = (unit) => {
+                if (unit === 'Day' || unit === 'Days') return 1;
+                if (unit === 'Week' || unit === 'Weeks') return 7;
+                if (unit === 'Month' || unit === 'Months') return 30.44;
+                if (unit === 'Year' || unit === 'Years') return 365.25;
+                return 1;
+            };
+
+            // 3. Determine Structure
+            // Chain: DensityUnit PER DensityFreq PER OccurrenceFreq ... within Duration
+            // We need to know what "OccurrenceFreq" is implied by the UI.
+
+            // Logic mirrored from updateOccurrenceUI()
+            let occurrenceFreqUnit = 'Week'; // default
+            if (densityFreq === 'Day') occurrenceFreqUnit = 'Week';     // X Days per Week
+            if (densityFreq === 'Week') occurrenceFreqUnit = 'Month';   // X Weeks per Month
+            if (densityFreq === 'Month') occurrenceFreqUnit = 'Year';   // X Months per Year
+            if (densityFreq === 'Year') occurrenceFreqUnit = 'Year';    // 1 Year per Year (No multiplier really)
+
+            const durationDays = duration * toDays(durationUnit);
+            const occurrenceFreqDays = toDays(occurrenceFreqUnit);
+
+            // A. How many "OccurrenceFreqs" fit in the Duration?
+            // e.g. Duration = 6 Weeks. OccFreq = Week. -> 6.
+            // e.g. Duration = 1 Year. OccFreq = Month. -> 12.
+            let totalOccurrencePeriods = durationDays / occurrenceFreqDays;
+
+            // B. Special Case: If DensityFreq == Year, we usually don't scale by occurrence unless "Years per Decade"?
+            // If DensityFreq is Year, Occurrence is hidden. Treat multiplier as 1 (handled by defaulting val/logic).
+            if (densityFreq === 'Year') {
+                totalOccurrencePeriods = duration * toDays(durationUnit) / toDays('Year'); // Just years in duration
+                // And OccurrenceVal should be 1.
+            }
+
+            // C. Total Active "DensityFreqs"
+            // e.g. 6 Weeks * 5 Days/Week = 30 Active Days.
+            const totalActiveFreqs = totalOccurrencePeriods * occurrenceVal;
+
+            // D. Total Active "DensityUnits"
+            // e.g. 30 Days * 4 Hours/Day = 120 Active Hours.
+            const totalActiveDensityUnits = totalActiveFreqs * densityVal;
+
+            // E. Convert to Rate Unit
+            // Need (DensityUnitHours / RateUnitHours)
+            const conversionFactor = toHours(densityUnit) / toHours(rateUnit);
+
+            const totalRateUnits = totalActiveDensityUnits * conversionFactor;
+
+            totalAmount = rate * totalRateUnits;
+            totalHours = totalActiveDensityUnits * toHours(densityUnit); // Capacity in Hours
+
+        } else {
+            // FLAT LOGIC
+            const flatAmount = parseFloat(document.getElementById('c-flat-amount').value) || 0;
+            const flatDurVal = parseFloat(document.getElementById('c-flat-duration-val').value) || 0;
+            const flatDurUnit = document.getElementById('c-flat-duration-unit').value;
+
+            params = { ...params, flatAmount, flatDurVal, flatDurUnit };
+
+            totalAmount = flatAmount;
+
+            // HOURS CALCULATION (Pro-rated Capacity)
+            // User Expectation: "Calculated for the month... and deducted"
+            // Assumption: Flat Fee covers "Standard Utilization" for that period.
+
+            // 1. Get Annual Capacity
+            const capacity = Utils.calculateBillableCapacity(profile);
+            const annualBillable = capacity.totalBillableHours || 0;
+
+            // 2. Get Duration Ratio based on User's Work Year
+            // If user works 45 weeks/year, then 1 week of work = 1/45th of Annual Capacity.
+            const workWeeksPerYear = (profile.schedule && profile.schedule.weeks) ? parseFloat(profile.schedule.weeks) : 52;
+
+            let durRatio = 0;
+            if (flatDurUnit === 'Weeks') durRatio = flatDurVal / workWeeksPerYear;
+            if (flatDurUnit === 'Months') durRatio = flatDurVal / 12; // Annual / 12
+            if (flatDurUnit === 'Years') durRatio = flatDurVal;
+
+            // 3. Pro-rate
+            totalHours = annualBillable * durRatio;
+        }
+
+        const contract = {
+            id,
+            name,
+            amount: totalAmount,
+            hours: totalHours,
+            probability: 100, // Hardcoded for now in UI
+            params
+        };
 
         if (!profile.calibrations) profile.calibrations = { confirmed: [], projected: [] };
         if (!profile.calibrations.confirmed) profile.calibrations.confirmed = [];
@@ -325,9 +486,52 @@
     window.handlePeriodChange = handlePeriodChange;
 
     function toggleMethod() {
-        console.log("Toggle Method clicked");
+        const val = document.getElementById('c-method').value;
+        const rateDiv = document.getElementById('method-rate');
+        const flatDiv = document.getElementById('method-flat');
+
+        if (val === 'rate') {
+            rateDiv.style.display = 'block';
+            flatDiv.style.display = 'none';
+        } else {
+            rateDiv.style.display = 'none';
+            flatDiv.style.display = 'block';
+        }
     }
     window.toggleMethod = toggleMethod;
+
+    function updateOccurrenceUI() {
+        const freq = document.getElementById('c-density-freq').value;
+        const row = document.getElementById('row-occurrence');
+        const label = document.getElementById('c-occurrence-label');
+        const input = document.getElementById('c-occurrence-value');
+
+        if (!row) return;
+
+        // Logic:
+        // Day -> Occurs X Days per Week?
+        // Week -> Occurs X Weeks per Month?
+        // Month -> Occurs X Months per Year?
+        // Year -> N/A (Assume 1)
+
+        if (freq === 'Day') {
+            row.style.display = 'flex';
+            label.textContent = 'Days per Week';
+            if (!input.value) input.value = 5;
+        } else if (freq === 'Week') {
+            row.style.display = 'flex';
+            label.textContent = 'Weeks per Month'; // Ambiguous w/ 4.3, but standard user input is 4 or 4.3
+            if (!input.value) input.value = 4;
+        } else if (freq === 'Month') {
+            row.style.display = 'flex';
+            label.textContent = 'Months per Year';
+            if (!input.value) input.value = 12;
+        } else {
+            row.style.display = 'none';
+            input.value = 1;
+        }
+    }
+    window.updateOccurrenceUI = updateOccurrenceUI;
 
     // START
     init();
