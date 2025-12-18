@@ -1865,13 +1865,19 @@
             init();
         </script>
         <script>
-            // Authentication Check
+            // Authentication Check & UI Update
             (async () => {
-                const user = await Store.checkSession();
-                if (!user) return;
+                const userEmail = await Store.checkSession();
+                if (userEmail) {
+                    const display = document.getElementById('user-display');
+                    if (display) {
+                        display.textContent = userEmail;
+                        display.href = "profile.html"; // Ensure link is active
+                        display.style.opacity = "1";
+                    }
+                }
             })();
         </script>
-</body>
 
 </html>
 ```

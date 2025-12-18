@@ -147,6 +147,29 @@
                 </div>
             </div>
 
+            <!-- Location -->
+            <div class="form-section">
+                <h3>Geographic Location of Residence</h3>
+                <div class="form-group">
+                    <label class="required">Country</label>
+                    <select id="loc-country" required>
+                        <option value="">Loading...</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group" style="display:none;">
+                        <label>State/Region</label>
+                        <select id="loc-state"></select>
+                    </div>
+                    <div class="form-group" style="display:none;">
+                        <label class="required">City</label>
+                        <input type="text" list="loc-cities" id="loc-city" placeholder="Select Country first..."
+                            required>
+                        <datalist id="loc-cities"></datalist>
+                    </div>
+                </div>
+            </div>
+
             <!-- Professional & Financial -->
             <div class="form-section">
                 <h3>Professional & Household</h3>
@@ -185,16 +208,27 @@
 
     <script src="js/supabase_client.js"></script>
     <script src="js/store.js"></script>
+    <script src="js/location_helper.js"></script>
     <script>
+        // Init Location
+        document.addEventListener('DOMContentLoaded', () => {
+            LocationHelper.init(
+                document.getElementById('loc-country'),
+                document.getElementById('loc-state'),
+                document.getElementById('loc-city'),
+                document.getElementById('loc-cities')
+            );
+        });
+
         document.getElementById('signup-form').addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            const btn = e.target.querySelector('button');
+            const btn = e.target.querySelector('button[type="submit"]');
             btn.disabled = true;
             btn.textContent = 'Creating Account...';
 
             // Collect Data
-            const email = document.getElementById('email').value.trim();
+            const email = document.getElementById('signup-email').value.trim(); // ID Check: signup-email
             const password = document.getElementById('password').value;
             const fullName = document.getElementById('fullname').value.trim();
 
@@ -202,17 +236,37 @@
                 // 1. Auth & Profile Create
                 await Store.register(email, password, fullName);
 
-                // 2. Save detailed profile data to 'profiles' table
-                // Wait for session to be established? Register usually auto-logs-in?
-                // Supabase signUp returns session if auto-confirm is on.
-                // If email confirm is on, we tell them to check email.
+                // 2. Attempt to Update Extra Data (if session active)
+                // Note: race, education, location etc.
+                const extraData = {
+                    email: email,
+                    fullName: fullName,
+                    callName: document.getElementById('callname').value.trim(),
+                    birthdate: document.getElementById('birthdate').value,
+                    race: document.getElementById('race').value,
+                    education: document.getElementById('education').value,
 
-                // Let's assume we can save the profile immediately OR we do it inside Store.register (which we did).
-                // But we have extra fields here (race, education, etc) that Store.register didn't capture fully in the generic call.
-                // Store.register only took (email, pass, fullname).
-                // effectively we need to UPDATE the profile now with the rest.
+                    // Location
+                    country: document.getElementById('loc-country').value,
+                    state: document.getElementById('loc-state').value,
+                    city: document.getElementById('loc-city').value,
 
-                alert('Account created! Please check your email/login.');
+                    workTypes: document.getElementById('worktypes').value,
+                    taxStatus: document.getElementById('taxstatus').value,
+                    dependentsCount: document.getElementById('dependents-count').value,
+                    dependentsType: document.getElementById('dependents-type').value
+                };
+
+                // Check session
+                const user = await Store.getCurrentUser();
+                if (user) {
+                    await Store.updateUser(email, extraData);
+                    console.log("Profile details saved.");
+                } else {
+                    console.warn("No session after signup. Profile details (race, etc) saved only basic.");
+                }
+
+                alert('Account created! Logging you in...');
                 window.location.href = 'independent.html';
 
             } catch (err) {
@@ -221,6 +275,7 @@
                 errorBox.textContent = err.message;
                 btn.disabled = false;
                 btn.textContent = 'Register';
+                console.error(err);
             }
         });
     </script>

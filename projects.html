@@ -77,7 +77,7 @@
             // Fetch full user object for ID check
             const currentUser = await Store.getCurrentUser();
 
-            document.getElementById('user-display').textContent = `User: ${userEmail}`;
+            document.getElementById('user-display').textContent = userEmail;
             document.getElementById('btn-logout').onclick = Store.logout;
 
             // Render Projects

@@ -109,6 +109,97 @@ const Store = {
         return { ...window.DEFAULT_INDEPENDENT, ...data.independent_profile };
     },
 
+    /**
+     * Get Full User Profile (Identity + Login info)
+     * Maps flat form fields to/from DB structure (columns + jsonb)
+     */
+    getFullProfile: async () => {
+        const user = await Store.getCurrentUser();
+        if (!user) return null;
+
+        const { data, error } = await window.supabaseClient
+            .from('profiles')
+            .select('email, full_name, independent_profile')
+            .eq('id', user.id)
+            .single();
+
+        if (error) {
+            console.error("Error fetching full profile:", error);
+            return null;
+        }
+
+        const identity = (data.independent_profile && data.independent_profile.identity) ? data.independent_profile.identity : {};
+
+        return {
+            username: data.email,
+            email: data.email,
+            fullName: data.full_name,
+            // Spread identity fields
+            callName: identity.callName,
+            birthdate: identity.birthdate,
+            race: identity.race,
+            education: identity.education,
+            country: identity.country,
+            state: identity.state,
+            city: identity.city,
+            workTypes: identity.workTypes,
+            taxStatus: identity.taxStatus,
+            dependentsCount: identity.dependentsCount,
+            dependentsType: identity.dependentsType
+        };
+    },
+
+    /**
+     * Update User Profile
+     * Updates 'full_name' column AND 'independent_profile.identity' json subset
+     */
+    updateUser: async (email, formData) => {
+        const user = await Store.getCurrentUser();
+        if (!user) throw new Error("Not logged in");
+
+        // 1. Fetch current independent_profile to preserve financial data
+        const { data: current, error: fetchError } = await window.supabaseClient
+            .from('profiles')
+            .select('independent_profile')
+            .eq('id', user.id)
+            .single();
+
+        if (fetchError) throw fetchError;
+
+        const currentProfile = current.independent_profile || window.DEFAULT_INDEPENDENT;
+
+        // 2. Prepare Identity Update
+        const identityUpdate = {
+            callName: formData.callName,
+            birthdate: formData.birthdate,
+            race: formData.race,
+            education: formData.education,
+            country: formData.country,
+            state: formData.state,
+            city: formData.city,
+            workTypes: formData.workTypes,
+            taxStatus: formData.taxStatus,
+            dependentsCount: formData.dependentsCount,
+            dependentsType: formData.dependentsType
+        };
+
+        // Merge into profile
+        currentProfile.identity = { ...currentProfile.identity, ...identityUpdate };
+
+        // 3. Update DB
+        const { error: saveError } = await window.supabaseClient
+            .from('profiles')
+            .update({
+                full_name: formData.fullName,
+                independent_profile: currentProfile
+            })
+            .eq('id', user.id);
+
+        if (saveError) throw saveError;
+
+        return true;
+    },
+
     saveIndependentProfile: async (profile) => {
         const user = await Store.getCurrentUser();
         if (!user) return;

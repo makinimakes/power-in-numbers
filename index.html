@@ -57,6 +57,11 @@
 
 <body>
     <div class="container">
+        <header style="padding: var(--spacing-md); display: flex; justify-content: flex-end; align-items: center;">
+            <a href="profile.html" id="user-display"
+                style="text-decoration:none; color:var(--color-text-main); font-weight:bold; font-size: 0.9rem;">Guest</a>
+        </header>
+
         <div class="hero">
             <div class="title-block">
                 <h1>Power<br>in Numbers.</h1>
@@ -90,6 +95,21 @@
             &copy; 2025 Power in Numbers
         </footer>
     </div>
+    <script src="js/utils.js"></script>
+    <script src="js/supabase_client.js"></script>
+    <script src="js/store.js"></script>
+    <script>
+        (async () => {
+            const email = await Store.checkSession();
+            if (email) {
+                const el = document.getElementById('user-display');
+                if (el) {
+                    el.textContent = email;
+                    el.href = 'profile.html';
+                }
+            }
+        })();
+    </script>
 </body>
 
 </html>

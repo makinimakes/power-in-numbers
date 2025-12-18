@@ -129,7 +129,7 @@
         (async () => {
             const currentUser = await Store.checkSession();
             if (currentUser) {
-                document.getElementById('user-display').textContent = 'User: ' + currentUser;
+                document.getElementById('user-display').textContent = currentUser;
             }
         })();
     </script>

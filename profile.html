@@ -164,6 +164,28 @@
                 </div>
             </div>
 
+            <!-- Location -->
+            <div class="form-section">
+                <h3>Geographic Location of Residence</h3>
+                <div class="form-group">
+                    <label>Country</label>
+                    <select id="loc-country">
+                        <option value="">Loading...</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group" style="display:none;">
+                        <label>State/Region</label>
+                        <select id="loc-state"></select>
+                    </div>
+                    <div class="form-group" style="display:none;">
+                        <label>City</label>
+                        <input type="text" list="loc-cities" id="loc-city" placeholder="Select Country first...">
+                        <datalist id="loc-cities"></datalist>
+                    </div>
+                </div>
+            </div>
+
             <!-- Professional & Financial -->
             <div class="form-section">
                 <h3>Professional & Household</h3>
@@ -210,32 +232,76 @@
     </div>
 
     <script src="js/supabase_client.js"></script>
-        <script src="js/store.js"></script>
+    <script src="js/store.js"></script>
+    <script src="js/location_helper.js"></script>
     <script>
         // Load Data
-        const currentUser = Store.checkSession();
-        if (!currentUser) window.location.href = 'login.html';
+        // Initialize and Load Data
+        (async () => {
+            if (typeof Store === 'undefined') {
+                console.error("Store not loaded");
+                return;
+            }
 
-        const users = Store.getUsers();
-        const userData = users[currentUser];
+            try {
+                await Store.init();
+                const sessionEmail = await Store.checkSession();
 
-        if (userData) {
-            document.getElementById('username').value = userData.username;
-            document.getElementById('email').value = userData.email || '';
-            document.getElementById('fullname').value = userData.fullName || '';
-            document.getElementById('callname').value = userData.callName || '';
-            document.getElementById('birthdate').value = userData.birthdate || '';
-            document.getElementById('race').value = userData.race || '';
-            document.getElementById('education').value = userData.education || '';
-            document.getElementById('worktypes').value = userData.workTypes || '';
-            document.getElementById('taxstatus').value = userData.taxStatus || '';
-            document.getElementById('dependents-count').value = userData.dependentsCount || '';
-            document.getElementById('dependents-type').value = userData.dependentsType || '';
-        }
+                if (!sessionEmail) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                const userData = await Store.getFullProfile();
+
+                // Init Location Dropdowns
+                const locCountry = document.getElementById('loc-country');
+                const locState = document.getElementById('loc-state');
+                const locCity = document.getElementById('loc-city');
+                const locCities = document.getElementById('loc-cities');
+                if (locCountry) LocationHelper.init(locCountry, locState, locCity, locCities);
+
+                if (userData) {
+                    document.getElementById('username').value = userData.username || sessionEmail;
+                    document.getElementById('email').value = userData.email || sessionEmail;
+                    document.getElementById('fullname').value = userData.fullName || '';
+                    document.getElementById('callname').value = userData.callName || '';
+                    document.getElementById('birthdate').value = userData.birthdate || '';
+                    document.getElementById('race').value = userData.race || '';
+                    document.getElementById('education').value = userData.education || '';
+
+                    // Location Populate
+                    if (userData.country) {
+                        const cEl = document.getElementById('loc-country');
+                        cEl.value = userData.country;
+                        // Trigger load of states/cities
+                        await LocationHelper.loadStateCity(
+                            userData.country,
+                            document.getElementById('loc-state'),
+                            document.getElementById('loc-city'),
+                            document.getElementById('loc-cities')
+                        );
+                        // Now set values
+                        document.getElementById('loc-state').value = userData.state || '';
+                        document.getElementById('loc-city').value = userData.city || '';
+                    }
+
+                    document.getElementById('worktypes').value = userData.workTypes || '';
+                    document.getElementById('taxstatus').value = userData.taxStatus || '';
+                    document.getElementById('dependents-count').value = userData.dependentsCount || '';
+                    document.getElementById('dependents-type').value = userData.dependentsType || '';
+                }
+
+            } catch (err) {
+                console.error("Profile Load Error:", err);
+            }
+        })();
 
         // Save Data
-        document.getElementById('profile-form').addEventListener('submit', (e) => {
+        document.getElementById('profile-form').addEventListener('submit', async (e) => {
             e.preventDefault();
+
+            const currentUser = document.getElementById('username').value; // or from closure
 
             const updatedData = {
                 email: document.getElementById('email').value.trim(),
@@ -244,16 +310,27 @@
                 birthdate: document.getElementById('birthdate').value,
                 race: document.getElementById('race').value,
                 education: document.getElementById('education').value,
+
+                // Location
+                country: document.getElementById('loc-country').value,
+                state: document.getElementById('loc-state').value,
+                city: document.getElementById('loc-city').value,
+
                 workTypes: document.getElementById('worktypes').value,
                 taxStatus: document.getElementById('taxstatus').value,
                 dependentsCount: document.getElementById('dependents-count').value,
                 dependentsType: document.getElementById('dependents-type').value
             };
 
-            try {
-                Store.updateUser(currentUser, updatedData);
+            const msg = document.getElementById('status-msg');
+            const btn = document.querySelector('button[type="submit"]');
 
-                const msg = document.getElementById('status-msg');
+            try {
+                btn.textContent = "Saving...";
+                btn.disabled = true;
+
+                await Store.updateUser(currentUser, updatedData);
+
                 msg.style.display = 'block';
                 msg.style.background = '#e8f5e9';
                 msg.style.color = '#2e7d32';
@@ -262,11 +339,14 @@
                 // Hide success message after 3s
                 setTimeout(() => msg.style.display = 'none', 3000);
             } catch (err) {
-                const msg = document.getElementById('status-msg');
                 msg.style.display = 'block';
                 msg.style.background = '#ffebee';
                 msg.style.color = '#c62828';
                 msg.textContent = 'Error: ' + err.message;
+                console.error(err);
+            } finally {
+                btn.textContent = "Save Changes";
+                btn.disabled = false;
             }
         });
     </script>
