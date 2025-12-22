@@ -95,8 +95,10 @@ begin
         return;
     end if;
 
-    -- Find pending invites for this email
-    for inv in select * from project_invites where email = usr_email and status = 'pending'
+    -- Find pending invites for this email (Case Insensitive Match)
+    for inv in select * from project_invites 
+               where lower(email) = lower(usr_email) 
+               and status = 'pending'
     loop
         -- Add to members
         insert into project_members (project_id, user_id, role)
