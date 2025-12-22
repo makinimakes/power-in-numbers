@@ -224,58 +224,97 @@
             e.preventDefault();
 
             const btn = e.target.querySelector('button[type="submit"]');
+            const originalText = btn.textContent;
+
+            // UI State: Loading
+            const errorBox = document.getElementById('signup-error');
+            errorBox.style.display = 'none';
             btn.disabled = true;
             btn.textContent = 'Creating Account...';
 
-            // Collect Data
-            const email = document.getElementById('signup-email').value.trim(); // ID Check: signup-email
-            const password = document.getElementById('password').value;
-            const fullName = document.getElementById('fullname').value.trim();
+            // Collect Data Safe
+            const getVal = (id) => {
+                const el = document.getElementById(id);
+                return el ? el.value.trim() : '';
+            };
+
+            // Watchdog Timer (15s) - Prevents "Infinite Freeze"
+            let watchdog = setTimeout(() => {
+                console.error("Signup Timed Out");
+                btn.disabled = false;
+                btn.textContent = originalText;
+                alert("Network request timed out. Please check your internet connection and try again.");
+            }, 15000);
 
             try {
+                // Collect Data
+                const email = getVal('signup-email');
+                const password = document.getElementById('password').value;
+                const fullName = getVal('fullname');
+
+                if (!email || !password) throw new Error("Email and Password are required.");
+
                 // 1. Auth & Profile Create
+                console.log("Starting Registration...");
                 await Store.register(email, password, fullName);
 
-                // 2. Attempt to Update Extra Data (if session active)
-                // Note: race, education, location etc.
+                // Clear Watchdog on success
+                clearTimeout(watchdog);
+
+                console.log("Registration Successful. Preparing Extra Data...");
+
+                // 2. Prepare Extra Data
                 const extraData = {
                     email: email,
                     fullName: fullName,
-                    callName: document.getElementById('callname').value.trim(),
+                    callName: getVal('callname'),
                     birthdate: document.getElementById('birthdate').value,
-                    race: document.getElementById('race').value,
-                    education: document.getElementById('education').value,
-
+                    race: getVal('race'),
+                    education: getVal('education'),
                     // Location
-                    country: document.getElementById('loc-country').value,
-                    state: document.getElementById('loc-state').value,
-                    city: document.getElementById('loc-city').value,
-
-                    workTypes: document.getElementById('worktypes').value,
-                    taxStatus: document.getElementById('taxstatus').value,
-                    dependentsCount: document.getElementById('dependents-count').value,
-                    dependentsType: document.getElementById('dependents-type').value
+                    country: getVal('loc-country'),
+                    state: getVal('loc-state'),
+                    city: getVal('loc-city'),
+                    // Other
+                    workTypes: getVal('worktypes'),
+                    taxStatus: getVal('taxstatus'),
+                    dependentsCount: getVal('dependents-count'),
+                    dependentsType: getVal('dependents-type')
                 };
 
-                // Check session
+                // 3. Update Extra Data (if session)
                 const user = await Store.getCurrentUser();
                 if (user) {
+                    console.log("Session active. Saving profile details...");
                     await Store.updateUser(email, extraData);
                     console.log("Profile details saved.");
                 } else {
-                    console.warn("No session after signup. Profile details (race, etc) saved only basic.");
+                    console.warn("No session after signup. Basic profile created, details queued.");
                 }
 
                 alert('Account created! Logging you in...');
                 window.location.href = 'independent.html';
 
             } catch (err) {
-                const errorBox = document.getElementById('signup-error');
+                clearTimeout(watchdog);
+                console.error("Signup Error:", err);
+
+                // Safe Error Display
                 errorBox.style.display = 'block';
-                errorBox.textContent = err.message;
+                let msg = "An error occurred during signup.";
+
+                if (err) {
+                    if (typeof err === 'string') msg = err;
+                    else if (err.message) msg = err.message;
+                    else if (err.error_description) msg = err.error_description; // Supabase sometimes
+                    else if (JSON.stringify(err) !== '{}') msg = JSON.stringify(err);
+                }
+
+                errorBox.textContent = msg;
+
+                // Reset Button
                 btn.disabled = false;
-                btn.textContent = 'Register';
-                console.error(err);
+                btn.textContent = originalText;
             }
         });
     </script>
