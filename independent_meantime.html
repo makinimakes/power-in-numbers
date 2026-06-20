@@ -93,39 +93,80 @@
             <!-- Right: Summary Dock -->
             <div style="padding-left: var(--spacing-md);">
                 <div class="section-header">
-                    Intermediate Goal
+                    Meantime Goal
                 </div>
 
                 <div style="margin-top: var(--spacing-md);">
 
-                    <div class="summary-card" style="background:var(--color-bg-subtle);">
-                        <h3 class="card-title" style="border-bottom-color:#ccc;">Baseline</h3>
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span style="font-size:0.9rem;">Current Net Income</span>
-                            <span id="out-current-net" style="font-weight:bold; font-size:1.1rem;">$0</span>
-                        </div>
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
-                            <span style="font-size:0.9rem;">Meantime Adjustment</span>
-                            <span id="out-adjustment"
-                                style="font-weight:bold; font-size:1.1rem; color: var(--color-accent-surviving);">+$0</span>
-                        </div>
+                    <div class="summary-card">
+                        <h3 class="card-title">Rate Comparison</h3>
+                        <table style="width:100%; border-collapse: collapse; font-size: 0.95rem; margin-top: 15px;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid #ddd; font-weight: bold; color: #555;">
+                                    <th style="padding: 8px 0; text-align: left;">Unit</th>
+                                    <th style="padding: 8px 0; text-align: right;">NOW</th>
+                                    <th style="padding: 8px 0; text-align: right; color: var(--color-primary);">NOWPrime</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr style="border-bottom: 1px dashed #eee;">
+                                    <td style="padding: 8px 0; color: var(--color-text-muted);">Hourly</td>
+                                    <td style="text-align:right; font-weight:bold;" id="out-now-hr">$0</td>
+                                    <td style="text-align:right; font-weight:bold; color: var(--color-primary);" id="out-prime-hr">$0</td>
+                                </tr>
+                                <tr style="border-bottom: 1px dashed #eee;">
+                                    <td style="padding: 8px 0; color: var(--color-text-muted);">Daily</td>
+                                    <td style="text-align:right; font-weight:bold;" id="out-now-day">$0</td>
+                                    <td style="text-align:right; font-weight:bold; color: var(--color-primary);" id="out-prime-day">$0</td>
+                                </tr>
+                                <tr style="border-bottom: 1px dashed #eee;">
+                                    <td style="padding: 8px 0; color: var(--color-text-muted);">Weekly</td>
+                                    <td style="text-align:right; font-weight:bold;" id="out-now-wk">$0</td>
+                                    <td style="text-align:right; font-weight:bold; color: var(--color-primary);" id="out-prime-wk">$0</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0; color: var(--color-text-muted);">Monthly</td>
+                                    <td style="text-align:right; font-weight:bold;" id="out-now-mo">$0</td>
+                                    <td style="text-align:right; font-weight:bold; color: var(--color-primary);" id="out-prime-mo">$0</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
 
                     <div class="summary-card">
-                        <h3 class="card-title">Current NetPRIME</h3>
-                        <div class="huge-number" id="out-net-prime">$0</div>
+                        <div style="display: flex; gap: 20px;">
+                            <!-- Column 1: NOW -->
+                            <div style="flex: 1; border-right: 1px dashed #ccc; padding-right: 20px;">
+                                <h3 class="card-title">NOW Net</h3>
+                                <div class="huge-number" id="out-now-net" style="font-size: 2rem;">$0</div>
 
-                        <div style="margin-top: 15px; padding-top: 10px; border-top: 1px dotted #ccc;">
-                            <h3 class="card-title" style="font-size: 0.9rem; border-bottom: none; margin-bottom: 5px;">
-                                Current GrossPRIME</h3>
-                            <div class="huge-number" id="out-gross-prime" style="font-size: 2rem;">$0</div>
+                                <div style="margin-top: 15px; padding-top: 10px; border-top: 1px dotted #ccc;">
+                                    <h3 class="card-title" style="font-size: 0.9rem; border-bottom: none; margin-bottom: 5px;">
+                                        NOW Gross</h3>
+                                    <div class="huge-number" id="out-now-gross" style="font-size: 1.5rem;">$0</div>
+                                </div>
+                            </div>
+
+                            <!-- Column 2: NOWPrime -->
+                            <div style="flex: 1;">
+                                <h3 class="card-title" style="color: var(--color-primary);">NOWPrime Net</h3>
+                                <div class="huge-number" id="out-net-prime" style="font-size: 2rem;">$0</div>
+
+                                <div style="margin-top: 15px; padding-top: 10px; border-top: 1px dotted #ccc;">
+                                    <h3 class="card-title" style="font-size: 0.9rem; border-bottom: none; margin-bottom: 5px; color: var(--color-primary);">
+                                        NOWPrime Gross</h3>
+                                    <div class="huge-number" id="out-gross-prime" style="font-size: 1.5rem;">$0</div>
+                                </div>
+                            </div>
                         </div>
 
-                        <p style="font-size:0.8rem; color:var(--color-text-muted); margin-top:10px;">
+                        <p style="font-size:0.8rem; color:var(--color-text-muted); margin-top:20px;">
                             This is the minimal income target needed to support your selected goals while maintaining
                             your current baseline.
                         </p>
                     </div>
+
+
 
                 </div>
             </div>

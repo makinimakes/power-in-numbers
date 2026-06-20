@@ -72,8 +72,13 @@
 
 <body>
     <div class="container">
-        <header class="page-header">
-            <h1>My Economies<br><span style="font-size: 0.5em; font-weight: 400;">Some NOW Calibrations</span></h1>
+        <header class="page-header" style="flex-wrap: wrap; align-items: flex-start;">
+            <div style="flex: 1; padding-right: 20px;">
+                <h1>My Economies<br><span style="font-size: 0.5em; font-weight: 400;">Some NOW Calibrations</span></h1>
+                <p style="font-size: 0.9rem; color: #666; margin-top: 15px; margin-bottom: 5px; line-height: 1.5; max-width: 800px;">
+                    This page takes the expenses that you outlined as your Needs and Desires, calculates what percentage each expense is of the total, and then applies those percentages to your current income situation. You can adjust and fix any of the expense calculations below, and the app will recalibrate the remaining expenses accordingly. You can use this page to try to figure out how to make space for expenses that you may not normally prioritize in your current income situation.
+                </p>
+            </div>
             <div style="text-align:right;">
                 <a href="independent.html" style="font-weight: 700; margin-right:15px;">&larr; BACK</a>
                 <button onclick="Store.logout()"
@@ -99,9 +104,7 @@
 
             <!-- Right: Summary Dock -->
             <div style="padding-left: var(--spacing-md);">
-                <div class="section-header">
-                    3. Recalibrated Totals
-                </div>
+
 
                 <div style="margin-top: var(--spacing-md);">
 

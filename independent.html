@@ -8,6 +8,70 @@
     <link rel="stylesheet" href="css/style.css?v=FORCE_7">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
+        /* Tag Input Styles */
+        .tag-input-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            padding: 5px;
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            background: transparent;
+            min-height: 38px;
+            position: relative;
+            align-items: center;
+        }
+        .tag-chip {
+            display: inline-flex;
+            align-items: center;
+            background: var(--color-bg-inverse);
+            color: var(--color-text-inverse);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            gap: 4px;
+        }
+        .tag-chip-remove {
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.8rem;
+        }
+        .tag-input-field {
+            border: none;
+            outline: none;
+            background: transparent;
+            flex-grow: 1;
+            min-width: 120px;
+            font-size: 0.85rem;
+            font-family: var(--font-family-base);
+            color: var(--color-text-main);
+            padding: 2px 0;
+        }
+        .autocomplete-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--color-bg-base);
+            border: 1px solid var(--color-border);
+            max-height: 150px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-radius: 0 0 4px 4px;
+        }
+        .autocomplete-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            color: var(--color-text-main);
+        }
+        .autocomplete-item:hover, .autocomplete-item.active {
+            background: var(--color-bg-inverse);
+            color: var(--color-text-inverse);
+        }
         /* Extra grid specifics for this page */
         .grid-header {
             display: flex;
@@ -90,19 +154,43 @@
                     </div>
                 </div>
 
+                <div style="display: flex; align-items: center; justify-content: flex-end; margin-bottom: 20px; gap: 20px; padding: var(--spacing-sm); background: var(--color-bg-subtle); border-radius: 4px;">
+                    <!-- Text Lines -->
+                    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div style="width: 12px; height: 12px; background: #0000ff; border-radius: 2px;"></div>
+                            <span style="font-size: 0.75rem; font-weight: 700; color: var(--color-text-muted);">Total Annual Work Hours</span>
+                            <span id="out-total-work-annual" style="font-weight: bold; font-size: 0.95rem; width: 50px; text-align: right;">-</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div style="width: 12px; height: 12px; background: #555555; border-radius: 2px;"></div>
+                            <span style="font-size: 0.75rem; font-weight: 700; color: var(--color-text-muted);">Total Annual Sleeping Hours (based on 8 hours per night)</span>
+                            <span id="out-total-sleep-annual" style="font-weight: bold; font-size: 0.95rem; width: 50px; text-align: right;">-</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div style="width: 12px; height: 12px; background: #10b981; border-radius: 2px;"></div>
+                            <span style="font-size: 0.75rem; font-weight: 700; color: var(--color-text-muted);">Remaining Living Life Hours</span>
+                            <span id="out-remain-life-annual" style="font-weight: bold; font-size: 0.95rem; width: 50px; text-align: right;">-</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Pie Chart -->
+                    <div id="life-pie-chart" style="width: 90px; height: 90px; border-radius: 50%; background: #eee; flex-shrink: 0; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);"></div>
+                </div>
+                <div id="schedule-alerts"></div>
+
                 <!-- Lines of Work Calculator -->
                 <div
                     style="margin-top: var(--spacing-sm); border-top: 1px dotted var(--color-border); padding-top: var(--spacing-sm);">
                     <div
                         style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-xs);">
-                        <button class="toggle-btn collapsed" onclick="toggleSection('lines-of-work-container', this)">
+                        <button class="toggle-btn collapsed" onclick="toggleSection('lines-of-work-container', this, 'btn-add-line-of-work')">
                             <span class="toggle-icon">▼</span>
                             <label
-                                style="margin:0; font-size: 0.7rem; text-transform:uppercase; letter-spacing:1px; cursor:pointer;">Lines
-                                of Work</label>
+                                style="margin:0; font-size: 0.7rem; text-transform:uppercase; letter-spacing:1px; cursor:pointer;">Non-Billable Working Time</label>
                         </button>
                         <button id="btn-add-line-of-work"
-                            style="font-size: 0.7rem; padding: 2px 6px; cursor: pointer;">+
+                            style="font-size: 0.7rem; padding: 2px 6px; cursor: pointer; display: none;">+
                             New Line</button>
                     </div>
                     <div id="lines-of-work-container" class="hidden" style="display:none;">
@@ -114,43 +202,96 @@
 
                 <!-- Tax Rate Input (Retained) -->
 
-                <div style="padding: var(--spacing-sm); border-bottom: var(--border-std);">
-                    <div class="ledger-row" style="flex-wrap: wrap;">
-                        <label>Estimated Tax Rate (%)</label>
-                        <div style="width: 80px;">
-                            <input type="number" id="in-tax-rate" min="0" max="100" placeholder="30">
-                        </div>
-                        <div
-                            style="width: 100%; font-size: 0.7rem; color: var(--color-text-muted); margin-top: 5px; font-style: italic;">
-                            We suggest keeping this at 30% for self-employed folks
-                        </div>
-                    </div>
-                </div>
 
                 <!-- Section 2: Personal Expenses -->
                 <div class="section-header"
                     style="margin-top: var(--spacing-md); display:flex; justify-content:space-between; align-items:center;">
-                    <button class="toggle-btn collapsed" onclick="toggleSection('expenses-container', this)">
-                        <span class="toggle-icon">▼</span>
-                        <span style="font-size: 0.9rem; font-weight:700;">2. Personal Survival Expenses</span>
-                    </button>
-                    <button id="btn-add-expense" style="font-size: 0.7rem; padding: 2px 6px; cursor: pointer;">+ Add
-                        Expense</button>
+                    <span style="font-size: 0.9rem; font-weight:700;">2. Pockets and Purses</span>
                 </div>
-                <div id="expenses-container" class="hidden" style="padding: var(--spacing-sm); display:none;">
-                    <!-- JS injected Expense Rows -->
+                <div id="pockets-purses-container" style="padding: var(--spacing-sm); border: 1px solid var(--color-border); border-radius: 4px; margin-top: 5px;">
+                    
+                    <div class="section-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom: none;">
+                        <button class="toggle-btn collapsed" onclick="toggleSection('needs-desires-wrapper', this, 'btn-add-expense')">
+                            <span class="toggle-icon">▼</span>
+                            <span style="font-size: 0.8rem; font-weight:700;">Needs & Desires</span>
+                        </button>
+                        <button id="btn-add-expense" style="font-size: 0.7rem; padding: 2px 6px; cursor: pointer; display: none;">+ Add Expense</button>
+                    </div>
+
+                    <div id="needs-desires-wrapper" class="hidden" style="display:none;">
+                        <div id="expenses-container" style="padding: var(--spacing-sm);">
+                            <!-- JS injected Expense Rows -->
+                        </div>
+                        <!-- Total Needs & Desires Footer -->
+                        <div style="padding: var(--spacing-sm); background: var(--color-bg-subtle); border-top: var(--border-std); display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-weight:bold; font-size:0.8rem; text-transform:uppercase;">Total Annual Needs & Desires</span>
+                            <span id="out-total-needs-desires" style="font-weight:bold; font-family:monospace;">$0</span>
+                        </div>
+                    </div>
+
+                    <div class="section-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom: none; margin-top: 10px;">
+                        <button class="toggle-btn collapsed" onclick="toggleSection('non-wage-income-wrapper', this, 'btn-add-income')">
+                            <span class="toggle-icon">▼</span>
+                            <span style="font-size: 0.8rem; font-weight:700;">Non-Wage Income</span>
+                        </button>
+                        <button id="btn-add-income" style="font-size: 0.7rem; padding: 2px 6px; cursor: pointer; display: none;">+ Add Income Source</button>
+                    </div>
+                    
+                    <div id="non-wage-income-wrapper" class="hidden" style="display:none;">
+                        <div id="unearned-income-container" style="padding: var(--spacing-sm);">
+                            <!-- JS Injected Income Rows -->
+                        </div>
+                        <!-- Total Unearned Footer -->
+                        <div style="padding: var(--spacing-sm); background: var(--color-bg-subtle); border-top: var(--border-std); display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-weight:bold; font-size:0.8rem; text-transform:uppercase;">Total Annual Non-Wage Income</span>
+                            <span id="out-total-unearned-income" style="font-weight:bold; font-family:monospace;">$0</span>
+                        </div>
+                    </div>
+
+                    <datalist id="holdings-library">
+                        <option value="Cash on Hand"></option>
+                        <option value="Money in Bank Accounts"></option>
+                        <option value="Certificates of Deposit"></option>
+                        <option value="Money Market Funds"></option>
+                        <option value="Value of Equities"></option>
+                        <option value="Value of Bonds / Fixed Income Securities"></option>
+                        <option value="Mutual Funds"></option>
+                        <option value="Retirement Accounts"></option>
+                        <option value="Cryptocurrency"></option>
+                        <option value="Real Estate"></option>
+                        <option value="Vehicles (beyond the first)"></option>
+                        <option value="Art and/or Collectibles"></option>
+                    </datalist>
+
+                    <div class="section-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom: none; margin-top: 10px;">
+                        <button class="toggle-btn collapsed" onclick="toggleSection('holdings-wrapper', this, 'btn-add-holding')">
+                            <span class="toggle-icon">▼</span>
+                            <span style="font-size: 0.8rem; font-weight:700;">Holdings</span>
+                        </button>
+                        <button id="btn-add-holding" style="font-size: 0.7rem; padding: 2px 6px; cursor: pointer; display: none;">+ Add Holding</button>
+                    </div>
+                    
+                    <div id="holdings-wrapper" class="hidden" style="display:none;">
+                        <div id="holdings-container" style="padding: var(--spacing-sm);">
+                            <!-- JS Injected Holdings Rows -->
+                        </div>
+                        <!-- Total Holdings Footer -->
+                        <div style="padding: var(--spacing-sm); background: var(--color-bg-subtle); border-top: var(--border-std); display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-weight:bold; font-size:0.8rem; text-transform:uppercase;">Total Value of Holdings</span>
+                            <span id="out-total-holdings" style="font-weight:bold; font-family:monospace;">$0</span>
+                        </div>
+                    </div>
+
                 </div>
 
                 <!-- Business Overhead Profiles -->
                 <div class="section-header"
                     style="margin-top: var(--spacing-md); display:flex; justify-content:space-between; align-items:center;">
-                    <button class="toggle-btn collapsed" onclick="toggleSection('overhead-profiles-container', this)">
+                    <button class="toggle-btn collapsed" onclick="toggleSection('overhead-profiles-container', this, 'btn-add-overhead-profile')">
                         <span class="toggle-icon">▼</span>
-                        <span style="font-size: 0.9rem; font-weight:700;">Business Infrastructures</span>
+                        <span style="font-size: 0.8rem; font-weight:700;">Associated Business Profile(s)</span>
                     </button>
-                    <button class="btn" id="btn-add-overhead-profile" style="padding: 2px 8px; font-size: 0.7rem;">+
-                        Create
-                        Profile</button>
+                    <button class="btn" id="btn-add-overhead-profile" style="padding: 2px 8px; font-size: 0.7rem; display: none;">+ Create Profile</button>
                 </div>
                 <div id="overhead-profiles-container" class="hidden" style="padding: var(--spacing-sm); display:none;">
                     <!-- JS Injected Overhead Profiles -->
@@ -159,51 +300,40 @@
                         account for overhead.</div>
                 </div>
 
-
-
-                <!-- Section 3: Unearned Income -->
+                <!-- Section 3: Current Annual Income (Net) -->
                 <div class="section-header"
                     style="margin-top: var(--spacing-md); display:flex; justify-content:space-between; align-items:center;">
-                    <button class="toggle-btn collapsed" onclick="toggleSection('unearned-income-container', this)">
-                        <span class="toggle-icon">▼</span>
-                        <span style="font-size: 0.9rem; font-weight:700;">3. Current Unearned Income Sources</span>
-                    </button>
-                    <button id="btn-add-income" style="font-size: 0.7rem; padding: 2px 6px; cursor: pointer;">+ Add
-                        Income Source</button>
-                </div>
-
-                <div id="unearned-income-container" class="hidden" style="padding: var(--spacing-sm); display:none;">
-                    <!-- JS Injected Income Rows -->
-                </div>
-                <!-- Total Unearned Footer -->
-                <div
-                    style="padding: var(--spacing-sm); background: var(--color-bg-subtle); border-top: var(--border-std); display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-weight:bold; font-size:0.8rem; text-transform:uppercase;">Total Annual Unearned
-                        Income</span>
-                    <span id="out-total-unearned-income" style="font-weight:bold; font-family:monospace;">$0</span>
-                </div>
-
-                <!-- Section 4: Current Annual Income (Net) -->
-                <div class="section-header"
-                    style="margin-top: var(--spacing-md); display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-size: 0.9rem;">4. Current Annual Income (Net)</span>
+                    <span style="font-size: 0.9rem;">3. <i>NOW</i> Annual Money Spent and Allocated</span>
                 </div>
 
                 <div style="padding: var(--spacing-sm); border-bottom: var(--border-std);">
                     <div class="ledger-row">
-                        <label>Current Net Income</label>
+                        <label><i>NOW</i> Annual Money Spent and Allocated</label>
                         <div style="width: 120px; display:flex; align-items:center;">
                             <span style="padding-right:5px; font-weight:bold; color:var(--color-text-muted);">$</span>
                             <input type="text" id="in-current-net-income" placeholder="0" style="width:100%;">
                         </div>
                     </div>
                     <div class="ledger-row" style="margin-top:5px; border-bottom:none;">
-                        <span class="text-muted" style="font-size:0.8rem; font-weight:bold;">Current Gross Income</span>
+                        <span class="text-muted" style="font-size:0.8rem; font-weight:bold;"><i>NOW</i> Estimated Gross Income</span>
                         <span>
                             <strong id="out-current-gross">$0</strong>
                             <button onclick="window.viewIndependentLog('currentGross')"
                                 style="background:none; border:none; cursor:pointer; opacity:0.6; font-size:0.8rem;">ℹ️</button>
                         </span>
+                    </div>
+                </div>
+
+                <div style="padding: var(--spacing-sm); border-bottom: var(--border-std);">
+                    <div class="ledger-row" style="flex-wrap: wrap;">
+                        <label>Estimated Income Tax Rate (%)</label>
+                        <div style="width: 80px;">
+                            <input type="number" id="in-tax-rate" min="0" max="100" placeholder="30">
+                        </div>
+                        <div
+                            style="width: 100%; font-size: 0.7rem; color: var(--color-text-muted); margin-top: 5px; font-style: italic;">
+                            We suggest keeping this at 30% for self-employed folks
+                        </div>
                     </div>
                 </div>
             </div> <!-- End Left Column -->
@@ -216,9 +346,23 @@
 
                     <!-- NOW RATES (Re-implemented) -->
                     <div style="margin-bottom: var(--spacing-lg);">
-                        <div class="result-label"
+                        <style>
+                            .switch input:checked + .slider { background-color: var(--color-primary) !important; }
+                            .switch input:checked ~ .slider-knob { transform: translateX(20px); }
+                        </style>
+                        <div id="now-rates-static-title" class="result-label"
                             style="text-align:center; color: var(--color-text-main); margin-bottom: 10px; font-size: 1.1rem; border-bottom: 2px solid var(--color-text-main); padding-bottom: 5px;">
                             NOW Rates
+                        </div>
+                        <div id="now-rates-toggle-title" class="result-label"
+                            style="display:none; justify-content:center; align-items:center; gap:10px; color: var(--color-text-main); margin-bottom: 10px; font-size: 1.1rem; border-bottom: 2px solid var(--color-text-main); padding-bottom: 5px;">
+                            <span id="label-now-rates">NOW Rates</span>
+                            <label class="switch" style="position: relative; display: inline-block; width: 40px; height: 20px;">
+                                <input type="checkbox" id="toggle-prime-rates" onchange="calculateAndDisplay()" style="opacity: 0; width: 0; height: 0;">
+                                <span class="slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 20px;"></span>
+                                <span class="slider-knob" style="position: absolute; height: 16px; width: 16px; left: 2px; bottom: 2px; background-color: white; transition: .4s; border-radius: 50%; pointer-events: none;"></span>
+                            </label>
+                            <span id="label-prime-rates" style="color:var(--color-text-muted);">NOWPrime</span>
                         </div>
                         <table style="width:100%; border-collapse: collapse; font-size: 0.95rem;">
                             <tr style="border-bottom: 1px dashed #eee;">
@@ -255,6 +399,15 @@
                                 </td>
                             </tr>
                         </table>
+                    </div>
+                    <div style="margin-bottom: 20px; font-size: 0.85rem; color: var(--color-text-muted); text-align: center; border: 1px solid #ddd; border-radius: 6px; padding: 10px; background: #fdfdfd;">
+                        <label style="cursor:pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0;">
+                            <input type="checkbox" id="check-send-prime" onchange="window.toggleSendPrime()"> 
+                            <span>Send <b>NOWPrime</b> Rates to Projects</span>
+                        </label>
+                        <div style="font-size: 0.75rem; margin-top: 5px; opacity: 0.8;">
+                            Check this to use your NOWPrime target as the baseline for equity and calculations in your Projects.
+                        </div>
                     </div>
 
                     <!-- GOAL FEES (Promoted to Top) -->
@@ -357,17 +510,17 @@
                             style="margin-bottom: var(--spacing-sm); font-size: 0.85rem; text-transform: uppercase; color: var(--color-text-muted); letter-spacing: 1px;">
                             Deep Dives
                         </h4>
-                        <a href="independent_calibrations.html" class="btn"
+                        <a href="independent_sliding_scales.html" class="btn"
                             style="display:flex; width:100%; margin-bottom:10px; font-size: 0.85rem; justify-content: space-between; text-decoration:none; background:white; border:1px solid #ddd; color: var(--color-text-main);">
-                            Sliding Scale Models <span>&rarr;</span>
+                            Some Now Calibrations <span>&rarr;</span>
                         </a>
                         <a href="independent_meantime.html" class="btn"
                             style="display:flex; width:100%; margin-bottom:10px; font-size: 0.85rem; justify-content: space-between; text-decoration:none; background:white; border:1px solid #ddd; color: var(--color-text-main);">
                             Meantime Steps <span>&rarr;</span>
                         </a>
-                        <a href="independent_sliding_scales.html" class="btn"
+                        <a href="independent_calibrations.html" class="btn"
                             style="display:flex; width:100%; font-size: 0.85rem; justify-content: space-between; text-decoration:none; background:white; border:1px solid #ddd; color: var(--color-text-main);">
-                            Some Now Calibrations <span>&rarr;</span>
+                            Sliding Scale Models <span>&rarr;</span>
                         </a>
                     </div>
                 </aside>
@@ -385,8 +538,7 @@
                             style="background:none; border:none; font-size:1.5rem; cursor:pointer;">&times;</button>
                     </div>
                     <p style="font-size:0.9rem; color:#666; margin-bottom:20px;">
-                        Compare your "Personal Baseline" rates with rates burdened by your various Business
-                        Infrastructures.
+                        This matrix shows how to adjust your rates when working a gig that should include overhead from one or more of your Lines of Work.
                     </p>
                     <div id="scenarios-container" style="overflow-x:auto;">
                         <!-- JS Injected Content (Goal vs Now Tables) -->
@@ -435,6 +587,37 @@
             </div>
         </div>
 
+        <!-- Modal: Create Business Infrastructure -->
+        <dialog id="modal-create-business" style="padding: 0; border: none; background: transparent; max-width: 500px; width: 100%;">
+            <div style="background: var(--color-bg-base); padding: 20px; border-radius: 8px; border: 1px solid var(--color-border); box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                <h3 style="margin-top:0; border-bottom:1px solid var(--color-border); padding-bottom:10px;">Create Business Infrastructure</h3>
+                
+                <div style="margin-top:15px; margin-bottom:15px;">
+                    <label style="display:block; font-size:0.8rem; font-weight:bold; margin-bottom:5px;">Select the Line of Work this attaches to:</label>
+                    <select id="modal-create-business-line" style="width:100%; padding:8px; border:1px solid var(--color-border); border-radius:4px;" onchange="BusinessProfileManager.onLineOfWorkSelected()">
+                    </select>
+                    <div id="modal-create-business-warning" style="display:none; color:#d32f2f; font-size:0.75rem; margin-top:5px; padding:5px; background:rgba(255,0,0,0.1); border-radius:4px;">
+                        You must create a billable Line of Work first.
+                    </div>
+                </div>
+
+                <div style="margin-bottom:20px;">
+                    <label style="display:block; font-size:0.8rem; font-weight:bold; margin-bottom:5px;">Name this Business Profile:</label>
+                    <input type="text" id="modal-create-business-name" style="width:100%; padding:8px; border:1px solid var(--color-border); border-radius:4px;">
+                    <div style="font-size:0.7rem; color:var(--color-text-muted); margin-top:5px; font-style:italic;">
+                        Defaults to the Line of Work name. Feel free to rename (e.g. "Choreography LLC").
+                    </div>
+                </div>
+
+                <div style="display:flex; justify-content:flex-end; gap:10px; border-top:1px solid var(--color-border); padding-top:15px;">
+                    <button onclick="document.getElementById('modal-create-business').close()"
+                        style="padding:8px 16px; border:1px solid var(--color-border); background:none; cursor:pointer;">Cancel</button>
+                    <button onclick="BusinessProfileManager.submitCreate()" id="btn-submit-create-business"
+                        style="padding:8px 16px; background:var(--color-accent-surviving); color:black; border:none; font-weight:bold; cursor:pointer; border-radius:4px;">Create</button>
+                </div>
+            </div>
+        </dialog>
+
         <!-- Modal: Edit Business Expenses -->
         <dialog id="modal-business-expenses"
             style="padding: 0; border: none; background: transparent; max-width: 600px; width: 100%;">
@@ -472,38 +655,40 @@
                     <div style="display:flex; gap:10px;">
                         <button onclick="document.getElementById('modal-business-expenses').close()"
                             style="padding:8px 16px; border:1px solid var(--color-border); background:none; cursor:pointer;">Cancel</button>
-                        <button onclick="saveBusinessExpenses()"
+                                <button onclick="saveBusinessExpenses()"
                             style="padding:8px 16px; background:var(--color-accent-surviving); color:black; border:none; font-weight:bold; cursor:pointer;">Save
                             Changes</button>
                     </div>
                 </div>
-            </div>
-        </dialog>
+            </dialog>
 
         <!-- Scripts -->
-        <script src="js/utils.js"></script>
-        <script src="js/supabase_client.js"></script>
-        <script src="js/store.js"></script>
+        <script src="js/utils.js?v=hotfix9"></script>
+        <script src="js/supabase_client.js?v=hotfix9"></script>
+        <script src="js/store.js?v=hotfix9"></script>
         <script>
             /**
              * Independent Tool Logic - Final Refactor (Inlined for Debugging)
              */
 
             // Global Toggle Function
-            window.toggleSection = (id, btn) => {
+            window.toggleSection = (id, btn, addBtnId) => {
                 const el = document.getElementById(id);
                 if (el) {
                     // Check actual display style to handle inline style="display:none"
                     const isHidden = el.style.display === 'none' || el.classList.contains('hidden');
+                    const addBtn = addBtnId ? document.getElementById(addBtnId) : null;
 
                     if (isHidden) {
                         el.style.display = 'block';
                         el.classList.remove('hidden');
                         btn.classList.remove('collapsed');
+                        if (addBtn) addBtn.style.display = 'block';
                     } else {
                         el.style.display = 'none';
                         el.classList.add('hidden');
                         btn.classList.add('collapsed');
+                        if (addBtn) addBtn.style.display = 'none';
                     }
                 }
             };
@@ -677,6 +862,69 @@
                 }
             };
 
+            // HOLDINGS MANAGER
+            const HoldingsManager = {
+                container: document.getElementById('holdings-container'),
+
+                render: () => {
+                    HoldingsManager.container.innerHTML = '';
+
+                    if (!profile.holdings) {
+                        profile.holdings = {
+                            items: [
+                                { id: crypto.randomUUID(), label: 'Cash on Hand', amount: 0 },
+                                { id: crypto.randomUUID(), label: 'Money in Bank Accounts', amount: 0 },
+                                { id: crypto.randomUUID(), label: 'Real Estate', amount: 0 }
+                            ]
+                        };
+                    }
+
+                    profile.holdings.items.forEach((item, index) => {
+                        const row = document.createElement('div');
+                        row.className = 'ledger-row';
+                        row.style.display = 'grid';
+                        row.style.gridTemplateColumns = '2fr 1fr auto';
+                        row.style.gap = '10px';
+                        row.style.alignItems = 'center';
+
+                        row.innerHTML = `
+                                <input type="text" value="${item.label}" list="holdings-library" placeholder="Asset Type" onchange="updateHolding(${index}, 'label', this.value)">
+                                <input type="number" value="${item.amount}" placeholder="Value ($)" onchange="updateHolding(${index}, 'amount', this.value)">
+                                <button onclick="removeHolding(${index})" style="color:red; background:none; border:none; cursor:pointer;">&times;</button>
+                            `;
+                        HoldingsManager.container.appendChild(row);
+                    });
+                },
+
+                addHolding: () => {
+                    if (!profile.holdings) profile.holdings = { items: [] };
+                    profile.holdings.items.push({
+                        id: crypto.randomUUID(),
+                        label: '',
+                        amount: 0
+                    });
+                    HoldingsManager.render();
+                    calculateAndDisplay();
+                    Store.saveIndependentProfile(profile);
+                },
+
+                removeHolding: (index) => {
+                    if (confirm('Remove this holding?')) {
+                        profile.holdings.items.splice(index, 1);
+                        HoldingsManager.render();
+                        calculateAndDisplay();
+                        Store.saveIndependentProfile(profile);
+                    }
+                },
+
+                updateHolding: (index, field, value) => {
+                    const val = (field === 'amount') ? parseFloat(value) : value;
+                    profile.holdings.items[index][field] = val;
+                    calculateAndDisplay();
+                    Store.saveIndependentProfile(profile);
+                }
+            };
+
             // BUSINESS PROFILE MANAGER
             const BusinessProfileManager = {
                 container: document.getElementById('overhead-profiles-container'),
@@ -735,15 +983,74 @@
                     });
                 },
 
-                create: async () => {
-                    const name = prompt("Enter Business Name (e.g. Makini Makes):");
+                onLineOfWorkSelected: () => {
+                    const selectEl = document.getElementById('modal-create-business-line');
+                    const nameEl = document.getElementById('modal-create-business-name');
+                    if (selectEl.selectedIndex >= 0) {
+                        const opt = selectEl.options[selectEl.selectedIndex];
+                        nameEl.value = opt.text;
+                    }
+                },
+
+                create: () => {
+                    const selectEl = document.getElementById('modal-create-business-line');
+                    const nameEl = document.getElementById('modal-create-business-name');
+                    const warnEl = document.getElementById('modal-create-business-warning');
+                    const btnSubmit = document.getElementById('btn-submit-create-business');
+
+                    selectEl.innerHTML = '';
+                    let hasBillable = false;
+
+                    profile.linesOfWork.forEach(line => {
+                        if (line.isBillable !== false) {
+                            const opt = document.createElement('option');
+                            opt.value = line.id;
+                            opt.text = line.label || 'Unnamed Line of Work';
+                            selectEl.appendChild(opt);
+                            hasBillable = true;
+                        }
+                    });
+
+                    if (!hasBillable) {
+                        selectEl.disabled = true;
+                        nameEl.disabled = true;
+                        btnSubmit.disabled = true;
+                        warnEl.style.display = 'block';
+                        nameEl.value = '';
+                    } else {
+                        selectEl.disabled = false;
+                        nameEl.disabled = false;
+                        btnSubmit.disabled = false;
+                        warnEl.style.display = 'none';
+                        BusinessProfileManager.onLineOfWorkSelected();
+                    }
+
+                    document.getElementById('modal-create-business').showModal();
+                },
+
+                submitCreate: async () => {
+                    const nameEl = document.getElementById('modal-create-business-name');
+                    const selectEl = document.getElementById('modal-create-business-line');
+                    const name = nameEl.value.trim();
                     if (!name) return;
+
                     try {
                         const newProj = await Store.createOverheadProject(name);
                         if (newProj) {
                             overheadProjects.push(newProj);
+                            
+                            // Auto-link
+                            const selectedLineId = selectEl.value;
+                            const line = profile.linesOfWork.find(l => l.id === selectedLineId);
+                            if (line) {
+                                line.overheadProjectId = newProj.id;
+                                await Store.saveIndependentProfile(profile);
+                            }
+
+                            document.getElementById('modal-create-business').close();
                             BusinessProfileManager.render();
                             renderLinesOfWork();
+                            calculateAndDisplay();
                         }
                     } catch (e) { alert(e.message); }
                 },
@@ -757,7 +1064,35 @@
 
                 remove: async (index) => {
                     if (!confirm("Delete this business profile?")) return;
-                    alert("Deletion not fully supported in this draft. (Contact support to remove DB row)");
+                    
+                    const proj = overheadProjects[index];
+                    try {
+                        // Delete from database
+                        await Store.deleteProject(proj.id);
+                        
+                        // Remove from local array
+                        overheadProjects.splice(index, 1);
+                        
+                        // Unlink from any lines of work that were using it
+                        let profileUpdated = false;
+                        profile.linesOfWork.forEach(line => {
+                            if (line.overheadProjectId === proj.id) {
+                                line.overheadProjectId = null;
+                                profileUpdated = true;
+                            }
+                        });
+                        
+                        if (profileUpdated) {
+                            await Store.saveIndependentProfile(profile);
+                        }
+                        
+                        BusinessProfileManager.render();
+                        renderLinesOfWork();
+                        calculateAndDisplay();
+                    } catch (e) {
+                        alert("Error deleting business profile: " + e.message);
+                        console.error(e);
+                    }
                 },
 
                 editExpenses: (id) => {
@@ -911,6 +1246,114 @@
                 }
             };
 
+            const PREDEFINED_PROFESSIONS = [
+                "Graphic Designer", "Illustrator", "Photographer", "Videographer", "Animator", 
+                "Art Director", "UX/UI Designer", "Copywriter", "Editor", "Painter", "Sculptor", 
+                "Musician", "Composer", "Actor", "Dancer", "Choreographer",
+                "Psychotherapist", "Clinical Psychologist", "Social Worker", "Counselor", 
+                "Art Therapist", "Music Therapist", "Dance/Movement Therapist", "Somatic Therapist", 
+                "Occupational Therapist", "Speech Therapist",
+                "CPA", "Tax Accountant", "Bookkeeper", "Enrolled Agent", "Financial Planner", "Tax Preparer",
+                "Professor", "Associate Professor", "Assistant Professor", "Adjunct Professor", 
+                "Researcher", "Postdoctoral Fellow", "Graduate Teaching Assistant", "Lecturer"
+            ];
+
+            function initProfessionAutocomplete(lineIndex, containerId, initialValue) {
+                const container = document.getElementById(containerId);
+                if (!container) return;
+
+                let tags = initialValue ? initialValue.split(',').map(t => t.trim()).filter(t => t) : [];
+
+                container.innerHTML = `
+                    <div class="tag-input-container">
+                        <div id="tags-wrapper-${lineIndex}" style="display:flex; flex-wrap:wrap; gap:5px; align-items:center;"></div>
+                        <input type="text" id="tag-input-${lineIndex}" class="tag-input-field" placeholder="Type profession...">
+                        <ul id="autocomplete-dropdown-${lineIndex}" class="autocomplete-dropdown"></ul>
+                    </div>
+                `;
+
+                const tagsWrapper = document.getElementById(`tags-wrapper-${lineIndex}`);
+                const input = document.getElementById(`tag-input-${lineIndex}`);
+                const dropdown = document.getElementById(`autocomplete-dropdown-${lineIndex}`);
+
+                function renderTags() {
+                    tagsWrapper.innerHTML = '';
+                    tags.forEach((tag, idx) => {
+                        const chip = document.createElement('div');
+                        chip.className = 'tag-chip';
+                        chip.innerHTML = `<span>${tag}</span><span class="tag-chip-remove" data-idx="${idx}">&times;</span>`;
+                        tagsWrapper.appendChild(chip);
+                    });
+                    
+                    tagsWrapper.querySelectorAll('.tag-chip-remove').forEach(btn => {
+                        btn.onclick = (e) => {
+                            const idx = parseInt(e.target.getAttribute('data-idx'));
+                            tags.splice(idx, 1);
+                            renderTags();
+                            updateLine(lineIndex, 'label', tags.join(', '));
+                        };
+                    });
+                }
+
+                function showDropdown(query) {
+                    const q = query.toLowerCase().trim();
+                    const available = PREDEFINED_PROFESSIONS.filter(p => p.toLowerCase().includes(q) && !tags.includes(p));
+                    if (available.length === 0 || q === '') {
+                        dropdown.style.display = 'none';
+                        return;
+                    }
+                    dropdown.innerHTML = available.map(p => `<li class="autocomplete-item">${p}</li>`).join('');
+                    dropdown.style.display = 'block';
+
+                    dropdown.querySelectorAll('.autocomplete-item').forEach(li => {
+                        li.onclick = () => {
+                            tags.push(li.innerText);
+                            input.value = '';
+                            dropdown.style.display = 'none';
+                            renderTags();
+                            updateLine(lineIndex, 'label', tags.join(', '));
+                            input.focus();
+                        };
+                    });
+                }
+
+                input.addEventListener('input', (e) => {
+                    const val = e.target.value;
+                    if (val.includes(',')) {
+                        const newTags = val.split(',').map(t => t.trim()).filter(t => t);
+                        tags.push(...newTags);
+                        input.value = '';
+                        dropdown.style.display = 'none';
+                        renderTags();
+                        updateLine(lineIndex, 'label', tags.join(', '));
+                    } else {
+                        showDropdown(val);
+                    }
+                });
+
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const val = input.value.trim();
+                        if (val) {
+                            tags.push(val);
+                            input.value = '';
+                            dropdown.style.display = 'none';
+                            renderTags();
+                            updateLine(lineIndex, 'label', tags.join(', '));
+                        }
+                    }
+                });
+
+                document.addEventListener('click', (e) => {
+                    if (!container.contains(e.target)) {
+                        dropdown.style.display = 'none';
+                    }
+                });
+
+                renderTags();
+            }
+
             // LINE ITEMS (Work)
             const LineManager = {
                 container: document.getElementById('lines-of-work-container'),
@@ -920,6 +1363,8 @@
                     const globalWeeks = parseFloat(inputs.weeks.value) || 0;
                     const globalDays = parseFloat(inputs.days.value) || 0;
                     const globalHours = parseFloat(inputs.hours.value) || 0;
+                    
+                    const capacity = Utils.calculateBillableCapacity(profile);
 
                     profile.linesOfWork.forEach((line, lineIndex) => {
                         const card = document.createElement('div');
@@ -940,10 +1385,10 @@
                         ).join('');
 
                         header.innerHTML = `
-                    <div style="display:flex; gap: var(--spacing-sm); width: 100%;">
-                        <div style="flex-grow:1;">
-                            <label style="font-size:0.6rem;">Role / Line of Work</label>
-                            <input type="text" value="${line.label}" onchange="updateLine(${lineIndex}, 'label', this.value)" style="width:100%;">
+                    <div style="display:flex; gap: var(--spacing-sm); width: 100%; flex-wrap: wrap;">
+                        <div style="flex-grow:1; min-width: 150px;">
+                            <label style="font-size:0.6rem;">Line of Work</label>
+                            <div id="profession-input-container-${lineIndex}"></div>
                         </div>
                         <div style="width: 80px;">
                             <label style="font-size:0.6rem;">Duration</label>
@@ -952,10 +1397,16 @@
                         <div style="width: 90px;">
                              <label style="font-size:0.6rem;">Unit</label>
                              <select onchange="updateLineDuration(${lineIndex}, 'unit', this.value)">
-                                <option value="Weeks" ${line.duration.unit === 'Weeks' ? 'selected' : ''}>Weeks</option>
-                                <option value="Months" ${line.duration.unit === 'Months' ? 'selected' : ''}>Months</option>
+                                <option value="Weeks" ${line.duration.unit === 'Weeks' ? 'selected' : ''}>Weeks/Year</option>
+                                <option value="Months" ${line.duration.unit === 'Months' ? 'selected' : ''}>Months/Year</option>
                                 <option value="% of Year" ${line.duration.unit === '% of Year' ? 'selected' : ''}>% of Year</option>
                              </select>
+                        </div>
+                        <div style="width: 100%; margin-top: 5px;">
+                            <label style="font-size:0.7rem; font-weight:normal; display:flex; align-items:center; cursor:pointer;">
+                                <input type="checkbox" ${line.isBillable !== false ? 'checked' : ''} onchange="updateLineBillable(${lineIndex}, this.checked)" style="width:auto; margin:0 5px 0 0;">
+                                This line of work includes billable gigs
+                            </label>
                         </div>
                     </div>
                     <button onclick="removeLine(${lineIndex})" style="color:red; background:none; border:none; cursor:pointer; font-size:1.2rem; line-height:1;">&times;</button>
@@ -964,6 +1415,36 @@
 
                         const overheadSelectorDiv = document.createElement('div');
                         overheadSelectorDiv.style.marginBottom = 'var(--spacing-sm)';
+
+                        let lineWeeks = parseFloat(line.duration.value) || 0;
+                        if (line.duration.unit === 'Months') lineWeeks *= 4.33;
+                        if (line.duration.unit === 'Years') lineWeeks *= 52;
+                        if (line.duration.unit === '% of Year') lineWeeks = (parseFloat(line.duration.value) / 100) * globalWeeks;
+
+                        // Calculate Billable Capacity for this Line
+                        const globalHoursPerWeek = globalDays * globalHours;
+                        const lineTotalCapacity = lineWeeks * globalHoursPerWeek;
+
+                        // Non-Billable using Activity Frequency Normalizer
+                        const lineTotalNonBillable = (line.activities || []).reduce((sum, act) => {
+                            const hrs = Normalizer.getActivityAnnualHours(act, lineWeeks, globalDays, globalHours);
+                            return sum + (hrs > 0 ? hrs : 0);
+                        }, 0);
+
+                        // Derived Billable Hours
+                        let lineBillableHours = 0;
+                        if (capacity.calculatedLineHours && capacity.calculatedLineHours[line.id] !== undefined) {
+                            lineBillableHours = capacity.calculatedLineHours[line.id];
+                        } else {
+                            // Fallback if not available in capacity object (e.g., non-billable roles)
+                            lineBillableHours = Math.max(0, lineTotalCapacity - lineTotalNonBillable);
+                        }
+
+                        const hoursDisplay = `
+                            <div style="margin-bottom: 15px; font-size: 0.8rem; color: var(--color-text-main); border-bottom: 1px solid #eee; padding-bottom: 10px;">
+                                <div>Total Annual Non-Billable Hours for this Line of Work: <strong>${Math.round(lineTotalNonBillable).toLocaleString()}</strong></div>
+                            </div>
+                        `;
 
                         let rateDisplay = '';
                         let computedOverheadRate = 0;
@@ -987,24 +1468,6 @@
                                     totalOverhead = projFixed / (1 - (projPercent / 100));
                                 }
 
-                                let lineWeeks = parseFloat(line.duration.value) || 0;
-                                if (line.duration.unit === 'Months') lineWeeks *= 4.33;
-                                if (line.duration.unit === 'Years') lineWeeks *= 52;
-                                if (line.duration.unit === '% of Year') lineWeeks = (parseFloat(line.duration.value) / 100) * globalWeeks;
-
-                                // Calculate Billable Capacity for this Line
-                                const globalHoursPerWeek = globalDays * globalHours;
-                                const lineTotalCapacity = lineWeeks * globalHoursPerWeek;
-
-                                // Non-Billable using Activity Frequency Normalizer
-                                const lineTotalNonBillable = (line.activities || []).reduce((sum, act) => {
-                                    const hrs = Normalizer.getActivityAnnualHours(act, lineWeeks, globalDays, globalHours);
-                                    return sum + (hrs > 0 ? hrs : 0);
-                                }, 0);
-
-                                // Derived Billable Hours
-                                const lineBillableHours = Math.max(0, lineTotalCapacity - lineTotalNonBillable);
-
                                 if (window.BudgetEngine) {
                                     computedOverheadRate = BudgetEngine.calculateOverheadRate(totalOverhead, lineBillableHours);
                                 } else {
@@ -1026,14 +1489,22 @@
                             line.derivedOverheadRate = 0;
                         }
 
+                        let bizProfileUI = '';
+                        if (line.isBillable !== false) {
+                            bizProfileUI = `
+                                <label style="font-size:0.6rem;">Associated Business Profile (Overhead)</label>
+                                <select onchange="updateLine(${lineIndex}, 'overheadProjectId', this.value)" style="width:100%; margin-bottom:5px;">
+                                    <option value="">None</option>
+                                    ${overheadOptions}
+                                </select>
+                                ${rateDisplay}
+                            `;
+                        }
+
                         overheadSelectorDiv.innerHTML = `
-                    <label style="font-size:0.6rem;">Associated Business Profile (Overhead)</label>
-                    <select onchange="updateLine(${lineIndex}, 'overheadProjectId', this.value)" style="width:100%; margin-bottom:5px;">
-                        <option value="">None</option>
-                        ${overheadOptions}
-                    </select>
-                    ${rateDisplay}
-                `;
+                            ${hoursDisplay}
+                            ${bizProfileUI}
+                        `;
                         card.appendChild(overheadSelectorDiv);
 
                         const actsContainer = document.createElement('div');
@@ -1043,7 +1514,7 @@
                         subHeader.style.marginBottom = 'var(--spacing-xs)';
                         subHeader.innerHTML = `
                      <div style="font-size:0.7rem; font-weight:bold;">NON-BILLABLE ACTIVITIES</div>
-                     <button onclick="addActivity(${lineIndex})" style="font-size:0.7rem; cursor:pointer;">+ Service</button>
+                     <button onclick="addActivity(${lineIndex})" style="font-size:0.7rem; cursor:pointer;">+ Activity</button>
                 `;
                         card.appendChild(subHeader);
 
@@ -1097,6 +1568,10 @@
                         card.appendChild(actsContainer);
                         LineManager.container.appendChild(card);
                     });
+                    
+                    profile.linesOfWork.forEach((line, lineIndex) => {
+                        initProfessionAutocomplete(lineIndex, `profession-input-container-${lineIndex}`, line.label);
+                    });
 
                     if (profile.linesOfWork.length > 0) {
                         const bottomBtn = document.createElement('button');
@@ -1138,6 +1613,13 @@
                 updateLine: (index, field, value) => {
                     profile.linesOfWork[index][field] = value;
                     calculateAndDisplay();
+                    Store.saveIndependentProfile(profile);
+                },
+
+                updateLineBillable: (index, isBillable) => {
+                    profile.linesOfWork[index].isBillable = isBillable;
+                    calculateAndDisplay();
+                    LineManager.render();
                     Store.saveIndependentProfile(profile);
                 },
 
@@ -1209,6 +1691,7 @@
                 updateActivity: (lineIndex, actIndex, field, value) => {
                     const val = (field === 'amount') ? parseFloat(value) : value;
                     profile.linesOfWork[lineIndex].activities[actIndex][field] = val;
+                    renderLinesOfWork();
                     calculateAndDisplay();
                     Store.saveIndependentProfile(profile);
                 }
@@ -1216,6 +1699,7 @@
 
             const renderLinesOfWork = LineManager.render;
             window.updateLine = LineManager.updateLine;
+            window.updateLineBillable = LineManager.updateLineBillable;
             window.updateLineDuration = LineManager.updateLineDuration;
             window.removeLine = LineManager.removeLine;
             window.addActivity = LineManager.addActivity;
@@ -1227,10 +1711,13 @@
             window.removeExpense = ExpenseManager.removeExpense;
             window.updateIncome = IncomeManager.updateIncome;
             window.removeIncome = IncomeManager.removeIncome;
+            window.updateHolding = HoldingsManager.updateHolding;
+            window.removeHolding = HoldingsManager.removeHolding;
 
             document.getElementById('btn-add-line-of-work').onclick = LineManager.addLine;
             document.getElementById('btn-add-expense').onclick = ExpenseManager.addExpense;
             document.getElementById('btn-add-income').onclick = IncomeManager.addIncome;
+            document.getElementById('btn-add-holding').onclick = HoldingsManager.addHolding;
             document.getElementById('btn-add-overhead-profile').onclick = BusinessProfileManager.create;
 
             function calculateAndDisplay() {
@@ -1247,17 +1734,65 @@
                 const hours = parseFloat(inputs.hours.value) || 0;
                 const taxRate = parseFloat(inputs.taxRate.value) || 0;
 
+                const workAnnEl = document.getElementById('out-total-work-annual');
+                if (workAnnEl) {
+                    const totalWorkingHours = weeks * days * hours;
+                    const sleepHours = 365 * 8; // 2920
+                    const lifeHours = Math.max(0, 8760 - totalWorkingHours - sleepHours);
+
+                    document.getElementById('out-total-work-annual').innerText = totalWorkingHours.toFixed(0);
+                    document.getElementById('out-total-sleep-annual').innerText = sleepHours.toFixed(0);
+                    document.getElementById('out-remain-life-annual').innerText = lifeHours.toFixed(0);
+
+                    // Update Pie Chart
+                    const pieEl = document.getElementById('life-pie-chart');
+                    if (pieEl) {
+                        const total = 8760;
+                        const workPct = (totalWorkingHours / total) * 100;
+                        const sleepPct = (sleepHours / total) * 100;
+                        const lifePct = (lifeHours / total) * 100;
+                        
+                        // conic-gradient(workColor 0% workPct%, sleepColor workPct% (workPct+sleepPct)%, lifeColor (workPct+sleepPct)% 100%)
+                        // Colors: Work = #0000ff, Sleep = #555555, Life = #10b981
+                        pieEl.style.background = `conic-gradient(#0000ff 0% ${workPct}%, #555555 ${workPct}% ${workPct + sleepPct}%, #10b981 ${workPct + sleepPct}% 100%)`;
+                    }
+                }
+
                 if (!profile.schedule) profile.schedule = {};
                 profile.schedule.weeks = weeks;
                 profile.schedule.days = days;
                 profile.schedule.hours = hours;
                 if (!profile.expenses) profile.expenses = {};
                 profile.expenses.taxRate = taxRate;
+                if (!profile.holdings) {
+                    profile.holdings = {
+                        items: [
+                            { id: crypto.randomUUID(), label: 'Cash on Hand', amount: 0 },
+                            { id: crypto.randomUUID(), label: 'Money in Bank Accounts', amount: 0 },
+                            { id: crypto.randomUUID(), label: 'Real Estate', amount: 0 }
+                        ]
+                    };
+                }
 
                 const capacity = Utils.calculateBillableCapacity(profile);
                 const totalWorkHours = capacity.totalWorkHours;
                 const totalNonBillableHours = capacity.totalNonBillableHours;
                 const totalBillableHours = capacity.totalBillableHours;
+
+                const alertsEl = document.getElementById('schedule-alerts');
+                if (alertsEl) {
+                    alertsEl.innerHTML = '';
+                    const errors = [];
+                    if (weeks > 52) errors.push("Work Weeks per Year cannot exceed 52.");
+                    if (days > 7) errors.push("Work Days per Week cannot exceed 7.");
+                    if (hours > 24) errors.push("Work Hours per Day cannot exceed 24.");
+                    if (totalNonBillableHours > totalWorkHours) {
+                        errors.push("Your non-billable hours exceed your total work hours. You will need to either adjust your Time Reclaimed Schedule to include more working hours OR claim fewer non-billable hours.");
+                    }
+                    if (errors.length > 0) {
+                        alertsEl.innerHTML = errors.map(e => `<div style="background: rgba(255,0,0,0.1); color: #d32f2f; padding: 10px; border-radius: 4px; border: 1px solid rgba(255,0,0,0.2); margin-bottom: 5px;">⚠️ ${e}</div>`).join('');
+                    }
+                }
 
                 const nbPercent = totalWorkHours > 0 ? (totalNonBillableHours / totalWorkHours) * 100 : 0;
                 const bPercent = totalWorkHours > 0 ? (totalBillableHours / totalWorkHours) * 100 : 0;
@@ -1288,6 +1823,14 @@
                         percentSum += amount;
                     }
                 });
+                let personalTotal = fixedSum;
+                if (percentSum > 0 && percentSum < 100) {
+                    personalTotal = fixedSum / (1 - (percentSum / 100));
+                }
+                const needsDesiresTotalEl = document.getElementById('out-total-needs-desires');
+                if (needsDesiresTotalEl) {
+                    needsDesiresTotalEl.textContent = Utils.formatCurrency(personalTotal);
+                }
 
                 /* 
                 // OVERHEAD DECOUPLED: 
@@ -1319,6 +1862,17 @@
                     unearnedTotalEl.textContent = Utils.formatCurrency(unearnedSum);
                 }
 
+                let holdingsSum = 0;
+                if (profile.holdings && profile.holdings.items) {
+                    profile.holdings.items.forEach(item => {
+                        holdingsSum += parseFloat(item.amount) || 0;
+                    });
+                }
+                const holdingsTotalEl = document.getElementById('out-total-holdings');
+                if (holdingsTotalEl) {
+                    holdingsTotalEl.textContent = Utils.formatCurrency(holdingsSum);
+                }
+
                 let goalNetTotal = 0;
                 if (percentSum < 100) {
                     goalNetTotal = fixedSum / (1 - (percentSum / 100));
@@ -1333,9 +1887,36 @@
                 } else {
                     goalGross = Infinity;
                 }
-                const currentNet = profile.currentNetIncome || 0;
-                const currentGross = currentNet * (1 + (taxRate / 100));
+                const baseCurrentNet = profile.currentNetIncome || 0;
+                
+                // Meantime Adjustments & Toggle UI
+                const meantimeAdjustment = Utils.calculateMeantimeAdjustment ? Utils.calculateMeantimeAdjustment(profile) : 0;
+                const toggleContainer = document.getElementById('now-rates-toggle-title');
+                const staticTitle = document.getElementById('now-rates-static-title');
+                const primeToggle = document.getElementById('toggle-prime-rates');
+                const labelNowRates = document.getElementById('label-now-rates');
+                const labelPrimeRates = document.getElementById('label-prime-rates');
 
+                if (meantimeAdjustment > 0) {
+                    if (toggleContainer) toggleContainer.style.display = 'flex';
+                    if (staticTitle) staticTitle.style.display = 'none';
+                } else {
+                    if (toggleContainer) toggleContainer.style.display = 'none';
+                    if (staticTitle) staticTitle.style.display = 'block';
+                    if (primeToggle) primeToggle.checked = false; // Reset if adjustment is gone
+                }
+
+                const usePrime = primeToggle && primeToggle.checked;
+                if (usePrime) {
+                    if (labelNowRates) labelNowRates.style.color = 'var(--color-text-muted)';
+                    if (labelPrimeRates) labelPrimeRates.style.color = 'var(--color-primary)';
+                } else {
+                    if (labelNowRates) labelNowRates.style.color = 'var(--color-text-main)';
+                    if (labelPrimeRates) labelPrimeRates.style.color = 'var(--color-text-muted)';
+                }
+
+                const currentNet = baseCurrentNet + (usePrime ? meantimeAdjustment : 0);
+                const currentGross = currentNet * (1 + (taxRate / 100));
                 outputs.goalNet.textContent = Utils.formatCurrency(goalNetWork);
                 outputs.goalGross.textContent = Utils.formatCurrency(goalGross);
 
@@ -1367,14 +1948,16 @@
                 setVal('out-goal-daily', goalHourly * hours); // Assuming full day billing? Or adjusted?
                 // Let's stick to: Rates are usually based on "Billable Hour".
                 setVal('out-goal-weekly', goalGross / (weeks || 1));
-                setVal('out-goal-monthly', goalGross / 12);
+                const goalWeekly = goalGross / (weeks || 1);
+                setVal('out-goal-monthly', goalWeekly * 4.3452381);
 
                 // Populate NOW Rates
                 const currentHourly = totalBillableHours > 0 ? currentGross / totalBillableHours : 0;
                 setVal('out-now-hourly', currentHourly);
                 setVal('out-now-daily', currentHourly * hours);
                 setVal('out-now-weekly', currentGross / (weeks || 1));
-                setVal('out-now-monthly', currentGross / 12);
+                const nowWeekly = currentGross / (weeks || 1);
+                setVal('out-now-monthly', nowWeekly * 4.3452381);
 
                 // --- MATH LOG GENERATION ---
                 try {
@@ -1422,8 +2005,9 @@
                         l.push(`Weekly Rate = Gross / Weeks`);
                         l.push(`${Utils.formatCurrency(gross)} / ${weeks} = ${Utils.formatCurrency(gross / (weeks || 1))}/week`);
                         l.push(`---`);
-                        l.push(`Monthly Rate = Gross / 12`);
-                        l.push(`${Utils.formatCurrency(gross)} / 12 = ${Utils.formatCurrency(gross / 12)}/mo`);
+                        const wk = gross / (weeks || 1);
+                        l.push(`Monthly Rate = Weekly Rate * 4.3452381 (Avg Weeks/Mo)`);
+                        l.push(`${Utils.formatCurrency(wk)} * 4.3452381 = ${Utils.formatCurrency(wk * 4.3452381)}/mo`);
                         return l;
                     };
 
@@ -1461,6 +2045,12 @@
 
 
             }
+
+            window.toggleSendPrime = () => {
+                const isChecked = document.getElementById('check-send-prime').checked;
+                profile.sendPrimeToProjects = isChecked;
+                Store.saveIndependentProfile(profile);
+            };
 
             window.viewIndependentLog = (key) => {
                 const modal = document.getElementById('modal-math-log');
@@ -1534,7 +2124,7 @@
 
                     const hourly = (billableHours > 0) ? (grossObj / billableHours) : 0;
                     const weekly = (workWeeks > 0) ? (grossObj / workWeeks) : 0;
-                    const monthly = grossObj / 12;
+                    const monthly = weekly * 4.3452381;
 
                     return {
                         fixed: baseFixed,
@@ -1559,7 +2149,7 @@
 
                     const hourly = (billableHours > 0) ? (grossNeeded / billableHours) : 0;
                     const weekly = (workWeeks > 0) ? (grossNeeded / workWeeks) : 0;
-                    const monthly = grossNeeded / 12;
+                    const monthly = weekly * 4.3452381;
 
                     return {
                         gross: grossNeeded,
@@ -1598,7 +2188,7 @@
                             percent: personalPercent,
                             hourly: (billableHours > 0) ? (gross / billableHours) : 0,
                             weekly: (workWeeks > 0) ? (gross / workWeeks) : 0,
-                            monthly: gross / 12
+                            monthly: ((workWeeks > 0) ? (gross / workWeeks) : 0) * 4.3452381
                         };
                     };
                     const nowBase = calcBaseNow(nowFixedBase);
@@ -1686,7 +2276,7 @@
                 }
 
                 const renderTable = (type) => { // type = 'goal' or 'now'
-                    const title = type === 'goal' ? 'GOAL SCENARIOS (Desired Lifestyle)' : 'NOW SCENARIOS (Current Reality)';
+                    const title = type === 'goal' ? 'GOAL SCENARIOS' : 'NOW SCENARIOS';
                     let html = `
             <div style="margin-bottom: 2rem;">
             <h3 style="margin-bottom: 0.5rem; color: var(--text-color); font-weight: 600;">${title}</h3>
@@ -1694,7 +2284,6 @@
                 <thead>
                     <tr style="border-bottom: 2px solid #ddd; font-weight: bold; color: #555;">
                         <th style="padding: 8px;">Scenario</th>
-                        <th style="padding: 8px;">Fixed Need</th>
                         <th style="padding: 8px; color: var(--primary-color);">Hourly Rate</th>
                         <th style="padding: 8px;">Weekly</th>
                         <th style="padding: 8px;">Monthly</th>
@@ -1711,7 +2300,6 @@
                         html += `
                 <tr style="${rowStyle}">
                     <td style="padding: 8px;">${sc.name}</td>
-                    <td style="padding: 8px;">${Utils.formatCurrency(data.fixed)}</td>
                     <td style="padding: 8px; color: var(--primary-color); font-weight: bold;">${Utils.formatCurrency(data.hourly)}</td>
                     <td style="padding: 8px;">${Utils.formatCurrency(data.weekly)}</td>
                     <td style="padding: 8px;">${Utils.formatCurrency(data.monthly)}</td>
@@ -1799,6 +2387,9 @@
                     if (profile.expenses.taxRate !== undefined) {
                         inputs.taxRate.value = profile.expenses.taxRate;
                     }
+                    if (profile.sendPrimeToProjects !== undefined) {
+                        document.getElementById('check-send-prime').checked = profile.sendPrimeToProjects;
+                    }
 
                     const currentNetInput = document.getElementById('in-current-net-income');
                     if (currentNetInput) {
@@ -1810,6 +2401,7 @@
                     ExpenseManager.render();
                     logToScreen("Expenses Rendered. Count: " + (profile.expenses.items ? profile.expenses.items.length : 0));
                     IncomeManager.render();
+                    HoldingsManager.render();
                     BusinessProfileManager.render();
                     calculateAndDisplay();
                     logToScreen("Init Complete. UI should be ready.");

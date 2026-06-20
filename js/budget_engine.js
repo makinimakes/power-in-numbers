@@ -40,7 +40,18 @@ const BudgetEngine = {
 
         // 3. Get Gross Income Targets
         // These are expected to be saved by the Independent Tool in profile.goals
-        const currentGross = (profile.goals && profile.goals.current) ? profile.goals.current : 0;
+        let currentGross = (profile.goals && profile.goals.current) ? profile.goals.current : 0;
+        
+        // If the user selected to send NOWPrime rates to Projects, recalculate baseline gross
+        if (profile.sendPrimeToProjects === true && window.Utils && typeof window.Utils.calculateMeantimeAdjustment === 'function') {
+            const meantimeAdjustment = window.Utils.calculateMeantimeAdjustment(profile);
+            const currentNet = profile.currentNetIncome ? parseFloat(profile.currentNetIncome) : 0;
+            const netPrime = currentNet + meantimeAdjustment;
+            const rawTax = (profile.expenses && profile.expenses.taxRate) ? profile.expenses.taxRate : 30;
+            const taxRate = parseFloat(rawTax) / 100;
+            currentGross = netPrime * (1 + taxRate);
+        }
+
         const goalGross = (profile.goals && profile.goals.gross) ? profile.goals.gross : 0;
 
         // 4. Calculate Hourly Rates

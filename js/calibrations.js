@@ -329,8 +329,8 @@
             div.innerHTML = `
                 <div>
                     <strong>${c.name}</strong><br>
-                    ${window.Utils ? window.Utils.formatCurrency(c.amount) : c.amount} | ${c.hours} hrs
-                    ${type === 'projected' ? `<br><small>${c.probability}% prob</small>` : ''}
+                    ${window.Utils ? window.Utils.formatCurrency(c.amount) : c.amount} | ${window.Utils ? window.Utils.formatNumber(c.hours) : c.hours} hrs
+                    ${type === 'projected' ? `<br><small>${window.Utils ? window.Utils.formatNumber(c.probability) : c.probability}% prob</small>` : ''}
                 </div>
                 <div>
                     <button onclick="openContractModal('${type}', '${c.id}')">Edit</button>
@@ -348,11 +348,17 @@
         const periodVal = parseFloat(inPeriodValue.value) || 1;
         const periodUnit = inPeriodUnit.value;
         let yearFraction = 1;
-        if (periodUnit === 'Months') yearFraction = periodVal / 12;
-        else if (periodUnit === 'Weeks') yearFraction = periodVal / 52;
+        
+        const workWeeksPerYear = (profile.schedule && profile.schedule.weeks) ? parseFloat(profile.schedule.weeks) : 52;
+
+        // A working month is defined as exactly 4.3452381 weeks
+        if (periodUnit === 'Months') yearFraction = (periodVal * 4.3452381) / workWeeksPerYear;
+        else if (periodUnit === 'Weeks') yearFraction = periodVal / workWeeksPerYear;
         else if (periodUnit === 'Years') yearFraction = periodVal;
 
-        const labelPeriod = `${periodVal} ${periodUnit}`;
+        // Format the periodVal so decimals are cleanly cut off
+        const formattedPeriodVal = Utils.formatNumber(periodVal);
+        const labelPeriod = `${formattedPeriodVal} ${periodUnit}`;
 
         // 2. Capacity Common Vars
         const capacity = Utils.calculateBillableCapacity(profile);
@@ -385,14 +391,46 @@
         }
 
         // --- NOW SCENARIO (Using Current Net Income as Target) ---
+        
+        // 1. Check Meantime Adjustments & UI Toggle
+        const meantimeAdjustment = Utils.calculateMeantimeAdjustment(profile);
+        const toggleEl = document.getElementById('toggle-calibrations-prime');
+        const staticTitle = document.getElementById('calibrations-now-static-title');
+        const toggleTitle = document.getElementById('calibrations-now-toggle-title');
+        
+        let usePrime = false;
+        
+        if (meantimeAdjustment > 0) {
+            if (staticTitle) staticTitle.style.display = 'none';
+            if (toggleTitle) toggleTitle.style.display = 'flex';
+            if (toggleEl) usePrime = toggleEl.checked;
+        } else {
+            if (staticTitle) staticTitle.style.display = 'block';
+            if (toggleTitle) toggleTitle.style.display = 'none';
+        }
+        
+        // Style Labels based on toggle state
+        const labelNow = document.getElementById('label-calibrations-now');
+        const labelPrime = document.getElementById('label-calibrations-prime');
+        if (labelNow && labelPrime) {
+            if (usePrime) {
+                labelNow.style.color = 'var(--color-text-muted)';
+                labelPrime.style.color = 'var(--color-primary)';
+            } else {
+                labelNow.style.color = 'var(--color-text-main)';
+                labelPrime.style.color = 'var(--color-text-muted)';
+            }
+        }
+
         // Safeguard Net Income
-        const annualTargetNow = (profile && profile.currentNetIncome) ? parseFloat(profile.currentNetIncome) : 0;
+        const baseCurrentNet = (profile && profile.currentNetIncome) ? parseFloat(profile.currentNetIncome) : 0;
+        const annualTargetNow = baseCurrentNet + (usePrime ? meantimeAdjustment : 0);
 
         // Safeguard Tax Rate
         const rawTax = (profile && profile.expenses && profile.expenses.taxRate) ? profile.expenses.taxRate : 30;
         const taxRate = parseFloat(rawTax) / 100;
 
-        // MATCH LOGIC: Additive Tax (Net * 1.Tax)
+        // MATCH LOGIC: Additive Tax (Net * (1 + Tax))
         const annualGrossTargetNow = annualTargetNow * (1 + taxRate);
         const periodTargetNow = annualGrossTargetNow * yearFraction;
 
@@ -484,6 +522,7 @@
     window.saveContract = saveContract;
     window.removeContract = removeContract;
     window.handlePeriodChange = handlePeriodChange;
+    window.calculateGap = calculateGap;
 
     function toggleMethod() {
         const val = document.getElementById('c-method').value;

@@ -183,6 +183,70 @@ const IncomeManager = {
 };
 
 // -------------------------------------------------------------------------
+// HOLDINGS MANAGER (Assets)
+// -------------------------------------------------------------------------
+const HoldingsManager = {
+    container: document.getElementById('holdings-container'),
+
+    render: () => {
+        HoldingsManager.container.innerHTML = '';
+
+        if (!profile.holdings) {
+            profile.holdings = {
+                items: [
+                    { id: crypto.randomUUID(), label: 'Cash on Hand', amount: 0 },
+                    { id: crypto.randomUUID(), label: 'Money in Bank Accounts', amount: 0 },
+                    { id: crypto.randomUUID(), label: 'Real Estate', amount: 0 }
+                ]
+            };
+        }
+
+        profile.holdings.items.forEach((item, index) => {
+            const row = document.createElement('div');
+            row.className = 'ledger-row';
+            row.style.display = 'grid';
+            row.style.gridTemplateColumns = '2fr 1fr auto';
+            row.style.gap = '10px';
+            row.style.alignItems = 'center';
+
+            row.innerHTML = `
+                    <input type="text" value="${item.label}" list="holdings-library" placeholder="Asset Type" onchange="updateHolding(${index}, 'label', this.value)">
+                    <input type="number" value="${item.amount}" placeholder="Value ($)" onchange="updateHolding(${index}, 'amount', this.value)">
+                    <button onclick="removeHolding(${index})" style="color:red; background:none; border:none; cursor:pointer;">&times;</button>
+                `;
+            HoldingsManager.container.appendChild(row);
+        });
+    },
+
+    addHolding: () => {
+        profile.holdings.items.push({
+            id: crypto.randomUUID(),
+            label: '',
+            amount: 0
+        });
+        HoldingsManager.render();
+        calculateAndDisplay();
+        Store.saveIndependentProfile(profile);
+    },
+
+    removeHolding: (index) => {
+        if (confirm('Remove this holding?')) {
+            profile.holdings.items.splice(index, 1);
+            HoldingsManager.render();
+            calculateAndDisplay();
+            Store.saveIndependentProfile(profile);
+        }
+    },
+
+    updateHolding: (index, field, value) => {
+        const val = (field === 'amount') ? parseFloat(value) : value;
+        profile.holdings.items[index][field] = val;
+        calculateAndDisplay();
+        Store.saveIndependentProfile(profile);
+    }
+};
+
+// -------------------------------------------------------------------------
 // BUSINESS PROFILE MANAGER (Overhead)
 // -------------------------------------------------------------------------
 const BusinessProfileManager = {
@@ -288,6 +352,114 @@ const BusinessProfileManager = {
 };
 window.BusinessProfileManager = BusinessProfileManager;
 
+const PREDEFINED_PROFESSIONS = [
+    "Graphic Designer", "Illustrator", "Photographer", "Videographer", "Animator", 
+    "Art Director", "UX/UI Designer", "Copywriter", "Editor", "Painter", "Sculptor", 
+    "Musician", "Composer", "Actor", "Dancer", "Choreographer",
+    "Psychotherapist", "Clinical Psychologist", "Social Worker", "Counselor", 
+    "Art Therapist", "Music Therapist", "Dance/Movement Therapist", "Somatic Therapist", 
+    "Occupational Therapist", "Speech Therapist",
+    "CPA", "Tax Accountant", "Bookkeeper", "Enrolled Agent", "Financial Planner", "Tax Preparer",
+    "Professor", "Associate Professor", "Assistant Professor", "Adjunct Professor", 
+    "Researcher", "Postdoctoral Fellow", "Graduate Teaching Assistant", "Lecturer"
+];
+
+function initProfessionAutocomplete(lineIndex, containerId, initialValue) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    let tags = initialValue ? initialValue.split(',').map(t => t.trim()).filter(t => t) : [];
+
+    container.innerHTML = `
+        <div class="tag-input-container">
+            <div id="tags-wrapper-${lineIndex}" style="display:flex; flex-wrap:wrap; gap:5px; align-items:center;"></div>
+            <input type="text" id="tag-input-${lineIndex}" class="tag-input-field" placeholder="Type profession...">
+            <ul id="autocomplete-dropdown-${lineIndex}" class="autocomplete-dropdown"></ul>
+        </div>
+    `;
+
+    const tagsWrapper = document.getElementById(`tags-wrapper-${lineIndex}`);
+    const input = document.getElementById(`tag-input-${lineIndex}`);
+    const dropdown = document.getElementById(`autocomplete-dropdown-${lineIndex}`);
+
+    function renderTags() {
+        tagsWrapper.innerHTML = '';
+        tags.forEach((tag, idx) => {
+            const chip = document.createElement('div');
+            chip.className = 'tag-chip';
+            chip.innerHTML = `<span>${tag}</span><span class="tag-chip-remove" data-idx="${idx}">&times;</span>`;
+            tagsWrapper.appendChild(chip);
+        });
+        
+        tagsWrapper.querySelectorAll('.tag-chip-remove').forEach(btn => {
+            btn.onclick = (e) => {
+                const idx = parseInt(e.target.getAttribute('data-idx'));
+                tags.splice(idx, 1);
+                renderTags();
+                updateLine(lineIndex, 'label', tags.join(', '));
+            };
+        });
+    }
+
+    function showDropdown(query) {
+        const q = query.toLowerCase().trim();
+        const available = PREDEFINED_PROFESSIONS.filter(p => p.toLowerCase().includes(q) && !tags.includes(p));
+        if (available.length === 0 || q === '') {
+            dropdown.style.display = 'none';
+            return;
+        }
+        dropdown.innerHTML = available.map(p => `<li class="autocomplete-item">${p}</li>`).join('');
+        dropdown.style.display = 'block';
+
+        dropdown.querySelectorAll('.autocomplete-item').forEach(li => {
+            li.onclick = () => {
+                tags.push(li.innerText);
+                input.value = '';
+                dropdown.style.display = 'none';
+                renderTags();
+                updateLine(lineIndex, 'label', tags.join(', '));
+                input.focus();
+            };
+        });
+    }
+
+    input.addEventListener('input', (e) => {
+        const val = e.target.value;
+        if (val.includes(',')) {
+            const newTags = val.split(',').map(t => t.trim()).filter(t => t);
+            tags.push(...newTags);
+            input.value = '';
+            dropdown.style.display = 'none';
+            renderTags();
+            updateLine(lineIndex, 'label', tags.join(', '));
+        } else {
+            showDropdown(val);
+        }
+    });
+
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const val = input.value.trim();
+            if (val) {
+                tags.push(val);
+                input.value = '';
+                dropdown.style.display = 'none';
+                renderTags();
+                updateLine(lineIndex, 'label', tags.join(', '));
+            }
+        }
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!container.contains(e.target)) {
+            dropdown.style.display = 'none';
+        }
+    });
+
+    renderTags();
+}
+
 // -------------------------------------------------------------------------
 // LINE ITEMS (Work)
 // -------------------------------------------------------------------------
@@ -325,8 +497,8 @@ const LineManager = {
             header.innerHTML = `
                     <div style="display:flex; gap: var(--spacing-sm); width: 100%;">
                         <div style="flex-grow:1;">
-                            <label style="font-size:0.6rem;">Role / Line of Work</label>
-                            <input type="text" value="${line.label}" onchange="updateLine(${lineIndex}, 'label', this.value)" style="width:100%;">
+                            <label style="font-size:0.6rem;">Line of Work</label>
+                            <div id="profession-input-container-${lineIndex}"></div>
                         </div>
                         <div style="width: 80px;">
                             <label style="font-size:0.6rem;">Duration</label>
@@ -335,8 +507,8 @@ const LineManager = {
                         <div style="width: 90px;">
                              <label style="font-size:0.6rem;">Unit</label>
                              <select onchange="updateLineDuration(${lineIndex}, 'unit', this.value)">
-                                <option value="Weeks" ${line.duration.unit === 'Weeks' ? 'selected' : ''}>Weeks</option>
-                                <option value="Months" ${line.duration.unit === 'Months' ? 'selected' : ''}>Months</option>
+                                <option value="Weeks" ${line.duration.unit === 'Weeks' ? 'selected' : ''}>Weeks/Year</option>
+                                <option value="Months" ${line.duration.unit === 'Months' ? 'selected' : ''}>Months/Year</option>
                                 <option value="% of Year" ${line.duration.unit === '% of Year' ? 'selected' : ''}>% of Year</option>
                              </select>
                         </div>
@@ -349,36 +521,66 @@ const LineManager = {
             const overheadSelectorDiv = document.createElement('div');
             overheadSelectorDiv.style.marginBottom = 'var(--spacing-sm)';
 
-            // Calculate Rate if linked
+            let lineWeeks = parseFloat(line.duration.value) || 0;
+            if (line.duration.unit === 'Months') lineWeeks *= 4.33;
+            if (line.duration.unit === 'Years') lineWeeks *= 52;
+            if (line.duration.unit === '% of Year') lineWeeks = (parseFloat(line.duration.value) / 100) * globalWeeks;
+
+            // Calculate Billable Capacity for this Line
+            const globalHoursPerWeek = globalDays * globalHours;
+            const lineTotalCapacity = lineWeeks * globalHoursPerWeek;
+
+            // Non-Billable using Activity Frequency Normalizer
+            const lineTotalNonBillable = (line.activities || []).reduce((sum, act) => {
+                const hrs = Normalizer.getActivityAnnualHours(act, lineWeeks, globalDays, globalHours);
+                return sum + (hrs > 0 ? hrs : 0);
+            }, 0);
+
+            // Derived Billable Hours
+            const lineBillableHours = Math.max(0, lineTotalCapacity - lineTotalNonBillable);
+
+            const hoursDisplay = `
+                <div style="margin-bottom: 15px; font-size: 0.8rem; color: var(--color-text-main); border-bottom: 1px solid #eee; padding-bottom: 10px;">
+                    <div style="margin-bottom: 4px;">Total Annual Hours Spent in this Line of Work: <strong>${Math.round(lineTotalCapacity).toLocaleString()}</strong></div>
+                    <div>Total Annual Billable Hours for this Line of Work: <strong>${Math.round(lineBillableHours).toLocaleString()}</strong></div>
+                </div>
+            `;
+
             let rateDisplay = '';
             let computedOverheadRate = 0;
 
             if (line.overheadProjectId) {
                 const linkedProj = overheadProjects.find(p => p.id === line.overheadProjectId);
                 if (linkedProj) {
-                    const totalOverhead = (linkedProj.expenses || []).reduce((acc, i) => acc + (parseFloat(i.amount) || 0), 0);
+                    // Calculate Total Overhead using Gross-Up Logic (Matching BusinessProfileManager)
+                    let projFixed = 0;
+                    let projPercent = 0;
+                    (linkedProj.expenses || []).forEach(e => {
+                        if (e.type === 'Percent') {
+                            projPercent += (e.baseAmount || e.amount || 0);
+                        } else {
+                            projFixed += (e.amount || 0);
+                        }
+                    });
 
-                    // Calculate Line Hours
-                    // Assume line duration is in Weeks for simplicity or convert.
-                    // Logic mirrors global calc: weeks * hours_per_week
-                    let lineWeeks = parseFloat(line.duration.value) || 0;
-                    if (line.duration.unit === 'Months') lineWeeks *= 4.33;
-                    if (line.duration.unit === 'Years') lineWeeks *= 52;
+                    let totalOverhead = projFixed;
+                    if (projPercent > 0 && projPercent < 100) {
+                        totalOverhead = projFixed / (1 - (projPercent / 100));
+                    }
 
-                    const weeklyHours = (line.activities || []).reduce((sum, act) => sum + (parseFloat(act.amount) || 0), 0);
-                    const totalLineHours = lineWeeks * weeklyHours;
+                    if (window.BudgetEngine) {
+                        computedOverheadRate = BudgetEngine.calculateOverheadRate(totalOverhead, lineBillableHours);
+                    } else {
+                        computedOverheadRate = lineBillableHours > 0 ? (totalOverhead / lineBillableHours) : 0;
+                    }
 
-                    computedOverheadRate = BudgetEngine.calculateOverheadRate(totalOverhead, totalLineHours);
-
-                    // Save to line object for persistence (so Project Tool can read it)
                     line.derivedOverheadRate = computedOverheadRate;
 
-                    // Formatting
-                    if (totalLineHours > 0) {
+                    if (lineBillableHours > 0) {
                         rateDisplay = `<div style="margin-top:5px; font-size:0.8rem; color:var(--color-primary); font-weight:bold; background:var(--color-bg-subtle); padding:5px; border-radius:4px;">
-                                Linked Overhead Rate: $${computedOverheadRate.toFixed(2)}/hr
-                                <span style="font-weight:normal; color:#666;">(${linkedProj.name}: $${totalOverhead.toLocaleString()} / ${Math.round(totalLineHours)} hrs)</span>
-                            </div>`;
+                    Linked Overhead Rate: $${computedOverheadRate.toFixed(2)}/hr
+                    <span style="font-weight:normal; color:#666;">(${linkedProj.name}: $${Math.round(totalOverhead).toLocaleString()} / ${Math.round(lineBillableHours)} billable hrs)</span>
+                </div>`;
                     } else {
                         rateDisplay = `<div style="margin-top:5px; font-size:0.8rem; color:red;">Add activities to calculate rate.</div>`;
                     }
@@ -388,13 +590,14 @@ const LineManager = {
             }
 
             overheadSelectorDiv.innerHTML = `
-                    <label style="font-size:0.6rem;">Associated Business Profile (Overhead)</label>
-                    <select onchange="updateLine(${lineIndex}, 'overheadProjectId', this.value)" style="width:100%; margin-bottom:5px;">
-                        <option value="">None</option>
-                        ${overheadOptions}
-                    </select>
-                    ${rateDisplay}
-                `;
+                ${hoursDisplay}
+                <label style="font-size:0.6rem;">Associated Business Profile (Overhead)</label>
+                <select onchange="updateLine(${lineIndex}, 'overheadProjectId', this.value)" style="width:100%; margin-bottom:5px;">
+                    <option value="">None</option>
+                    ${overheadOptions}
+                </select>
+                ${rateDisplay}
+            `;
             card.appendChild(overheadSelectorDiv);
 
             // Activities Container
@@ -407,7 +610,7 @@ const LineManager = {
             subHeader.style.marginBottom = 'var(--spacing-xs)';
             subHeader.innerHTML = `
                      <div style="font-size:0.7rem; font-weight:bold;">NON-BILLABLE ACTIVITIES</div>
-                     <button onclick="addActivity(${lineIndex})" style="font-size:0.7rem; cursor:pointer;">+ Service</button>
+                     <button onclick="addActivity(${lineIndex})" style="font-size:0.7rem; cursor:pointer;">+ Activity</button>
                 `;
             card.appendChild(subHeader);
 
@@ -463,6 +666,10 @@ const LineManager = {
 
             card.appendChild(actsContainer);
             LineManager.container.appendChild(card);
+        });
+        
+        profile.linesOfWork.forEach((line, lineIndex) => {
+            initProfessionAutocomplete(lineIndex, `profession-input-container-${lineIndex}`, line.label);
         });
 
         // Add "New Line" button at the bottom if there are any lines
@@ -612,9 +819,14 @@ window.removeExpense = ExpenseManager.removeExpense;
 window.updateIncome = IncomeManager.updateIncome;
 window.removeIncome = IncomeManager.removeIncome;
 
+// Holdings Exports
+window.updateHolding = HoldingsManager.updateHolding;
+window.removeHolding = HoldingsManager.removeHolding;
+
 document.getElementById('btn-add-line-of-work').onclick = LineManager.addLine;
 document.getElementById('btn-add-expense').onclick = ExpenseManager.addExpense;
 document.getElementById('btn-add-income').onclick = IncomeManager.addIncome;
+document.getElementById('btn-add-holding').onclick = HoldingsManager.addHolding;
 document.getElementById('btn-add-overhead-profile').onclick = BusinessProfileManager.create;
 
 
@@ -635,6 +847,16 @@ function calculateAndDisplay() {
 
     if (!profile.expenses) profile.expenses = {};
     profile.expenses.taxRate = taxRate;
+
+    if (!profile.holdings) {
+        profile.holdings = {
+            items: [
+                { id: crypto.randomUUID(), label: 'Cash on Hand', amount: 0 },
+                { id: crypto.randomUUID(), label: 'Money in Bank Accounts', amount: 0 },
+                { id: crypto.randomUUID(), label: 'Real Estate', amount: 0 }
+            ]
+        };
+    }
 
     // 1. Calculate Schedule & Capacity via Utils
     const capacity = Utils.calculateBillableCapacity(profile);
@@ -677,6 +899,16 @@ function calculateAndDisplay() {
         }
     });
 
+    let personalTotal = fixedSum;
+    if (percentSum > 0 && percentSum < 100) {
+        personalTotal = fixedSum / (1 - (percentSum / 100));
+    }
+
+    const needsDesiresTotalEl = document.getElementById('out-total-needs-desires');
+    if (needsDesiresTotalEl) {
+        needsDesiresTotalEl.textContent = Utils.formatCurrency(personalTotal);
+    }
+
     // Add Overhead Project Expenses
     overheadProjects.forEach(proj => {
         if (proj.expenses) {
@@ -707,6 +939,18 @@ function calculateAndDisplay() {
     const unearnedTotalEl = document.getElementById('out-total-unearned-income');
     if (unearnedTotalEl) {
         unearnedTotalEl.textContent = Utils.formatCurrency(unearnedSum);
+    }
+
+    // 6. Holdings (Assets)
+    let holdingsSum = 0;
+    if (profile.holdings && profile.holdings.items) {
+        profile.holdings.items.forEach(item => {
+            holdingsSum += parseFloat(item.amount) || 0;
+        });
+    }
+    const holdingsTotalEl = document.getElementById('out-total-holdings');
+    if (holdingsTotalEl) {
+        holdingsTotalEl.textContent = Utils.formatCurrency(holdingsSum);
     }
 
     // Goal Net (Total) = Fixed / (1 - Percent/100)
@@ -773,7 +1017,7 @@ function calculateAndDisplay() {
         const weekly = adjustedGross / weeksPerYear / pBillable;
 
         // Step 2: Derive others
-        const monthly = weekly * weeksPerYear / 12;
+        const monthly = weekly * 4.3452381;
         const daily = days > 0 ? (weekly / days) : 0;
         const hourly = hours > 0 ? (daily / hours) : 0;
 

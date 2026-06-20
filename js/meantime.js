@@ -19,8 +19,9 @@ const MAX_SELECTION = 3;
 async function init() {
     profile = await Store.getIndependentProfile();
 
-    // Init state from profile if it exists (TO DO: Add persistence later if needed)
-    // For now, ephemeral state or check if we want to save 'meantimeSelections'
+    if (profile.meantimeSelections && Array.isArray(profile.meantimeSelections)) {
+        selectedItems = profile.meantimeSelections;
+    }
 
     renderList();
     updateCalculations();
@@ -75,7 +76,7 @@ function handleInputChange(id, field, value) {
  */
 function updateCalculations() {
     const currentNet = profile.currentNetIncome || 0;
-    outCurrentNet.textContent = Utils.formatCurrency(currentNet);
+    if (outCurrentNet) outCurrentNet.textContent = Utils.formatCurrency(currentNet);
 
     let totalAdjustmentAnnual = 0;
 
@@ -95,7 +96,7 @@ function updateCalculations() {
 
     // Adjustment Display
     const sign = displayAdjustment > 0 ? '+' : '';
-    outAdjustment.textContent = sign + Utils.formatCurrency(displayAdjustment);
+    if (outAdjustment) outAdjustment.textContent = sign + Utils.formatCurrency(displayAdjustment);
 
     // NetPRIME
     const netPrime = currentNet + displayAdjustment;
@@ -103,8 +104,50 @@ function updateCalculations() {
 
     // GrossPRIME (Net * (1 + TaxRate))
     const taxRate = (profile.expenses && profile.expenses.taxRate) ? parseFloat(profile.expenses.taxRate) / 100 : 0.3;
+    const currentGross = currentNet * (1 + taxRate);
     const grossPrime = netPrime * (1 + taxRate);
+    
     if (outGrossPrime) outGrossPrime.textContent = Utils.formatCurrency(grossPrime);
+
+    // Rate Calculations
+    const capacity = Utils.calculateBillableCapacity(profile);
+    const billableHours = capacity.totalBillableHours || 0;
+    const hoursPerDay = parseFloat(profile.schedule?.hours) || 0;
+    const daysPerWeek = parseFloat(profile.schedule?.days) || 0;
+
+    // NOW Rates
+    const nowHourly = billableHours > 0 ? currentGross / billableHours : 0;
+    const nowDaily = nowHourly * hoursPerDay;
+    const nowWeekly = nowDaily * daysPerWeek;
+    const nowMonthly = nowWeekly * 4.3452381;
+
+    // NOW Prime Rates
+    const primeHourly = billableHours > 0 ? grossPrime / billableHours : 0;
+    const primeDaily = primeHourly * hoursPerDay;
+    const primeWeekly = primeDaily * daysPerWeek;
+    const primeMonthly = primeWeekly * 4.3452381;
+
+    // Update DOM
+    const setVal = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = Utils.formatCurrency(val);
+    };
+
+    setVal('out-now-net', currentNet);
+    setVal('out-now-gross', currentGross);
+    setVal('out-now-hr', nowHourly);
+    setVal('out-now-day', nowDaily);
+    setVal('out-now-wk', nowWeekly);
+    setVal('out-now-mo', nowMonthly);
+
+    setVal('out-prime-hr', primeHourly);
+    setVal('out-prime-day', primeDaily);
+    setVal('out-prime-wk', primeWeekly);
+    setVal('out-prime-mo', primeMonthly);
+
+    // Persist to Store
+    profile.meantimeSelections = selectedItems;
+    Store.saveIndependentProfile(profile);
 
     // Update Count UI
     outSelectCount.textContent = `${selectedItems.length}/${MAX_SELECTION} selected`;
