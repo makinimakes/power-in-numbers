@@ -1148,7 +1148,11 @@ function renderCollaborators(project, usersMap, invites = []) {
             stats = '<span style="color:orange">Calc Unavailable</span>';
         }
 
-        d.innerHTML = `<strong>${m.name || m.username}</strong><br>${m.email || m.username}<br>${stats}`;
+        // Apply Privacy Masking if present in userMap
+        const displayName = user.fullName || m.name || m.username;
+        const displayEmail = user.email === null ? '<em style="color:#999">Email Hidden</em>' : (user.email || m.email || m.username);
+
+        d.innerHTML = `<strong>${displayName}</strong><br>${displayEmail}<br>${stats}`;
         list.appendChild(d);
 
         // Also add email to seen if available, to block pending invites
@@ -2251,7 +2255,7 @@ function renderTeamPool(project, usersMap) {
     allMembers.forEach(m => {
         const id = m.email || m.username;
         const user = usersMap[id] || {};
-        const name = user.name || m.name || id;
+        const name = user.fullName || m.name || id;
         const role = m.role || user.role || 'Collaborator';
 
         let ratesStr = '-';

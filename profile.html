@@ -215,6 +215,29 @@
                 </div>
             </div>
 
+            <!-- Privacy Settings -->
+            <div class="form-section">
+                <h3>Privacy & Sharing Settings</h3>
+                <div class="form-group">
+                    <label>Public Directory Sharing Level <small style="color:var(--color-text-muted); font-weight:normal;">(When users search the public community)</small></label>
+                    <select id="privacy-public">
+                        <option value="hidden">Hidden (Do not list me)</option>
+                        <option value="anonymous">Anonymous (No name or demographics)</option>
+                        <option value="demographic">Anonymous with Demographics</option>
+                        <option value="full">Full Visibility (Name & Demographics)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Private Project Sharing Level <small style="color:var(--color-text-muted); font-weight:normal;">(When you are invited to a Project)</small></label>
+                    <select id="privacy-private">
+                        <option value="hidden">Hidden (Refuse Invites)</option>
+                        <option value="anonymous">Anonymous (No name or demographics)</option>
+                        <option value="demographic">Anonymous with Demographics</option>
+                        <option value="full">Full Visibility (Name & Demographics)</option>
+                    </select>
+                </div>
+            </div>
+
             <!-- Spacer for fixed footer -->
             <div style="height: 100px;"></div>
 
@@ -290,6 +313,10 @@
                     document.getElementById('taxstatus').value = userData.taxStatus || '';
                     document.getElementById('dependents-count').value = userData.dependentsCount || '';
                     document.getElementById('dependents-type').value = userData.dependentsType || '';
+
+                    // Privacy Settings
+                    if (userData.privacyPublic) document.getElementById('privacy-public').value = userData.privacyPublic;
+                    if (userData.privacyPrivate) document.getElementById('privacy-private').value = userData.privacyPrivate;
                 }
 
             } catch (err) {
@@ -319,7 +346,11 @@
                 workTypes: document.getElementById('worktypes').value,
                 taxStatus: document.getElementById('taxstatus').value,
                 dependentsCount: document.getElementById('dependents-count').value,
-                dependentsType: document.getElementById('dependents-type').value
+                dependentsType: document.getElementById('dependents-type').value,
+
+                // Privacy
+                privacyPublic: document.getElementById('privacy-public').value,
+                privacyPrivate: document.getElementById('privacy-private').value
             };
 
             const msg = document.getElementById('status-msg');

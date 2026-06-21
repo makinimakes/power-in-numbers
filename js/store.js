@@ -130,6 +130,8 @@ const Store = {
 
         const identity = (data.independent_profile && data.independent_profile.identity) ? data.independent_profile.identity : {};
 
+        const privacy = (data.independent_profile && data.independent_profile.privacy) ? data.independent_profile.privacy : {};
+
         return {
             username: data.email,
             email: data.email,
@@ -145,7 +147,10 @@ const Store = {
             workTypes: identity.workTypes,
             taxStatus: identity.taxStatus,
             dependentsCount: identity.dependentsCount,
-            dependentsType: identity.dependentsType
+            dependentsType: identity.dependentsType,
+            // Privacy
+            privacyPublic: privacy.publicMode || 'hidden',
+            privacyPrivate: privacy.privateMode || 'full'
         };
     },
 
@@ -185,6 +190,13 @@ const Store = {
 
         // Merge into profile
         currentProfile.identity = { ...currentProfile.identity, ...identityUpdate };
+        
+        // Prepare Privacy Update
+        const privacyUpdate = {
+            publicMode: formData.privacyPublic || 'hidden',
+            privateMode: formData.privacyPrivate || 'full'
+        };
+        currentProfile.privacy = { ...(currentProfile.privacy || {}), ...privacyUpdate };
 
         // 3. Update DB
         const { error: saveError } = await window.supabaseClient
@@ -361,13 +373,48 @@ const Store = {
         return data || [];
     },
 
+    /**
+     * Privacy Masking Engine
+     * Strips identifiable information based on the requested privacy mode.
+     */
+    maskProfile: (userObj, context = 'private') => {
+        if (!userObj) return null;
+        
+        const profile = userObj.independent_profile || {};
+        const privacy = profile.privacy || { publicMode: 'hidden', privateMode: 'full' }; // Default to full for legacy, or maybe hidden? Wait, if legacy has no setting, we default to full.
+        
+        const mode = context === 'public' ? privacy.publicMode : privacy.privateMode;
+        
+        // Deep clone
+        const masked = JSON.parse(JSON.stringify(userObj));
+        
+        if (mode === 'hidden') {
+            return null;
+        } else if (mode === 'anonymous') {
+            masked.full_name = "Anonymous User";
+            masked.email = null;
+            if (masked.independent_profile) {
+                masked.independent_profile.identity = {};
+            }
+        } else if (mode === 'demographic') {
+            masked.full_name = "Anonymous User";
+            masked.email = null;
+            // leave identity intact
+        }
+        // if mode === 'full', return unmodified
+
+        return masked;
+    },
+
     checkUser: async (email) => {
         const { data } = await window.supabaseClient
             .from('profiles')
             .select('id, full_name, independent_profile')
             .eq('email', email)
             .single();
-        return data; // Returns object if found, null if not
+            
+        // For MVP, we apply the 'private' project masking right here
+        return Store.maskProfile(data, 'private');
     },
 
     getProject: async (id) => {
@@ -545,11 +592,14 @@ const Store = {
 
         if (error || !data) return null;
 
+        const maskedData = Store.maskProfile(data, 'private');
+        if (!maskedData) return null; // Hidden
+
         return {
-            username: data.email, // Map email to legacy username field
-            email: data.email,
-            fullName: data.full_name,
-            independentProfile: data.independent_profile
+            username: maskedData.email || 'anonymous@hidden.local', // Map email to legacy username field
+            email: maskedData.email,
+            fullName: maskedData.full_name,
+            independentProfile: maskedData.independent_profile
         };
     },
 
@@ -573,12 +623,16 @@ const Store = {
 
             if (data) {
                 data.forEach(p => {
-                    map[p.email] = {
-                        username: p.email,
-                        email: p.email,
-                        fullName: p.full_name,
-                        independentProfile: p.independent_profile
-                    };
+                    const maskedData = Store.maskProfile(p, 'private');
+                    if (maskedData) {
+                        const emailKey = p.email; // Use original email for the map key so the project can still find them
+                        map[emailKey] = {
+                            username: maskedData.email || emailKey,
+                            email: maskedData.email,
+                            fullName: maskedData.full_name,
+                            independentProfile: maskedData.independent_profile
+                        };
+                    }
                 });
             }
         } catch (e) {
