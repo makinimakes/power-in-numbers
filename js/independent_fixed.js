@@ -974,7 +974,35 @@ function calculateAndDisplay() {
     }
 
     // Calculate Current Gross (Moved up)
-    const currentNet = profile.currentNetIncome || 0;
+    let currentNet = profile.currentNetIncome || 0;
+    
+    // Meantime Adjustments & Prime Toggle Logic
+    const meantimeAdjustment = Utils.calculateMeantimeAdjustment(profile);
+    const togglePrimeEl = document.getElementById('toggle-prime-rates');
+    const staticTitle = document.getElementById('now-rates-static-title');
+    const toggleTitle = document.getElementById('now-rates-toggle-title');
+    
+    let isPrime = false;
+    if (meantimeAdjustment > 0) {
+        if (staticTitle) staticTitle.style.display = 'none';
+        if (toggleTitle) toggleTitle.style.display = 'flex';
+        isPrime = togglePrimeEl && togglePrimeEl.checked;
+    } else {
+        if (staticTitle) staticTitle.style.display = 'block';
+        if (toggleTitle) toggleTitle.style.display = 'none';
+    }
+
+    // Apply labels
+    const lblNow = document.getElementById('label-now-rates');
+    const lblPrime = document.getElementById('label-prime-rates');
+    if (lblNow) lblNow.style.fontWeight = isPrime ? 'normal' : 'bold';
+    if (lblPrime) lblPrime.style.fontWeight = isPrime ? 'bold' : 'normal';
+
+    // If Enhanced (Prime) is selected, add meantime adjustment to Current Net
+    if (isPrime) {
+        currentNet += meantimeAdjustment;
+    }
+
     const currentGross = currentNet * (1 + (taxRate / 100));
 
     outputs.goalNet.textContent = Utils.formatCurrency(goalNetWork);
@@ -983,6 +1011,11 @@ function calculateAndDisplay() {
     // Update Current Gross Output
     const outCurrentGross = document.getElementById('out-current-gross');
     if (outCurrentGross) {
+        // Change label to Enhanced Gross if needed
+        const currentGrossLabel = document.getElementById('label-current-gross');
+        if (currentGrossLabel) {
+            currentGrossLabel.textContent = isPrime ? "ENHANCED Gross Income" : "Current Gross Income";
+        }
         outCurrentGross.textContent = Utils.formatCurrency(currentGross);
     }
 

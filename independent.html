@@ -705,6 +705,8 @@
         <script src="js/utils.js?v=hotfix9"></script>
         <script src="js/supabase_client.js?v=hotfix9"></script>
         <script src="js/store.js?v=hotfix9"></script>
+        <script src="js/libraries.js"></script>
+        <script src="js/autocomplete.js"></script>
         <script>
             /**
              * Independent Tool Logic - Final Refactor (Inlined for Debugging)
@@ -788,7 +790,7 @@
                         const showFreq = item.type === 'Periodic';
 
                         row.innerHTML = `
-                    <input type="text" value="${item.label}" placeholder="Category" onchange="updateExpense(${index}, 'label', this.value)">
+                    <div id="expense-input-container-${index}" style="width:100%;"></div>
                     <input type="number" value="${item.amount}" placeholder="Amount" onchange="updateExpense(${index}, 'amount', this.value)">
                     <select onchange="updateExpense(${index}, 'type', this.value)">
                         <option value="Monthly" ${item.type === 'Monthly' ? 'selected' : ''}>Monthly</option>
@@ -801,6 +803,14 @@
                     <button onclick="removeExpense(${index})" style="color:red; background:none; border:none; cursor:pointer;">&times;</button>
                 `;
                         ExpenseManager.container.appendChild(row);
+                        
+                        window.Autocomplete.init(
+                            `expense-input-container-${index}`, 
+                            item.label, 
+                            window.AppLibraries.EXPENSES, 
+                            (newVal) => ExpenseManager.updateExpense(index, 'label', newVal),
+                            "Category"
+                        );
                     });
                 },
 
@@ -853,7 +863,7 @@
                         const showFreq = item.type === 'Periodic';
 
                         row.innerHTML = `
-                    <input type="text" value="${item.label}" placeholder="Source" onchange="updateIncome(${index}, 'label', this.value)">
+                    <div id="income-input-container-${index}" style="width:100%;"></div>
                     <input type="number" value="${item.amount}" placeholder="Amount" onchange="updateIncome(${index}, 'amount', this.value)">
                     <select onchange="updateIncome(${index}, 'type', this.value)">
                         <option value="Annual" ${item.type === 'Annual' ? 'selected' : ''}>Annual</option>
@@ -866,6 +876,14 @@
                     <button onclick="removeIncome(${index})" style="color:red; background:none; border:none; cursor:pointer;">&times;</button>
                 `;
                         IncomeManager.container.appendChild(row);
+                        
+                        window.Autocomplete.init(
+                            `income-input-container-${index}`, 
+                            item.label, 
+                            window.AppLibraries.INCOME_SOURCES, 
+                            (newVal) => IncomeManager.updateIncome(index, 'label', newVal),
+                            "Source"
+                        );
                     });
                 },
 
@@ -927,11 +945,19 @@
                         row.style.alignItems = 'center';
 
                         row.innerHTML = `
-                                <input type="text" value="${item.label}" list="holdings-library" placeholder="Asset Type" onchange="updateHolding(${index}, 'label', this.value)">
+                                <div id="holdings-input-container-${index}" style="width:100%;"></div>
                                 <input type="number" value="${item.amount}" placeholder="Value ($)" onchange="updateHolding(${index}, 'amount', this.value)">
                                 <button onclick="removeHolding(${index})" style="color:red; background:none; border:none; cursor:pointer;">&times;</button>
                             `;
                         HoldingsManager.container.appendChild(row);
+                        
+                        window.Autocomplete.init(
+                            `holdings-input-container-${index}`, 
+                            item.label, 
+                            window.AppLibraries.HOLDINGS, 
+                            (newVal) => HoldingsManager.updateHolding(index, 'label', newVal),
+                            "Asset Type"
+                        );
                     });
                 },
 
@@ -1285,113 +1311,7 @@
                 }
             };
 
-            const PREDEFINED_PROFESSIONS = [
-                "Graphic Designer", "Illustrator", "Photographer", "Videographer", "Animator", 
-                "Art Director", "UX/UI Designer", "Copywriter", "Editor", "Painter", "Sculptor", 
-                "Musician", "Composer", "Actor", "Dancer", "Choreographer",
-                "Psychotherapist", "Clinical Psychologist", "Social Worker", "Counselor", 
-                "Art Therapist", "Music Therapist", "Dance/Movement Therapist", "Somatic Therapist", 
-                "Occupational Therapist", "Speech Therapist",
-                "CPA", "Tax Accountant", "Bookkeeper", "Enrolled Agent", "Financial Planner", "Tax Preparer",
-                "Professor", "Associate Professor", "Assistant Professor", "Adjunct Professor", 
-                "Researcher", "Postdoctoral Fellow", "Graduate Teaching Assistant", "Lecturer"
-            ];
 
-            function initProfessionAutocomplete(lineIndex, containerId, initialValue) {
-                const container = document.getElementById(containerId);
-                if (!container) return;
-
-                let tags = initialValue ? initialValue.split(',').map(t => t.trim()).filter(t => t) : [];
-
-                container.innerHTML = `
-                    <div class="tag-input-container">
-                        <div id="tags-wrapper-${lineIndex}" style="display:flex; flex-wrap:wrap; gap:5px; align-items:center;"></div>
-                        <input type="text" id="tag-input-${lineIndex}" class="tag-input-field" placeholder="Type profession...">
-                        <ul id="autocomplete-dropdown-${lineIndex}" class="autocomplete-dropdown"></ul>
-                    </div>
-                `;
-
-                const tagsWrapper = document.getElementById(`tags-wrapper-${lineIndex}`);
-                const input = document.getElementById(`tag-input-${lineIndex}`);
-                const dropdown = document.getElementById(`autocomplete-dropdown-${lineIndex}`);
-
-                function renderTags() {
-                    tagsWrapper.innerHTML = '';
-                    tags.forEach((tag, idx) => {
-                        const chip = document.createElement('div');
-                        chip.className = 'tag-chip';
-                        chip.innerHTML = `<span>${tag}</span><span class="tag-chip-remove" data-idx="${idx}">&times;</span>`;
-                        tagsWrapper.appendChild(chip);
-                    });
-                    
-                    tagsWrapper.querySelectorAll('.tag-chip-remove').forEach(btn => {
-                        btn.onclick = (e) => {
-                            const idx = parseInt(e.target.getAttribute('data-idx'));
-                            tags.splice(idx, 1);
-                            renderTags();
-                            updateLine(lineIndex, 'label', tags.join(', '));
-                        };
-                    });
-                }
-
-                function showDropdown(query) {
-                    const q = query.toLowerCase().trim();
-                    const available = PREDEFINED_PROFESSIONS.filter(p => p.toLowerCase().includes(q) && !tags.includes(p));
-                    if (available.length === 0 || q === '') {
-                        dropdown.style.display = 'none';
-                        return;
-                    }
-                    dropdown.innerHTML = available.map(p => `<li class="autocomplete-item">${p}</li>`).join('');
-                    dropdown.style.display = 'block';
-
-                    dropdown.querySelectorAll('.autocomplete-item').forEach(li => {
-                        li.onclick = () => {
-                            tags.push(li.innerText);
-                            input.value = '';
-                            dropdown.style.display = 'none';
-                            renderTags();
-                            updateLine(lineIndex, 'label', tags.join(', '));
-                            input.focus();
-                        };
-                    });
-                }
-
-                input.addEventListener('input', (e) => {
-                    const val = e.target.value;
-                    if (val.includes(',')) {
-                        const newTags = val.split(',').map(t => t.trim()).filter(t => t);
-                        tags.push(...newTags);
-                        input.value = '';
-                        dropdown.style.display = 'none';
-                        renderTags();
-                        updateLine(lineIndex, 'label', tags.join(', '));
-                    } else {
-                        showDropdown(val);
-                    }
-                });
-
-                input.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        const val = input.value.trim();
-                        if (val) {
-                            tags.push(val);
-                            input.value = '';
-                            dropdown.style.display = 'none';
-                            renderTags();
-                            updateLine(lineIndex, 'label', tags.join(', '));
-                        }
-                    }
-                });
-
-                document.addEventListener('click', (e) => {
-                    if (!container.contains(e.target)) {
-                        dropdown.style.display = 'none';
-                    }
-                });
-
-                renderTags();
-            }
 
             // LINE ITEMS (Work)
             const LineManager = {
@@ -1406,6 +1326,10 @@
                     const capacity = Utils.calculateBillableCapacity(profile);
 
                     profile.linesOfWork.forEach((line, lineIndex) => {
+                        // Safety checks for older or incomplete data
+                        if (!line.duration) line.duration = { value: 0, unit: 'Weeks' };
+                        if (!line.activities) line.activities = [];
+
                         const card = document.createElement('div');
                         card.className = 'grid-card';
                         card.style.marginBottom = 'var(--spacing-md)';
@@ -1557,7 +1481,7 @@
                 `;
                         card.appendChild(subHeader);
 
-                        line.activities.forEach((act, actIndex) => {
+                        (line.activities || []).forEach((act, actIndex) => {
                             const lineWeeks = Normalizer.getLineWeeks(line.duration.value, line.duration.unit, globalWeeks);
                             const annualHours = Normalizer.getActivityAnnualHours(act, lineWeeks, globalDays, globalHours);
                             const isInvalid = annualHours === -1;
@@ -1609,7 +1533,13 @@
                     });
                     
                     profile.linesOfWork.forEach((line, lineIndex) => {
-                        initProfessionAutocomplete(lineIndex, `profession-input-container-${lineIndex}`, line.label);
+                        window.Autocomplete.init(
+                            `profession-input-container-${lineIndex}`, 
+                            line.label, 
+                            window.AppLibraries.WORK_TYPES, 
+                            (newVal) => updateLine(lineIndex, 'label', newVal),
+                            "Type profession..."
+                        );
                     });
 
                     if (profile.linesOfWork.length > 0) {
@@ -2136,11 +2066,18 @@
                     });
                 }
 
-                // 3. Current Reality Baseline (NOW)
+                // 3. Current Reality Baseline (NOW/ENHANCED)
                 // "Current Net Income" acts as the "Fixed" amount we need to clear to maintain current lifestyle
-                // We fetch directly from input to ensure it matches the user's latest type
                 const currentNetInput = document.getElementById('in-current-net-income'); // Corrected ID
-                const nowFixedBase = currentNetInput ? (parseFloat(currentNetInput.value.replace(/,/g, '')) || 0) : 0;
+                let nowFixedBase = currentNetInput ? (parseFloat(currentNetInput.value.replace(/,/g, '')) || 0) : 0;
+
+                // Apply ENHANCED (Meantime) adjustment if toggle is checked
+                const meantimeAdjustment = Utils.calculateMeantimeAdjustment(profile);
+                const togglePrimeEl = document.getElementById('toggle-prime-rates');
+                if (togglePrimeEl && togglePrimeEl.checked && meantimeAdjustment > 0) {
+                    nowFixedBase += meantimeAdjustment;
+                }
+
 
                 // 4. Capacity Factors
                 const capacity = Utils.calculateBillableCapacity(profile);
@@ -2219,12 +2156,12 @@
                     // So Gross = Net * (1+Tax) / (1-Agent).
 
                     const calcBaseNow = (netInput) => {
-                        const gross = (netInput * (1 + (taxRate / 100))) / (1 - (personalPercent / 100));
+                        const gross = netInput * (1 + (taxRate / 100));
                         return {
                             net: netInput,
                             gross: gross,
                             fixed: netInput, // Conceptually
-                            percent: personalPercent,
+                            percent: 0, // Base NOW does not incorporate goal percentages
                             hourly: (billableHours > 0) ? (gross / billableHours) : 0,
                             weekly: (workWeeks > 0) ? (gross / workWeeks) : 0,
                             monthly: ((workWeeks > 0) ? (gross / workWeeks) : 0) * 4.3452381
@@ -2315,7 +2252,15 @@
                 }
 
                 const renderTable = (type) => { // type = 'goal' or 'now'
-                    const title = type === 'goal' ? 'GOAL SCENARIOS' : 'NOW SCENARIOS';
+                    let title = type === 'goal' ? 'GOAL SCENARIOS' : 'NOW SCENARIOS';
+                    
+                    if (type === 'now') {
+                        const togglePrimeEl = document.getElementById('toggle-prime-rates');
+                        if (togglePrimeEl && togglePrimeEl.checked && Utils.calculateMeantimeAdjustment(profile) > 0) {
+                            title = 'ENHANCED SCENARIOS';
+                        }
+                    }
+
                     let html = `
             <div style="margin-bottom: 2rem;">
             <h3 style="margin-bottom: 0.5rem; color: var(--text-color); font-weight: 600;">${title}</h3>
@@ -2427,7 +2372,10 @@
                         inputs.taxRate.value = profile.expenses.taxRate;
                     }
                     if (profile.sendPrimeToProjects !== undefined) {
-                        document.getElementById('check-send-prime').checked = profile.sendPrimeToProjects;
+                        const primeCheck = document.getElementById('check-send-prime');
+                        if (primeCheck) {
+                            primeCheck.checked = profile.sendPrimeToProjects;
+                        }
                     }
 
                     const currentNetInput = document.getElementById('in-current-net-income');
@@ -2436,13 +2384,13 @@
                         // The original event listener was here, but we're moving it to a dedicated block below
                     }
 
-                    LineManager.render();
-                    ExpenseManager.render();
+                    try { LineManager.render(); } catch (e) { console.error("LineManager Render Error:", e); }
+                    try { ExpenseManager.render(); } catch (e) { console.error("ExpenseManager Render Error:", e); }
                     logToScreen("Expenses Rendered. Count: " + (profile.expenses.items ? profile.expenses.items.length : 0));
-                    IncomeManager.render();
-                    HoldingsManager.render();
-                    BusinessProfileManager.render();
-                    calculateAndDisplay();
+                    try { IncomeManager.render(); } catch (e) { console.error("IncomeManager Render Error:", e); }
+                    try { HoldingsManager.render(); } catch (e) { console.error("HoldingsManager Render Error:", e); }
+                    try { BusinessProfileManager.render(); } catch (e) { console.error("BusinessProfileManager Render Error:", e); }
+                    try { calculateAndDisplay(); } catch (e) { console.error("Calculate Error:", e); }
                     logToScreen("Init Complete. UI should be ready.");
 
                     ['weeks', 'days', 'hours'].forEach(key => {
@@ -2494,6 +2442,27 @@
 
             // Start
             init();
+
+            // Handle URL Routing from Global Search
+            setTimeout(() => {
+                const params = new URLSearchParams(window.location.search);
+                const openSection = params.get('open');
+                if (openSection) {
+                    let wrapperId = '';
+                    if (openSection === 'expenses') wrapperId = 'needs-desires-wrapper';
+                    else if (openSection === 'income') wrapperId = 'non-wage-income-wrapper';
+                    else if (openSection === 'holdings') wrapperId = 'holdings-wrapper';
+                    
+                    if (wrapperId) {
+                        const wrapper = document.getElementById(wrapperId);
+                        if (wrapper && (wrapper.style.display === 'none' || wrapper.classList.contains('hidden'))) {
+                            const toggleBtn = document.querySelector(`button[onclick*="'${wrapperId}'"]`);
+                            if (toggleBtn) toggleBtn.click();
+                        }
+                        if (wrapper) wrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }
+            }, 500);
         </script>
         <script>
             // Authentication Check & UI Update
@@ -2510,5 +2479,6 @@
             })();
         </script>
 
+        <script src="js/global_search.js"></script>
+    </body>
 </html>
-```

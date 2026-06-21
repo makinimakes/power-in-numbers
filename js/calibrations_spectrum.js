@@ -11,6 +11,7 @@ let overheadProjects = [];
 let selectedOverheadRate = 0; // Cumulative hourly rate to add
 let cachedPersonalRateNow = 0;
 let cachedPersonalRateGoal = 0;
+let spectrumProfile = null;
 
 // Spectrum Deltas: 10% to 90%
 const DELTAS = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9];
@@ -30,12 +31,12 @@ async function openSpectrumModal() {
     try {
         overheadProjects = await Store.getOverheadProjects();
 
-        const profile = await Store.getIndependentProfile(); // Ensure fresh profile for Billable Hours
+        spectrumProfile = await Store.getIndependentProfile(); // Ensure fresh profile for Billable Hours
 
         // (Filter step removed as getOverheadProjects handles it)
 
         // Calculate Hourly Rate for each Project
-        const capacity = Utils.calculateBillableCapacity(profile);
+        const capacity = Utils.calculateBillableCapacity(spectrumProfile);
         const billableHours = capacity.totalBillableHours || 1; // Avoid div/0
 
         overheadProjects.forEach(p => {
@@ -124,24 +125,28 @@ function closeSpectrumModal() {
 }
 
 function renderPairedSpectrum() {
-    // 1. Get Base Rates
-    const parseRate = (id) => {
-        const el = document.getElementById(id);
-        if (!el) return 0;
-        const clean = el.textContent.replace(/[$,]/g, '').replace(/\/hr/g, '').trim();
-        return parseFloat(clean) || 0;
-    };
+    // 1. Get Base Rates from Profile
+    const gaps = window.getCalibrationsGaps(spectrumProfile);
+    
+    const toggleEl = document.getElementById('toggle-calibrations-prime');
+    const isEnhanced = toggleEl && toggleEl.checked;
+    
+    const titleEl = document.getElementById('spectrum-now-title');
+    if (titleEl) {
+        titleEl.textContent = isEnhanced ? 'Recalibrated ENHANCED Spectrum' : 'Recalibrated NOW Spectrum';
+    }
 
-    const rateNowBase = parseRate('out-required-rate-now');
-    const rateGoalBase = parseRate('out-required-rate-goal');
+    const targetNow = isEnhanced ? gaps.periodTargetEnhanced : gaps.periodTargetNow;
+    const rateNowBase = (gaps.periodGrossCapacity > 0) ? (targetNow / gaps.periodGrossCapacity) : 0;
+    const rateGoalBase = (gaps.periodGrossCapacity > 0) ? (gaps.periodTargetGoal / gaps.periodGrossCapacity) : 0;
 
     // Apply Overhead
     const rateNow = rateNowBase + selectedOverheadRate;
     const rateGoal = rateGoalBase + selectedOverheadRate;
 
     // 2. Schedule
-    const hoursPerDay = (profile.schedule && profile.schedule.hours) ? profile.schedule.hours : 6;
-    const daysPerWeek = (profile.schedule && profile.schedule.days) ? profile.schedule.days : 4;
+    const hoursPerDay = (spectrumProfile && spectrumProfile.schedule && spectrumProfile.schedule.hours) ? spectrumProfile.schedule.hours : 6;
+    const daysPerWeek = (spectrumProfile && spectrumProfile.schedule && spectrumProfile.schedule.days) ? spectrumProfile.schedule.days : 4;
 
     // 3. Render Tables
     renderTable(tableNow, rateNow, hoursPerDay, daysPerWeek);

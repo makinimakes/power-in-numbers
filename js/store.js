@@ -102,11 +102,13 @@ const Store = {
 
         if (error) {
             console.error("Error fetching profile:", error);
-            return window.DEFAULT_INDEPENDENT;
+            // DO NOT RETURN DEFAULTS ON NETWORK ERROR! This causes data loss if saved.
+            throw error;
         }
 
-        // Merge defaults
-        return { ...window.DEFAULT_INDEPENDENT, ...data.independent_profile };
+        // Merge defaults if independent_profile is null (new user)
+        const dbProfile = data.independent_profile || {};
+        return { ...window.DEFAULT_INDEPENDENT, ...dbProfile };
     },
 
     /**

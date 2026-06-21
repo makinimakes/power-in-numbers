@@ -160,7 +160,7 @@
                 </div>
                 <div class="form-group">
                     <label>Education</label>
-                    <input type="text" id="education">
+                        <div id="education-container" style="width:100%;"></div>
                 </div>
             </div>
 
@@ -191,22 +191,16 @@
                 <h3>Professional & Household</h3>
                 <div class="form-group">
                     <label>Type(s) of Work You Do</label>
-                    <input type="text" id="worktypes">
+                    <div id="worktypes-container" style="width:100%;"></div>
                 </div>
                 <div class="form-group">
                     <label>Tax Filing Status</label>
-                    <select id="taxstatus">
-                        <option value="">Select...</option>
-                        <option value="Single">Single</option>
-                        <option value="Married Filing Jointly">Married Filing Jointly</option>
-                        <option value="Married Filing Separately">Married Filing Separately</option>
-                        <option value="Head of Household">Head of Household</option>
-                    </select>
+                    <div id="taxstatus-container" style="width:100%;"></div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label>Number of Dependents</label>
-                        <input type="number" id="dependents-count" min="0">
+                        <div id="dependents-count-container" style="width:100%;"></div>
                     </div>
                     <div class="form-group">
                         <label>Types of Dependents</label>
@@ -256,6 +250,8 @@
 
     <script src="js/supabase_client.js"></script>
     <script src="js/store.js"></script>
+    <script src="js/libraries.js"></script>
+    <script src="js/autocomplete.js"></script>
     <script src="js/location_helper.js"></script>
     <script>
         // Load Data
@@ -284,6 +280,13 @@
                 const locCities = document.getElementById('loc-cities');
                 if (locCountry) LocationHelper.init(locCountry, locState, locCity, locCities);
 
+                window.profileTags = {
+                    education: '',
+                    workTypes: '',
+                    taxStatus: '',
+                    dependentsCount: ''
+                };
+
                 if (userData) {
                     document.getElementById('username').value = userData.username || sessionEmail;
                     document.getElementById('email').value = userData.email || sessionEmail;
@@ -291,7 +294,9 @@
                     document.getElementById('callname').value = userData.callName || '';
                     document.getElementById('birthdate').value = userData.birthdate || '';
                     document.getElementById('race').value = userData.race || '';
-                    document.getElementById('education').value = userData.education || '';
+
+                    profileTags.education = userData.education || '';
+                    window.Autocomplete.init('education-container', profileTags.education, window.AppLibraries.EDUCATION, (v) => profileTags.education = v, "Education level");
 
                     // Location Populate
                     if (userData.country) {
@@ -309,9 +314,14 @@
                         document.getElementById('loc-city').value = userData.city || '';
                     }
 
-                    document.getElementById('worktypes').value = userData.workTypes || '';
-                    document.getElementById('taxstatus').value = userData.taxStatus || '';
-                    document.getElementById('dependents-count').value = userData.dependentsCount || '';
+                    profileTags.workTypes = userData.workTypes || '';
+                    window.Autocomplete.init('worktypes-container', profileTags.workTypes, window.AppLibraries.WORK_TYPES, (v) => profileTags.workTypes = v, "Work types");
+                    
+                    profileTags.taxStatus = userData.taxStatus || '';
+                    window.Autocomplete.init('taxstatus-container', profileTags.taxStatus, window.AppLibraries.TAX_STATUS, (v) => profileTags.taxStatus = v, "Tax status");
+                    
+                    profileTags.dependentsCount = userData.dependentsCount || '';
+                    window.Autocomplete.init('dependents-count-container', profileTags.dependentsCount, window.AppLibraries.DEPENDENTS_COUNT, (v) => profileTags.dependentsCount = v, "Number of dependents");
                     document.getElementById('dependents-type').value = userData.dependentsType || '';
 
                     // Privacy Settings
@@ -336,16 +346,16 @@
                 callName: document.getElementById('callname').value.trim(),
                 birthdate: document.getElementById('birthdate').value,
                 race: document.getElementById('race').value,
-                education: document.getElementById('education').value,
+                education: window.profileTags.education,
 
                 // Location
                 country: document.getElementById('loc-country').value,
                 state: document.getElementById('loc-state').value,
                 city: document.getElementById('loc-city').value,
 
-                workTypes: document.getElementById('worktypes').value,
-                taxStatus: document.getElementById('taxstatus').value,
-                dependentsCount: document.getElementById('dependents-count').value,
+                workTypes: window.profileTags.workTypes,
+                taxStatus: window.profileTags.taxStatus,
+                dependentsCount: window.profileTags.dependentsCount,
                 dependentsType: document.getElementById('dependents-type').value,
 
                 // Privacy
@@ -381,6 +391,7 @@
             }
         });
     </script>
+    <script src="js/global_search.js"></script>
 </body>
 
 </html>

@@ -665,6 +665,17 @@
                 <div class="modal-header">Manage Income Source</div>
                 <div style="padding: var(--spacing-md);">
                     <input type="hidden" id="income-id">
+
+                    <!-- NEW: Import from Catalog -->
+                    <div class="input-group" style="background: #f9f9f9; padding: 10px; border: 1px dashed #ccc; border-radius: 4px; margin-bottom: 15px;">
+                        <label style="color: var(--color-primary);">Import from Catalog (Optional)</label>
+                        <select id="income-catalog-import" style="width:100%; padding:8px;" onchange="window.importCatalogToIncome(this.value)">
+                            <option value="">-- Select an Item to Import --</option>
+                            <!-- JS Injected -->
+                        </select>
+                        <small style="color: #666; display: block; margin-top: 5px;">This will auto-fill the Expected Net as a lump-sum source.</small>
+                    </div>
+
                     <div class="input-group">
                         <label>Source Name</label>
                         <input type="text" id="income-name" placeholder="e.g. Grant Name, Donor">
@@ -1074,6 +1085,17 @@
         <div class="modal-content" style="max-width:400px;">
             <div class="modal-header">Add Funding Source</div>
             <div style="padding:20px;">
+
+                <!-- NEW: Import from Catalog -->
+                <div class="form-group" style="background: #f9f9f9; padding: 10px; border: 1px dashed #ccc; border-radius: 4px; margin-bottom: 15px;">
+                    <label style="color: var(--color-primary);">Import from Catalog (Optional)</label>
+                    <select id="income-catalog-import-real" style="width:100%; padding:8px;" onchange="window.importCatalogToIncome(this.value)">
+                        <option value="">-- Select an Item to Import --</option>
+                        <!-- JS Injected -->
+                    </select>
+                    <small style="color: #666; display: block; margin-top: 5px;">This will auto-fill the Expected Net as a lump-sum source.</small>
+                </div>
+
                 <div class="form-group">
                     <label>Source Name</label>
                     <input type="text" id="income-source-name" placeholder="e.g. Arts Council Grant">

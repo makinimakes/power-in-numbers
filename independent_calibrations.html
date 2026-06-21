@@ -111,8 +111,25 @@
                         <!-- JS Injected -->
                     </div>
                     <div style="display:flex; justify-content:space-between; margin-top:10px; font-weight:bold;">
-                        <span>Total Projected</span>
+                        <span>Total Projected Contracts</span>
                         <span id="out-total-projected-left">$0</span>
+                    </div>
+                </div>
+
+                <!-- Projected Goods & Tickets -->
+                <div class="section-header"
+                    style="margin-top: var(--spacing-md); display:flex; justify-content:space-between; align-items:center; background: #2E4E3F;">
+                    <span>Projections for Goods / Service Items / Ticketed Events</span>
+                    <button class="btn" onclick="openCatalogModal()"
+                        style="padding: 2px 8px; font-size: 0.7rem; background: #fff; color: #2E4E3F;">+ Add Catalog Item</button>
+                </div>
+                <div style="padding: var(--spacing-sm);">
+                    <div id="catalog-list">
+                        <!-- JS Injected Catalog Items -->
+                    </div>
+                    <div style="display:flex; justify-content:space-between; margin-top:10px; font-weight:bold;">
+                        <span>Total Expected Catalog Net</span>
+                        <span id="out-total-catalog-left">$0</span>
                     </div>
                 </div>
             </div>
@@ -124,6 +141,7 @@
                 </div>
 
                 <div style="margin-top: var(--spacing-md);">
+                    <h3 style="margin-top:0; margin-bottom:15px; font-size:1.1rem; color:var(--color-primary); text-align:center;">Recalibrated Rate Tables</h3>
                     <!-- Layout: Two Columns for Analysis -->
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-sm);">
 
@@ -169,7 +187,7 @@
                             style="background: var(--color-bg-base); border: var(--border-std); padding: var(--spacing-md);">
                             <h3
                                 style="margin-top:0; border-bottom:1px solid #ddd; padding-bottom:5px; margin-bottom:10px; font-size:1rem;">
-                                Recalibrated GOAL Fees</h3>
+                                GOAL Fees</h3>
 
                             <small>Period Target</small>
                             <div id="out-period-target-goal" class="huge-number" style="font-size: 2rem;">0.00</div>
@@ -201,6 +219,7 @@
                     View Rate Spectrum
                 </button>
             </div>
+
         </div>
     </div>
 
@@ -334,7 +353,7 @@
             </div>
 
             <!-- NOW Table -->
-            <h4 style="margin-bottom:10px; color:var(--color-primary); border-bottom:1px solid #ddd;">Recalibrated NOW
+            <h4 id="spectrum-now-title" style="margin-bottom:10px; color:var(--color-primary); border-bottom:1px solid #ddd;">Recalibrated NOW
                 Spectrum</h4>
             <div style="overflow-x: auto; margin-bottom: 30px;">
                 <table style="width:100%; border-collapse: collapse; font-size: 0.9rem;">
@@ -373,6 +392,126 @@
         </form>
     </dialog>
 
+    <!-- NEW: Modal for Catalog/Library Item -->
+    <dialog id="modal-catalog" style="padding:0; border:var(--border-std); border-radius:8px; max-width:750px; width:100%; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
+        <form method="dialog" style="padding: var(--spacing-lg);">
+            <h2 id="modal-catalog-title" style="margin-top:0;">Manage Catalog Item</h2>
+            <input type="hidden" id="cat-id">
+
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label>Item Name</label>
+                <input type="text" id="cat-name" class="form-control" placeholder="e.g. Custom Painting, Party Ticket" required>
+            </div>
+
+            <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+                <div class="form-group" style="flex: 1;">
+                    <label>Type</label>
+                    <select id="cat-type" class="form-control" onchange="window.toggleCatalogTimeInput()">
+                        <option value="good">Good</option>
+                        <option value="service">Service</option>
+                        <option value="ticket">Ticketed Event</option>
+                    </select>
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label>Line of Work</label>
+                    <select id="cat-line-of-work" class="form-control">
+                        <!-- JS Injected -->
+                    </select>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+                <div class="form-group" style="flex: 1;">
+                    <label>Expected Total Sales Volume</label>
+                    <input type="number" id="cat-volume" class="form-control" value="1" min="1" required onchange="window.handleCatalogVolumeChange()">
+                </div>
+                <div class="form-group" style="flex: 1;" id="cat-time-container">
+                    <label>Time to Produce (Per Item)</label>
+                    <div style="display: flex; gap: 5px;">
+                        <input type="number" id="cat-time-value" class="form-control" value="0" min="0" style="width: 50%;" onchange="window.updateCatalogBaseCost()">
+                        <select id="cat-time-unit" class="form-control" style="width: 50%;" onchange="window.updateCatalogBaseCost()">
+                            <option value="Hours">Hours</option>
+                            <option value="Days">Days</option>
+                            <option value="Weeks">Weeks</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 15px;" id="cat-overhead-container">
+                <label>Associated Business Profiles (Overhead)</label>
+                <div id="cat-overhead-profiles-list" style="display: flex; flex-wrap: wrap; gap: 10px; background: var(--color-bg-base); border: 1px solid var(--color-border); padding: 10px; border-radius: 4px; max-height: 120px; overflow-y: auto;">
+                    <!-- JS Injected Checkboxes -->
+                </div>
+            </div>
+
+            <!-- NEW: BASE COST SECTION -->
+            <div id="cat-base-cost-section" style="background: var(--color-bg-subtle); padding: 15px; border-radius: 4px; margin-bottom: 15px;">
+                <h4 style="margin-top:0; margin-bottom: 10px; font-size: 0.95rem;">Set Base Cost</h4>
+                
+                <div id="cat-rate-selector-container">
+                    <label style="font-size: 0.8rem; margin-bottom: 5px; display:block;">Calculate Base Cost from Hourly Rate:</label>
+                    <div style="display: flex; gap: 15px; font-size: 0.85rem; margin-bottom: 10px;">
+                        <label><input type="radio" name="catRateMode" value="now" onchange="window.updateCatalogBaseCost()"> NOW (<span id="cat-rate-now-lbl">$0/hr</span>)</label>
+                        <label><input type="radio" name="catRateMode" value="enhanced" onchange="window.updateCatalogBaseCost()"> ENHANCED (<span id="cat-rate-enhanced-lbl">$0/hr</span>)</label>
+                        <label><input type="radio" name="catRateMode" value="goal" onchange="window.updateCatalogBaseCost()"> GOAL (<span id="cat-rate-goal-lbl">$0/hr</span>)</label>
+                        <label><input type="radio" name="catRateMode" value="custom" onchange="window.updateCatalogBaseCost()" checked> Flat/Custom</label>
+                    </div>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <label style="margin: 0; font-weight: bold;">Base Cost: $</label>
+                    <input type="number" id="cat-base-cost" class="form-control" value="0" min="0" style="width: 120px; font-weight: bold;" onchange="window.handleManualBaseCost()">
+                    <span id="cat-base-cost-formula" style="font-size: 0.75rem; color: var(--color-text-muted);"></span>
+                </div>
+            </div>
+
+            <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
+
+            <h3 style="margin-top:0; font-size:1.1rem; display:flex; justify-content:space-between; align-items:center;">
+                Pricing Tiers
+                <div style="display:flex; gap: 5px; align-items: center;">
+                    <input type="number" id="cat-tiers-count" value="1" min="1" max="10" style="width: 50px; font-size:0.8rem; padding: 2px;">
+                    <button type="button" class="btn" onclick="window.generateCatalogTiers()" style="font-size:0.7rem; padding: 4px 8px;">Generate Tiers</button>
+                </div>
+            </h3>
+            <div style="font-size:0.8rem; color:var(--color-text-muted); margin-bottom:10px;">
+                Define your sliding scale tiers by entering a % discount (-20) or augmentation (+15). Volumes will auto-balance to 100%.
+            </div>
+            
+            <div style="display: flex; gap: 5px; font-size: 0.75rem; font-weight: bold; margin-bottom: 5px; color: var(--color-text-muted);">
+                <div style="flex:2;">Tier Name</div>
+                <div style="flex:1; text-align:center;">Adjustment %</div>
+                <div style="flex:1; text-align:center;">Final Price</div>
+                <div style="width: 40px; text-align:center;">Fixed</div>
+                <div style="flex:1; text-align:center;"># Items</div>
+                <div style="width: 50px; text-align:center;">Vol %</div>
+                <div style="width:20px;"></div>
+            </div>
+            <div id="cat-tiers-list"></div>
+
+            <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
+
+            <h3 style="margin-top:0; font-size:1.1rem; display:flex; justify-content:space-between; align-items:center;">
+                Cost of Goods Sold (COGS)
+                <button type="button" class="btn" onclick="window.addCatalogCogs()" style="font-size:0.7rem; padding: 4px 8px;">+ Add Expense</button>
+            </h3>
+            <div id="cat-cogs-list"></div>
+
+            <div id="cat-gap-info" style="font-size: 0.8rem; color: var(--color-text-muted); padding: 10px; background: #f9f9f9; border-radius: 4px; margin-top: 15px;">
+                PLEASE NOTE: If you would like to use this good/item to satisfy the entire Remaining Gap, you would need to shift your "Expected Total Sales Volume" to <strong id="cat-shift-now">___</strong> (NOW), <strong id="cat-shift-enhanced">___</strong> (ENHANCED), or <strong id="cat-shift-goal">___</strong> (GOAL) within these indicated Pricing Tiers.
+            </div>
+
+            <div style="margin-top:20px; display:flex; justify-content:space-between;">
+                <button type="button" class="btn btn-danger" id="btn-delete-catalog" onclick="window.deleteCatalogItem()" style="display:none; background:#e74c3c; color:white; border:none;">Delete</button>
+                <div style="margin-left:auto; display:flex; gap:10px;">
+                    <button class="btn" type="button" onclick="document.getElementById('modal-catalog').close()">Cancel</button>
+                    <button class="btn btn-primary" type="button" onclick="window.saveCatalogItem()">Save Item</button>
+                </div>
+            </div>
+        </form>
+    </dialog>
+
     <script>
         window.onerror = function (msg, url, lineNo, columnNo, error) {
             alert('Global Error: ' + msg + '\nURL: ' + url + '\nLine: ' + lineNo);
@@ -384,210 +523,9 @@
     <script src="js/supabase_client.js?v=hotfix9"></script>
     <script src="js/store.js?v=hotfix9"></script>
     <script src="js/calibrations.js?v=hotfix9"></script>
-
-    <!-- INLINED SPECTRUM LOGIC (Nuclear Option) -->
+    <script src="js/calibrations_spectrum.js?v=hotfix9"></script>
+    
     <script>
-        // Spectrum Logic (Inlined for reliability)
-
-        const modalSpectrum = document.getElementById('modal-spectrum');
-        const tableNow = document.getElementById('spectrum-table-now');
-        const tableGoal = document.getElementById('spectrum-table-goal');
-        const overheadList = document.getElementById('overhead-toggles-list');
-
-        let overheadProjects = [];
-        let selectedOverheadRate = 0;
-        let cachedPersonalRateNow = 0;
-        let cachedPersonalRateGoal = 0;
-
-        const DELTAS = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9];
-
-        async function openSpectrumModal() {
-            // toggleOverheadSpectrum logic
-            try {
-                // Initialize Store if needed
-                if (!window.supabaseClient) await Store.init();
-
-                console.log("Fetching overhead projects...");
-                overheadProjects = await Store.getOverheadProjects();
-                console.log("Overhead projects fetched:", overheadProjects.length);
-
-                console.log("Fetching profile...");
-                const profile = await Store.getIndependentProfile();
-
-                // User Verified: Profiles Found
-
-                const capacity = Utils.calculateBillableCapacity(profile);
-                const billableHours = capacity.totalBillableHours || 1;
-
-                overheadProjects.forEach(p => {
-                    let fixed = 0;
-                    let percent = 0;
-                    const expenses = p.expenses || (p.data && p.data.expenses) || [];
-
-                    expenses.forEach(e => {
-                        const val = parseFloat(e.amount) || 0;
-                        if (e.type === 'Percent') percent += (e.baseAmount || val);
-                        else fixed += val;
-                    });
-
-                    let cost = 0;
-                    if (percent < 100) {
-                        cost = fixed / (1 - (percent / 100));
-                    }
-                    p.hourlyRate = cost / billableHours;
-                });
-
-                renderOverheadToggles();
-                renderPairedSpectrum();
-                if (modalSpectrum) {
-                    modalSpectrum.showModal();
-                }
-            } catch (err) {
-                console.error("Error in openSpectrumModal:", err);
-                alert("Inline System Error: " + err.message);
-            }
-        }
-
-        function closeSpectrumModal() {
-            if (modalSpectrum) modalSpectrum.close();
-        }
-
-        function renderOverheadToggles() {
-            if (!overheadList) return;
-            overheadList.innerHTML = '';
-            if (overheadProjects.length === 0) {
-                overheadList.innerHTML = '<span style="color:#888; font-size:0.8rem;">No business profiles found (Database Empty).</span>';
-                return;
-            }
-            overheadProjects.forEach(p => {
-                const label = document.createElement('label');
-                label.style.display = 'flex';
-                label.style.alignItems = 'center';
-                label.style.padding = '5px';
-                label.style.border = '1px solid #eee';
-                label.style.borderRadius = '4px';
-                label.style.fontSize = '0.8rem';
-                label.style.background = '#fff';
-                label.style.cursor = 'pointer';
-
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.value = p.id;
-                checkbox.style.marginRight = '8px';
-                checkbox.onchange = recalculateSelectedOverhead;
-
-                label.appendChild(checkbox);
-                label.appendChild(document.createTextNode(`${p.name} (+${Utils.formatCurrency(p.hourlyRate)}/hr)`));
-                overheadList.appendChild(label);
-            });
-        }
-
-        function recalculateSelectedOverhead() {
-            selectedOverheadRate = 0;
-            const checkboxes = overheadList.querySelectorAll('input[type="checkbox"]:checked');
-            checkboxes.forEach(cb => {
-                const proj = overheadProjects.find(p => p.id == cb.value);
-                if (proj) selectedOverheadRate += proj.hourlyRate;
-            });
-            renderPairedSpectrum();
-        }
-
-        function renderPairedSpectrum() {
-            // Re-read inputs or use cached profile data? 
-            // Better to pull from DOM elements if possible to match live edits, 
-            // but for now let's assume saved data since modal triggers a "save state" usually.
-            // Actually, we need to read the "out-now-hourly" and "out-goal-hourly" from the page if avail,
-            // OR re-calculate. The independent page calculates them and puts them in Store.profile?
-            // Let's grab from the DOM outputs since they are right there.
-
-            const elNow = document.getElementById('out-required-rate-now');
-            const elGoal = document.getElementById('out-required-rate-goal');
-
-            const nowRateText = elNow ? elNow.textContent.replace(/[^0-9.]/g, '') : '0';
-            const goalRateText = elGoal ? elGoal.textContent.replace(/[^0-9.]/g, '') : '0';
-
-            cachedPersonalRateNow = parseFloat(nowRateText) || 0;
-            cachedPersonalRateGoal = parseFloat(goalRateText) || 0;
-
-            const rateNowWithOverhead = cachedPersonalRateNow + selectedOverheadRate;
-            const rateGoalWithOverhead = cachedPersonalRateGoal + selectedOverheadRate;
-
-            renderTable(tableNow, rateNowWithOverhead);
-            renderTable(tableGoal, rateGoalWithOverhead);
-        }
-
-        function renderTable(tbody, baseRate) {
-            tbody.innerHTML = '';
-            if (baseRate <= 0) {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#999;">Calculate a base rate first.</td></tr>';
-                return;
-            }
-
-            DELTAS.forEach(delta => {
-                const multAug = 1 + delta;
-                const multDisc = 1 - delta;
-
-                const tr = document.createElement('tr');
-                tr.style.borderBottom = '1px solid #eee';
-
-                // 1. Augmented Rate Cell
-                const tdAugRate = createRateCell(baseRate, multAug);
-                tdAugRate.style.background = '#f6fff5';
-
-                // 2. Aug %
-                const tdAugPct = document.createElement('td');
-                tdAugPct.textContent = `+${Math.round(delta * 100)}%`;
-                tdAugPct.style.textAlign = 'center';
-                tdAugPct.style.fontWeight = 'bold';
-                tdAugPct.style.background = '#e6fffa';
-
-                // 3. Disc %
-                const tdDiscPct = document.createElement('td');
-                tdDiscPct.textContent = `-${Math.round(delta * 100)}%`;
-                tdDiscPct.style.textAlign = 'center';
-                tdDiscPct.style.fontWeight = 'bold';
-                tdDiscPct.style.background = '#fff5f5';
-
-                // 4. Discounted Rate Cell
-                const tdDiscRate = createRateCell(baseRate, multDisc);
-                tdDiscRate.style.background = '#fff0eb';
-
-                tr.appendChild(tdAugRate);
-                tr.appendChild(tdAugPct);
-                tr.appendChild(tdDiscPct);
-                tr.appendChild(tdDiscRate);
-
-                tbody.appendChild(tr);
-            });
-        }
-
-        // Helper for formatting rate cells (matches reference)
-        function createRateCell(baseRate, multiplier) {
-            const td = document.createElement('td');
-            td.style.padding = '10px';
-            td.style.textAlign = 'center';
-
-            // Assume 6 hours/day, 4 days/week if not in store (Hardcoded fallback if store logic missing from inline)
-            // But we can try to fetch from store if available, or just standard.
-            // Reference used: hoursPerDay, daysPerWeek from profile.
-            // We'll calculate simple standard for display.
-            const hpd = 6;
-            const dpw = 4; // Standard independent work week
-
-            const hourly = baseRate * multiplier;
-            const daily = hourly * hpd;
-            const weekly = daily * dpw;
-
-            // Format: $100/hr <br> <small>$600/day | $2400/wk</small>
-            td.innerHTML = `
-                <div style="font-weight:bold; font-size:1rem;">${Utils.formatCurrency(hourly)}/hr</div>
-                <div style="font-size:0.75rem; color:#666; margin-top:2px;">
-                    ${Utils.formatCurrency(daily)}/day • ${Utils.formatCurrency(weekly)}
-                </div>
-            `;
-            return td;
-        }
-
         // Init Logic (Page Load)
         (async () => {
             await Store.init();
@@ -603,6 +541,7 @@
 
     </div>
     <script src="js/calibrations.js"></script>
+    <script src="js/global_search.js"></script>
 </body>
 
 </html>

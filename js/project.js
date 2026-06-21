@@ -953,7 +953,7 @@ function assignGlobalHelpers() {
     const btnIncome = document.getElementById('btn-open-income-modal');
     if (btnIncome) btnIncome.onclick = () => window.openIncomeModal();
 
-    window.openIncomeModal = () => {
+    window.openIncomeModal = async () => {
         window._editingSourceId = null; // Clear edit state
 
         // V121: Hide Delete Button on Create
@@ -963,7 +963,55 @@ function assignGlobalHelpers() {
         document.getElementById('income-source-name').value = '';
         document.getElementById('income-source-amount').value = '';
         document.getElementById('income-source-status').value = 'Confirmed';
+        
+        // NEW: Populate Catalog Import Dropdown
+        const selectCatalog = document.getElementById('income-catalog-import-real');
+        if (selectCatalog) {
+            selectCatalog.innerHTML = '<option value="">Loading Catalog...</option>';
+            try {
+                const profile = await Store.getIndependentProfile();
+                window._catalogData = profile.catalog || [];
+                
+                let html = '<option value="">-- Select an Item to Import --</option>';
+                window._catalogData.forEach(cat => {
+                    html += `<option value="${cat.id}">${cat.name} (${cat.type})</option>`;
+                });
+                selectCatalog.innerHTML = html;
+                selectCatalog.value = '';
+            } catch (err) {
+                console.error("Error loading catalog:", err);
+                selectCatalog.innerHTML = '<option value="">Error loading catalog</option>';
+            }
+        }
+
         document.getElementById('modal-manage-income').style.display = 'block';
+    };
+
+    window.importCatalogToIncome = (catalogId) => {
+        if (!catalogId || !window._catalogData) return;
+        const cat = window._catalogData.find(c => c.id === catalogId);
+        if (!cat) return;
+
+        // Calculate Expected Net
+        let expectedGross = 0;
+        cat.tiers.forEach(tier => {
+            const vol = cat.expectedTotalSales * (tier.percentOfVolume / 100);
+            expectedGross += vol * tier.price;
+        });
+
+        let expectedCogs = 0;
+        cat.cogs.forEach(c => {
+            if (c.type === 'per_item') {
+                expectedCogs += c.amount * cat.expectedTotalSales;
+            } else {
+                expectedCogs += c.amount;
+            }
+        });
+
+        const expectedNet = expectedGross - expectedCogs;
+
+        document.getElementById('income-source-name').value = `Catalog: ${cat.name}`;
+        document.getElementById('income-source-amount').value = expectedNet > 0 ? expectedNet : 0;
     };
 
     window.editFundingSource = (id) => {
