@@ -303,19 +303,19 @@
                 <!-- Section 3: Current Annual Income (Net) -->
                 <div class="section-header"
                     style="margin-top: var(--spacing-md); display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-size: 0.9rem;">3. <i>NOW</i> Annual Money Spent and Allocated</span>
+                    <span style="font-size: 0.9rem;">3. <i>NOW</i> Net</span>
                 </div>
 
                 <div style="padding: var(--spacing-sm); border-bottom: var(--border-std);">
                     <div class="ledger-row">
-                        <label><i>NOW</i> Annual Money Spent and Allocated</label>
+                        <label><i>NOW</i> Net</label>
                         <div style="width: 120px; display:flex; align-items:center;">
                             <span style="padding-right:5px; font-weight:bold; color:var(--color-text-muted);">$</span>
                             <input type="text" id="in-current-net-income" placeholder="0" style="width:100%;">
                         </div>
                     </div>
                     <div class="ledger-row" style="margin-top:5px; border-bottom:none;">
-                        <span class="text-muted" style="font-size:0.8rem; font-weight:bold;"><i>NOW</i> Estimated Gross Income</span>
+                        <span class="text-muted" style="font-size:0.8rem; font-weight:bold;"><i>NOW</i> Gross</span>
                         <span>
                             <strong id="out-current-gross">$0</strong>
                             <button onclick="window.viewIndependentLog('currentGross')"
@@ -362,7 +362,7 @@
                                 <span class="slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 20px;"></span>
                                 <span class="slider-knob" style="position: absolute; height: 16px; width: 16px; left: 2px; bottom: 2px; background-color: white; transition: .4s; border-radius: 50%; pointer-events: none;"></span>
                             </label>
-                            <span id="label-prime-rates" style="color:var(--color-text-muted);">NOWPrime</span>
+                            <span id="label-prime-rates" style="color:var(--color-text-muted);">ENHANCED</span>
                         </div>
                         <table style="width:100%; border-collapse: collapse; font-size: 0.95rem;">
                             <tr style="border-bottom: 1px dashed #eee;">
@@ -400,15 +400,54 @@
                             </tr>
                         </table>
                     </div>
-                    <div style="margin-bottom: 20px; font-size: 0.85rem; color: var(--color-text-muted); text-align: center; border: 1px solid #ddd; border-radius: 6px; padding: 10px; background: #fdfdfd;">
-                        <label style="cursor:pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0;">
-                            <input type="checkbox" id="check-send-prime" onchange="window.toggleSendPrime()"> 
-                            <span>Send <b>NOWPrime</b> Rates to Projects</span>
-                        </label>
-                        <div style="font-size: 0.75rem; margin-top: 5px; opacity: 0.8;">
-                            Check this to use your NOWPrime target as the baseline for equity and calculations in your Projects.
+
+                <!-- NEW: Privacy & Sharing Settings Card -->
+                <div class="card" style="margin-top: var(--spacing-lg);">
+                    <div class="card-header">
+                        <h2><i class="fa fa-shield-alt" style="margin-right: 8px;"></i> Privacy & Sharing Settings</h2>
+                    </div>
+                    <div class="card-body">
+                        <!-- Private Sharing Level -->
+                        <div class="form-group">
+                            <label>Private Project Sharing Level</label>
+                            <div style="font-size: 0.8rem; color: var(--color-text-muted); margin-bottom: 5px;">
+                                Controls what details the Project Owner sees when you collaborate on a project.
+                            </div>
+                            <select id="private-sharing-mode" class="form-control" style="max-width: 300px;">
+                                <option value="anonymous">Anonymous (No Name/Email, No Demographics)</option>
+                                <option value="demographic">Anonymous with Demographics</option>
+                                <option value="full">Full Visibility (Name, Email & Demographics)</option>
+                                <option value="hidden">Hidden (Decline all Collaboration)</option>
+                            </select>
+                        </div>
+
+                        <!-- Public Directory Sharing Level -->
+                        <div class="form-group" style="margin-top: 15px;">
+                            <label>Public Directory Sharing Level</label>
+                            <div style="font-size: 0.8rem; color: var(--color-text-muted); margin-bottom: 5px;">
+                                Controls what other users see if they search for you in the global My Economies
+                                directory.
+                            </div>
+                            <select id="public-sharing-mode" class="form-control" style="max-width: 300px;">
+                                <option value="anonymous">Anonymous (No Name/Email, No Demographics)</option>
+                                <option value="demographic">Anonymous with Demographics</option>
+                                <option value="full">Full Visibility (Name, Email & Demographics)</option>
+                                <option value="hidden">Hidden (Unsearchable)</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Rate Sharing Preference -->
+                        <div class="form-group" style="margin-top: 15px; display:flex; align-items:flex-start; gap:10px;">
+                            <input type="checkbox" id="send-prime-rates" style="margin-top:5px;">
+                            <div>
+                                <span>Send <b>ENHANCED</b> Rates to Projects</span>
+                                <div style="font-size: 0.8rem; color: var(--color-text-muted);">
+                                    Check this to use your ENHANCED target as the baseline for equity and calculations in your Projects.
+                                </div>
+                            </div>
                         </div>
                     </div>
+                </div>
 
                     <!-- GOAL FEES (Promoted to Top) -->
                     <div style="margin-bottom: var(--spacing-lg);">

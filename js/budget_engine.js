@@ -42,7 +42,7 @@ const BudgetEngine = {
         // These are expected to be saved by the Independent Tool in profile.goals
         let currentGross = (profile.goals && profile.goals.current) ? profile.goals.current : 0;
         
-        // If the user selected to send NOWPrime rates to Projects, recalculate baseline gross
+        // If the user selected to send ENHANCED rates to Projects, recalculate baseline gross
         if (profile.sendPrimeToProjects === true && window.Utils && typeof window.Utils.calculateMeantimeAdjustment === 'function') {
             const meantimeAdjustment = window.Utils.calculateMeantimeAdjustment(profile);
             const currentNet = profile.currentNetIncome ? parseFloat(profile.currentNetIncome) : 0;
