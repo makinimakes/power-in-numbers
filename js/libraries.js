@@ -36,8 +36,8 @@ window.AppLibraries = {
     EDUCATION: [
         'Less than High School', 'High School Diploma / GED', 
         'Some College, No Degree', 'Associate Degree', 
-        'Bachelor\\'s Degree', 'Master\\'s Degree', 
-        'Professional Degree (e.g., JD, MD)', 'Doctorate (e.g., PhD)', 
+        "Bachelor's Degree", "Master's Degree", 
+        "Professional Degree (e.g., JD, MD)", "Doctorate (e.g., PhD)", 
         'Trade / Technical / Vocational Certificate'
     ],
 
